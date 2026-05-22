@@ -35,15 +35,22 @@ The full SRS authoring structure contains these chapters:
 | Chapter | Purpose | Output Guidance |
 | --- | --- | --- |
 | 目的 | Define why the SRS exists and what downstream activities consume it. | Required |
-| 适用范围 | Define in-scope and out-of-scope behavior. | Required |
+| 适用范围 | Define the applicable software scope and exclusions in concise prose. | Required |
 | 定义和缩写 | Define domain terms, abbreviations, and semantic distinctions. | Required |
-| 概述 | Summarize chip/module context, supported capability, driver responsibility, pins, and state machine. | Required |
+| 概述 | Summarize chip/module context, supported capability, driver responsibility, pins, and state machine only when complex state transitions exist. | Required |
 | 软件需求 / 功能需求 | Define functional software requirements. | Required; default output heading is `功能需求`. |
 | 非功能需求 | Define timing, safety level, coding standard, resource, and process-quality requirements. | Required |
 | 约束与假设 | Capture explicit constraints and unresolved assumptions. | Optional as standalone section; may be folded into requirement scope boundaries, nonfunctional requirements, or open issues. |
 | 需求追溯 | Capture source and trace intent. | Optional as standalone section; calibrated template uses `需求来源` and keeps trace rules internal. |
 | 验证策略 | Explain verification methods and stages. | Optional as standalone section; each requirement must still include verification method and stage. |
 | 附录 | Provide requirement list, supporting files, terms, or generated matrices. | Optional, depending on output workflow. |
+
+Document balance rule:
+
+- Avoid `头重脚轻`: front-matter, scope, and overview should stay concise and serve only as context.
+- The main document weight should be in `5 功能需求` and `6 非功能需求`.
+- Do not use long overview prose, oversized capability lists, or communication parameter dumps to replace formal requirements.
+- If a statement defines software responsibility, move it to a requirement item instead of expanding the overview.
 
 For the calibrated FC output template, use this generated chapter layout unless the user asks for the full-process structure:
 
@@ -79,7 +86,6 @@ Default output fields:
 | --- | --- |
 | 类别 | Requirement category and subcategory. |
 | 范围边界 | Explicit inclusion/exclusion boundary. |
-| 接口契约 | API inputs, outputs, return values, and pre/post conditions. Use only when applicable. |
 | 前置条件 | Required state before the behavior applies. |
 | 触发条件 | Event, call, condition, or transition that triggers the behavior. |
 | 输入 | Inputs, parameters, signals, configuration values, or states. |
@@ -114,6 +120,8 @@ Field rules:
 - Do not render Markdown field tables for requirement items.
 - Keep `来源`, `验证方式`, `验证阶段`, and `状态` present for every formal requirement in the status tag line.
 - Use `范围边界` to carry project exclusions, unsupported modes, scope limits, and source-derived caveats.
+- `DET` or equivalent development error detection is a mandatory requirement topic for externally callable software modules.
+- If the module detects, latches, reports, or evaluates faults/diagnostic status, the SRS should include a readable fault/diagnostic status interface or an equivalent observable mechanism.
 
 ## 3. Status Standard
 

@@ -320,19 +320,9 @@ def _scope_markdown(document: SrsDocument) -> list[str]:
         "- 功能安全工程师",
         "- 项目质量和配置管理人员",
         "",
-        "### 2.2 范围内",
+        "### 2.2 适用范围",
         "",
-        "本文档覆盖：",
-        "",
-        f"- `{document.module}` 模块的软件功能、接口、配置、状态、诊断、时序和非功能需求。",
-        "- 需求来源、验证方式、验证阶段和需求状态。",
-        "",
-        "### 2.3 范围外",
-        "",
-        "本文档不覆盖：",
-        "",
-        "- 详细设计方案、代码实现方案和测试用例步骤。",
-        "- 未由项目输入明确分配给本模块的软件责任。",
+        f"本文档覆盖 `{document.module}` 模块的软件功能、接口、配置、诊断、时序及相关非功能需求，并给出需求来源、验证方式、验证阶段和需求状态。本文档不展开详细设计方案、代码实现方案和测试用例步骤。",
         "",
         "---",
         "",
@@ -363,7 +353,12 @@ def _terms_markdown() -> list[str]:
 
 def _overview_markdown(document: SrsDocument) -> list[str]:
     overview = document.overview or {}
-    lines = ["## 4 概述", ""]
+    lines = [
+        "## 4 概述",
+        "",
+        "本章仅保留理解需求所需的芯片和驱动背景信息，避免展开实现细节；正式软件责任以下文需求条目为准。",
+        "",
+    ]
 
     # ---- 4.1 外设芯片介绍 ----
     lines.extend(_chip_overview_markdown(document, overview))
@@ -395,7 +390,7 @@ def _chip_overview_markdown(document: SrsDocument, overview: dict[str, Any]) -> 
     if chip_intro:
         lines.extend([chip_intro, ""])
     if chip_capabilities:
-        lines.append("芯片具备以下与软件需求相关的能力：")
+        lines.append("芯片支持以下功能：")
         lines.append("")
         lines.extend(f"- {item}" for item in chip_capabilities)
         lines.append("")
@@ -413,14 +408,6 @@ def _driver_functions_markdown(document: SrsDocument, overview: dict[str, Any]) 
         "初始化并配置外设工作参数。",
         "提供外设读写、状态处理和错误处理接口。",
     ]
-    constraints = overview.get("driver_boundary_constraints") or [
-        "驱动不控制芯片硬件复位引脚，复位由硬件电路管理。",
-        "驱动不控制总线电气特性（上拉电阻、总线电容），由硬件设计保证。",
-    ]
-    pending = overview.get("driver_pending_items") or [
-        "项目 GPIO 使用清单和默认配置表。",
-        "设备地址和 I2C 通道分配。",
-    ]
 
     lines = [
         "### 4.2 驱动功能介绍",
@@ -429,20 +416,6 @@ def _driver_functions_markdown(document: SrsDocument, overview: dict[str, Any]) 
         "",
     ]
     lines.extend(f"{idx}. {item}" for idx, item in enumerate(functions, start=1))
-    lines.append("")
-
-    lines.extend([
-        "**边界约束**：",
-        "",
-    ])
-    lines.extend(f"- {item}" for item in constraints)
-    lines.append("")
-
-    lines.extend([
-        "**待定项**：",
-        "",
-    ])
-    lines.extend(f"- {item}" for item in pending)
     lines.append("")
     return lines
 
@@ -474,9 +447,10 @@ def _state_machine_markdown(document: SrsDocument, overview: dict[str, Any]) -> 
     if not sm_data or not isinstance(sm_data, dict):
         return []
     states = sm_data.get("states", [])
+    transitions = sm_data.get("transitions", [])
     diagram = sm_data.get("diagram", "")
     summary = sm_data.get("summary", "")
-    if not summary and not states and not diagram:
+    if len(states) < 2 and len(transitions) < 2 and not diagram:
         return []
     lines = [
         "### 4.4 状态机介绍",
@@ -511,9 +485,7 @@ def _communication_params_markdown(document: SrsDocument, overview: dict[str, An
     speed_modes = comm.get("speed_modes", [])
     addressing = comm.get("device_addressing", "")
     timing_params = comm.get("timing_params", [])
-    timing_diagram = comm.get("timing_diagram", "")
-    reg_map = comm.get("register_map_summary", "")
-    if not summary and not speed_modes and not timing_params and not reg_map:
+    if not summary and not speed_modes and not timing_params and not addressing:
         return []
     lines = [
         f"### {section_num} {bus_type} 通信参数" if bus_type else f"### {section_num} 通信参数",
@@ -522,40 +494,27 @@ def _communication_params_markdown(document: SrsDocument, overview: dict[str, An
     if summary:
         lines.extend([summary, ""])
     if speed_modes:
-        lines.append(f"{bus_type} 总线支持以下速率模式：" if bus_type else "总线支持以下速率模式：")
+        lines.append("关键通信参数：")
         lines.append("")
-        lines.extend(f"- {mode}" for mode in speed_modes)
-        lines.append("")
+        lines.extend(f"- {mode}" for mode in speed_modes[:2])
 
     if addressing:
-        lines.extend([
-            "**器件寻址**：",
-            "",
-            addressing,
-            "",
-        ])
-
-    if timing_diagram:
-        lines.extend([timing_diagram, ""])
+        lines.append(f"- 器件寻址：{addressing}")
 
     if timing_params:
-        lines.extend([
-            "| 参数 | 符号 | 条件 | 最小值 | 最大值 | 单位 |",
-            "| --- | --- | --- | --- | --- | --- |",
-        ])
-        for param in timing_params:
-            lines.append(
-                f"| {_escape_table_text(param.get('name', ''))} "
-                f"| {_escape_table_text(param.get('symbol', ''))} "
-                f"| {_escape_table_text(param.get('condition', ''))} "
-                f"| {_escape_table_text(param.get('min', ''))} "
-                f"| {_escape_table_text(param.get('max', ''))} "
-                f"| {_escape_table_text(param.get('unit', ''))} |"
-            )
+        for param in timing_params[:4]:
+            name = _escape_table_text(param.get("name", ""))
+            minimum = _escape_table_text(param.get("min", ""))
+            maximum = _escape_table_text(param.get("max", ""))
+            unit = _escape_table_text(param.get("unit", ""))
+            if minimum and maximum and maximum not in {"—", "-"}:
+                value = f"{minimum}~{maximum} {unit}".strip()
+            elif maximum and maximum not in {"—", "-"}:
+                value = f"<= {maximum} {unit}".strip()
+            else:
+                value = f">= {minimum} {unit}".strip()
+            lines.append(f"- {name}：{value}")
         lines.append("")
-
-    if reg_map:
-        lines.extend([reg_map, ""])
 
     return lines
 
@@ -624,6 +583,7 @@ _BLOCK_TITLES: dict[str, str] = {
     "interface": "接口约束",
     "functional": "功能约束",
     "configuration": "配置约束",
+    "diagnostic": "诊断约束",
     "state": "状态约束",
     "timing": "时序约束",
     "safety": "约束定义",
@@ -650,6 +610,14 @@ _BLOCK_FIELDS: dict[str, list[tuple[str, str]]] = {
     "configuration": [
         ("配置项", "constraint"),
         ("前置条件", "pre_condition"),
+        ("验收准则", "verification"),
+    ],
+    "diagnostic": [
+        ("触发条件", "trigger"),
+        ("输入", "input"),
+        ("输出", "output"),
+        ("异常处理", "exception"),
+        ("行为边界", "constraint"),
         ("验收准则", "verification"),
     ],
     "state": [
@@ -686,6 +654,7 @@ def _short_category_tag(req_type: str) -> str:
         "state": "状态需求",
         "interface": "接口需求",
         "configuration": "配置需求",
+        "diagnostic": "诊断需求",
         "timing": "时序需求",
         "safety": "安全需求",
         "coding": "编码需求",
@@ -901,8 +870,8 @@ def _with_default_nonfunctional_requirements(
     requirements: list[EngineeringRequirement],
     module: str,
 ) -> list[EngineeringRequirement]:
-    existing = {req.requirement_type for req in requirements}
-    result = list(requirements)
+    result = _with_default_diagnostic_requirements(requirements, module)
+    existing = {req.requirement_type for req in result}
     token = _normalize_doc_token(module)
     if "safety" not in existing:
         result.append(
@@ -943,6 +912,57 @@ def _with_default_nonfunctional_requirements(
                 source=[{"document": "SRS Template", "chunk_id": "DEFAULT-RESOURCE-BUDGET", "evidence": "No project resource budget input; default resource requirement generated."}],
             )
         )
+    return result
+
+
+def _with_default_diagnostic_requirements(
+    requirements: list[EngineeringRequirement],
+    module: str,
+) -> list[EngineeringRequirement]:
+    result = list(requirements)
+    token = _normalize_doc_token(module)
+    names = " ".join(
+        f"{req.title} {req.description} {req.constraint} {req.exception} {req.input} {req.output}".lower()
+        for req in requirements
+    )
+
+    if "det" not in names and "development error" not in names and "开发错误" not in names:
+        result.append(
+            EngineeringRequirement(
+                requirement_id=f"SRS-{token}-DIAG-0001",
+                semantic_id=f"DEFAULT-{token}-DIAG-DET",
+                requirement_type="diagnostic",
+                title="开发错误检测",
+                description="软件应提供开发错误检测能力，对未初始化访问、空指针、非法参数和非法调用顺序进行检测，并按项目约定进行 DET 上报或错误返回。",
+                exception="未初始化访问、空指针、非法参数、非法状态调用时，应拒绝继续执行当前请求并保持无关状态不被破坏。",
+                constraint="DET 为必备需求；若项目未集成 DET 模块，也应保留等效的开发错误检测和错误返回语义。",
+                verification="通过接口测试、边界测试和故障注入验证：触发未初始化访问、空指针、非法参数和非法调用顺序时，应产生定义的 DET 上报或错误返回，且内部状态保持一致。",
+                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-DIAG-DET", "evidence": "DET is a mandatory baseline diagnostic requirement."}],
+            )
+        )
+
+    has_fault_like_behavior = any(
+        keyword in names for keyword in ("fault", "diag", "diagnostic", "error", "interrupt", "中断", "故障", "诊断")
+    )
+    has_fault_read = any(
+        keyword in names for keyword in ("getdevfault", "getdiag", "故障读取", "故障信息读取", "诊断读取", "故障状态读取", "诊断状态读取")
+    )
+    if has_fault_like_behavior and not has_fault_read:
+        result.append(
+            EngineeringRequirement(
+                requirement_id=f"SRS-{token}-IF-9001",
+                semantic_id=f"DEFAULT-{token}-DIAG-READ",
+                requirement_type="interface",
+                title="故障诊断信息读取接口",
+                description="软件应提供故障或诊断状态读取接口，用于向上层返回当前故障状态、诊断结果或中断相关状态信息。",
+                output="故障位、诊断状态字或项目定义的状态结果。",
+                exception="当驱动未初始化、参数非法或底层状态不可获取时，应返回定义错误，并保留最近一次有效诊断状态或给出无效标识。",
+                constraint="当模块存在故障检测、诊断判定或中断异常处理时，应提供对应的故障/诊断读取接口或等效状态读取机制。",
+                verification="通过故障注入、状态切换和接口测试验证：产生通信故障、中断异常或项目定义诊断事件后，读取接口应返回对应状态；故障清除后应反映更新结果。",
+                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-DIAG-READ", "evidence": "Fault/diagnostic handling requires a readable fault or diagnostic status interface."}],
+            )
+        )
+
     return result
 
 

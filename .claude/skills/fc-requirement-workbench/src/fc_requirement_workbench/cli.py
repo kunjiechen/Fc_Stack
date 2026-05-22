@@ -316,81 +316,39 @@ def _nca9539_overview(chip_intro: str, pin_rows: list[tuple[str, str, str]]) -> 
     return {
         "chip_intro": chip_intro,
         "chip_capabilities": [
-            "16-bit GPIO 端口扩展：通过 I2C 总线访问 16 路 GPIO（P00-P07 / P10-P17），每路可独立配置为输入或输出。",
-            "输入端口读取：Input Port 寄存器（00h/01h）反映引脚实际电平，不受方向配置影响，驱动可随时读取。",
-            "输出端口控制：Output Port 寄存器（02h/03h）定义输出引脚的驱动电平，支持单路 pin 写操作（读-改-写保护同 port 内其余 pin）。",
-            "输入极性反转：Polarity Inversion 寄存器（04h/05h）支持对输入引脚逻辑值取反，上电默认不反转。",
-            "GPIO 方向配置：Configuration 寄存器（06h/07h）控制每路 GPIO 的方向（1 = 输入/高阻，0 = 输出），上电默认全部为输入。",
-            "中断输出指示：INT 引脚（开漏）在输入状态变化时拉低，驱动可通过读取 Input Port 寄存器清除中断。",
-            "硬件地址选择：A0/A1 引脚提供 2 位硬件可编程地址，同一 I2C 总线上最多挂载 4 片 NCA9539-Q1。",
-            "复位与上电默认状态：RESET 引脚低有效复位或上电后，所有寄存器恢复默认值（Input=高电平，Output=低电平，Polarity=不反转，Configuration=输入）。",
+            "支持 16 路 GPIO 扩展，每路可独立配置为输入或输出。",
+            "支持输入状态读取、输出控制和输入极性反转。",
+            "支持 GPIO 方向配置和寄存器访问。",
+            "支持 INT 中断指示、RESET 复位和上电默认状态恢复。",
+            "支持通过 A0/A1 配置器件地址，同一总线最多挂载 4 片器件。",
         ],
         "driver_functions": [
             "通过 I2C 总线读写芯片内部寄存器（Input、Output、Polarity Inversion、Configuration），实现对 16 路 GPIO 的软件控制。",
             "在初始化阶段加载项目配置表，设置每路 GPIO 的方向（输入/输出）、默认输出电平及极性反转策略。",
             "提供 GPIO 输入状态读取接口，按项目配置的 pin 或 port 粒度返回逻辑电平，支持极性反转后的逻辑值输出。",
             "提供 GPIO 输出控制接口，在写单路 pin 时通过读-改-写操作保持同 port 内其余 pin 的输出值不变。",
-            "在 I2C 通信出现 NACK、timeout 或总线错误时，向上层返回明确的错误码，并维持驱动内部状态一致。",
-            "若项目使用 INT 引脚且接入 MCU，提供中断状态读取与清除接口，支持输入变化检测。",
-        ],
-        "driver_boundary_constraints": [
-            "驱动不控制 RESET 引脚——该引脚由外部硬件上拉或 MCU GPIO 管理，驱动仅在初始化时检测并恢复复位后的默认寄存器状态。",
-            "驱动不控制 I2C 总线电气特性（上拉电阻阻值、总线电容、上升/下降时间），这些由硬件设计保证，驱动仅依赖底层 I2C 驱动提供的读写接口。",
-            "A0/A1 地址引脚为硬件接线决定，驱动不动态修改器件地址；若项目需要运行时切换地址，需额外提供配置接口。",
-            "P00-P17 的 5V 耐压能力及最大输出电流限制由硬件设计保证，驱动不做电流监测或过流保护。",
-            "I2C 总线 Standard-mode (100kHz) 与 Fast-mode (400kHz) 的选择由底层 I2C 控制器配置决定，本驱动不做速率协商。",
-            "芯片 Standby 电流（typ 0.14μA @3.6V）为硬件功耗指标，驱动不实现软件低功耗模式切换。",
-        ],
-        "driver_pending_items": [
-            "项目 GPIO 使用清单：明确哪些 pin 用作输入、哪些用作输出、哪些未使用。",
-            "默认 GPIO 方向表和默认输出电平表（上电初始化时加载）。",
-            "INT 引脚是否连接 MCU，若连接则确认中断触发方式（电平/边沿）和清除策略。",
-            "RESET 引脚的控制权归属和复位后驱动恢复策略。",
-            "底层 I2C 驱动接口规范（API 命名、同步/异步模型、超时策略、错误返回码）。",
-            "设备 I2C 地址配置来源（硬编码/配置文件/自适应扫描）。",
+            "在 I2C 通信出现 NACK、timeout 或总线错误时，向上层返回明确的错误码，并支持故障状态读取。",
+            "若项目使用 INT 引脚且接入 MCU，支持中断状态检测与清除。",
         ],
         "pin_rows": pin_rows or [("待确认", "待确认", "待提取")],
         "state_machine": None,
         "communication": {
             "bus_type": "I2C",
             "summary": (
-                "NCA9539-Q1 通过标准 I2C 双线串行接口（SCL、SDA）与主控制器通信。"
-                "器件作为 I2C 从机，主控制器通过器件地址选中本芯片后，以命令字节 + 数据字节的方式读写内部寄存器。"
-                "A0/A1 引脚提供 2 位硬件可编程地址，最多支持 4 片 NCA9539-Q1 挂载在同一 I2C 总线上。"
+                "NCA9539-Q1 通过 I2C 总线与主控制器通信，主控制器通过器件地址和命令字节访问内部寄存器。"
             ),
             "speed_modes": [
-                "Standard-mode：SCL 时钟频率 0–100 kHz",
-                "Fast-mode：SCL 时钟频率 0–400 kHz",
+                "Standard-mode：最高 100 kHz",
+                "Fast-mode：最高 400 kHz",
             ],
             "device_addressing": (
-                "7-bit 从机地址，高 5 位固定为 `11101`，低 2 位由 A1/A0 引脚电平决定。"
-                "第 8 位为 R/W 位（0 = 写，1 = 读）。"
-                "4 种地址组合：0x74（A1=L, A0=L）、0x75（A1=L, A0=H）、0x76（A1=H, A0=L）、0x77（A1=H, A0=H）。"
+                "7-bit 从机地址高 5 位固定，低 2 位由 A1/A0 决定，可形成 4 种器件地址。"
             ),
             "timing_params": [
-                {"name": "SCL 时钟频率 (Fast-mode)", "symbol": "f_SCL", "condition": "Fast-mode", "min": "0", "max": "400", "unit": "kHz"},
-                {"name": "SCL 时钟频率 (Standard-mode)", "symbol": "f_SCL", "condition": "Standard-mode", "min": "0", "max": "100", "unit": "kHz"},
-                {"name": "START/STOP 间隔时间 (Fast-mode)", "symbol": "t_BUF", "condition": "Fast-mode", "min": "1.3", "max": "—", "unit": "μs"},
-                {"name": "数据建立时间 (Fast-mode)", "symbol": "t_SU;DAT", "condition": "Fast-mode", "min": "100", "max": "—", "unit": "ns"},
-                {"name": "数据保持时间", "symbol": "t_HD;DAT", "condition": "—", "min": "0", "max": "—", "unit": "ns"},
-                {"name": "SCL 低电平宽度 (Fast-mode)", "symbol": "t_LOW", "condition": "Fast-mode", "min": "1.3", "max": "—", "unit": "μs"},
-                {"name": "SCL 高电平宽度 (Fast-mode)", "symbol": "t_HIGH", "condition": "Fast-mode", "min": "0.6", "max": "—", "unit": "μs"},
-                {"name": "SDA/SCL 上升时间 (Fast-mode)", "symbol": "t_r", "condition": "C_b ≤ 400pF", "min": "20+0.1C_b", "max": "300", "unit": "ns"},
-                {"name": "SDA/SCL 下降时间 (Fast-mode)", "symbol": "t_f", "condition": "C_b ≤ 400pF", "min": "20+0.1C_b", "max": "300", "unit": "ns"},
-                {"name": "输入滤波抑制脉宽", "symbol": "t_SP", "condition": "—", "min": "—", "max": "50", "unit": "ns"},
-                {"name": "RESET 脉宽", "symbol": "t_w(rst)", "condition": "—", "min": "6", "max": "—", "unit": "ns"},
-                {"name": "RESET 恢复时间", "symbol": "t_rec(rst)", "condition": "—", "min": "200", "max": "—", "unit": "ns"},
-                {"name": "复位时长", "symbol": "t_rst", "condition": "—", "min": "400", "max": "—", "unit": "ns"},
-                {"name": "INT 有效时间", "symbol": "t_v(INT_N)", "condition": "—", "min": "—", "max": "4", "unit": "μs"},
-                {"name": "INT 复位时间", "symbol": "t_rst(INT_N)", "condition": "—", "min": "—", "max": "4", "unit": "μs"},
+                {"name": "SCL 时钟频率", "symbol": "f_SCL", "condition": "Standard/Fast", "min": "0", "max": "400", "unit": "kHz"},
+                {"name": "RESET 脉宽", "symbol": "t_w(rst)", "condition": "RESET", "min": "6", "max": "—", "unit": "ns"},
+                {"name": "复位时长", "symbol": "t_rst", "condition": "RESET", "min": "400", "max": "—", "unit": "ns"},
             ],
-            "register_map_summary": (
-                "芯片内部寄存器映射（8 个寄存器，组成 4 个寄存器对）：<br>"
-                "- **Input Port 0/1 (00h/01h)**：只读，反映引脚实际电平，不受方向配置影响。<br>"
-                "- **Output Port 0/1 (02h/03h)**：读/写，定义输出引脚的驱动电平；对配置为输入的引脚无影响。<br>"
-                "- **Polarity Inversion 0/1 (04h/05h)**：读/写，置 1 时对应输入引脚的逻辑值取反。<br>"
-                "- **Configuration 0/1 (06h/07h)**：读/写，置 1 = 输入（高阻），清 0 = 输出。"
-            ),
         },
     }
 
@@ -407,19 +365,18 @@ def _generic_overview(
     if state_group:
         sm_data = {
             "summary": (
-                f"{_feature_summary(state_group)} "
-                "驱动应在初始化和复位恢复过程中处理默认寄存器和引脚状态；"
-                "RESET 控制权、复位检测方式、初始化顺序和错误恢复策略应由项目进一步确认。"
+                f"{_feature_summary(state_group)} 驱动需根据项目定义处理状态切换和恢复行为。"
             ),
             "diagram": "",
-            "states": [],
+            "states": getattr(state_group, "states", []) if hasattr(state_group, "states") else [],
+            "transitions": [],
         }
     return {
         "chip_intro": chip_intro,
         "chip_capabilities": [
-            f"{_feature_summary(g)}" for g in groups[:12] if getattr(g, "name", "")
+            f"{_feature_summary(g)}" for g in groups[:5] if getattr(g, "name", "")
         ] or None,
-        "driver_functions": functions or ["根据项目确认的软件责任生成驱动功能需求。"],
+        "driver_functions": (functions[:5] if functions else ["根据项目确认的软件责任生成驱动功能需求。"]),
         "driver_boundary_constraints": [
             "驱动不控制芯片硬件复位引脚，复位由外部硬件电路管理。",
             "驱动不控制总线电气特性，由硬件设计保证。",
@@ -445,7 +402,7 @@ def _has_state_related_feature(feature: Any) -> bool:
     ).lower()
     return any(
         keyword in text
-        for keyword in ("state", "reset", "power-on", "mode", "transition")
+        for keyword in ("state machine", "transition", "mode switch", "operating mode")
     )
 
 

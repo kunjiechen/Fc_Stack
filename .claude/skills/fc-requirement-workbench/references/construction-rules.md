@@ -45,7 +45,7 @@ Example:
 
 ## 2. 接口需求 Interface Requirements
 
-Interface requirements describe API behavior, input/output behavior, pin access, return value semantics, preconditions, postconditions, and ownership of external interaction points.
+Interface requirements describe API behavior, input/output behavior, pin access, return value semantics, preconditions, and ownership of external interaction points.
 
 Required elements:
 
@@ -58,7 +58,6 @@ Required elements:
 
 Recommended elements:
 
-- Interface contract
 - Valid input range
 - Return value mapping
 - Failure postcondition
@@ -117,7 +116,7 @@ Example:
 
 ## 4. 诊断需求 Diagnostic Requirements
 
-Diagnostic requirements describe status interpretation, diagnostic signals, internal flags, wake-related behavior, uninitialized access, parameter errors, and controlled failure semantics.
+Diagnostic requirements describe status interpretation, diagnostic signals, internal flags, wake-related behavior, uninitialized access, parameter errors, controlled failure semantics, and readable fault/diagnostic status behavior when such faults exist.
 
 Required elements:
 
@@ -133,6 +132,7 @@ Recommended elements:
 - Applicable mode or state
 - Fault or invalid-condition trigger
 - Error return or unavailable-state behavior
+- Readable fault/diagnostic status interface or equivalent observable mechanism
 - Boundary where complete DEM/DTC design is outside scope
 - Acceptance criteria
 
@@ -141,6 +141,8 @@ Missing handling:
 - If any required element is missing, set `Status` to `Draft`.
 - If diagnostic meaning cannot be supported by source evidence, set `Status` to `needs_source`.
 - If software responsibility is unclear, set `Status` to `open_issue`.
+- `DET` or equivalent development error detection is mandatory for externally callable modules and should be rendered as a formal requirement.
+- If the module has fault detection or diagnostic behavior, include an interface requirement for fault/diagnostic readout such as `GetDevFault`, `GetDiag`, or a project-equivalent status interface.
 
 Example:
 

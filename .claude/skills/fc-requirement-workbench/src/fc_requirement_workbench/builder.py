@@ -21,6 +21,7 @@ EngineeringRequirementType = Literal[
     "functional",
     "interface",
     "configuration",
+    "diagnostic",
     "timing",
     "state",
     "safety",
@@ -33,6 +34,7 @@ TYPE_CODES = {
     "functional": "FUNC",
     "interface": "IF",
     "configuration": "CFG",
+    "diagnostic": "DIAG",
     "timing": "TIME",
     "state": "STATE",
     "safety": "SAFE",
@@ -108,6 +110,8 @@ class RequirementBuilder:
             return self._build_interface(item, findings)
         if req_type == "configuration":
             return self._build_configuration(item, findings)
+        if req_type == "diagnostic":
+            return self._build_diagnostic(item, findings)
         if req_type == "timing":
             return self._build_timing(item, findings)
         if req_type == "state":
@@ -198,6 +202,28 @@ class RequirementBuilder:
             verification=_planned_verification(config, req_type="configuration"),
         )
 
+    def _build_diagnostic(
+        self, item: dict[str, Any], findings: list[ValidationFinding]
+    ) -> EngineeringRequirement:
+        name = item.get("name") or item.get("interface_name") or "Diagnostic Behavior"
+        description = item.get("description") or f"软件应支持{name}相关的诊断、故障观测或错误处理行为。"
+        if not description.lower().startswith("the ") and not description.startswith("软件"):
+            description = f"软件应支持{description.rstrip('。.')}。"
+        dependency = item.get("dependency", "")
+        if isinstance(dependency, list):
+            dependency = ", ".join(str(value) for value in dependency if value)
+        return self._base(
+            item,
+            findings,
+            title=name,
+            description=description,
+            input=", ".join(item.get("inputs", [])) if isinstance(item.get("inputs"), list) else "",
+            output=", ".join(item.get("outputs", [])) if isinstance(item.get("outputs"), list) else "",
+            exception=item.get("exception", "") if isinstance(item.get("exception", ""), str) else "",
+            constraint=dependency,
+            verification=_planned_verification(name, req_type="diagnostic"),
+        )
+
     def _build_timing(
         self, item: dict[str, Any], findings: list[ValidationFinding]
     ) -> EngineeringRequirement:
@@ -252,6 +278,7 @@ def _default_verification(req_type: str) -> str:
         "functional": "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。",
         "interface": "通过接口测试和集成测试验证：调用接口后应检查返回值、输出参数和外部可观测结果；对非法参数、未初始化和底层访问失败场景，应返回定义错误且不破坏既有状态。",
         "configuration": "通过配置评审、默认值检查和边界测试验证：加载默认配置后应得到期望配置结果；超出有效范围、缺失配置或非法组合时，应拒绝配置并给出定义结果。",
+        "diagnostic": "通过故障注入、异常路径和集成测试验证：故障、非法参数、未初始化访问或底层通信失败时，应产生定义的错误返回、诊断状态或故障信息，并保证软件状态一致。",
         "timing": "通过时序分析、超时注入和集成测试验证：在定义测量点记录开始和结束时刻，确认满足最小/最大时序约束；超时场景应触发定义错误或恢复动作。",
         "state": "通过状态转换测试验证：在有效触发条件下应进入目标状态并更新可观测状态；非法触发、失败依赖或恢复场景下应保持或回退到定义状态。",
         "safety": "通过安全需求评审和失效场景分析验证：确认安全边界、检测机制和失效响应完整，并且异常场景下的系统反应有可审查证据。",

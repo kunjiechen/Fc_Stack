@@ -203,3 +203,13 @@ Description: Use a small, consistent status vocabulary. Preferred values are `Re
 Example: If a requirement is missing source, use `needs_source` rather than "TBD source pending".
 
 Applicability: 全部
+
+## Rule 21: Avoid Head-Heavy Documents
+
+Rule Name: `avoid_head_heavy_document`
+
+Description: Keep front-matter, scope, and overview short. The document should place its main information weight in formal requirement sections, not in introductory explanation. Capability context belongs in overview only to the extent needed to understand later requirements.
+
+Example: Do not use a long chip feature narrative, full register explanation, or dense communication timing dump when the real software obligations are only a few read/write, configuration, diagnostic, and timing requirements.
+
+Applicability: 输出模板 / 概述 / 功能 / 非功能

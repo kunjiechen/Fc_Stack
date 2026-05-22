@@ -206,6 +206,39 @@ class CompletenessRule(RequirementRule):
                 )
             )
 
+        if not index.has_text("det", "development error", "开发错误"):
+            findings.append(
+                ValidationFinding(
+                    rule=self.name,
+                    rule_group=self.group,
+                    status="failed",
+                    severity="warning",
+                    message="Mandatory DET requirement is missing.",
+                    missing=["DET / 开发错误检测"],
+                    recommendation="Add a diagnostic requirement covering uninitialized access, invalid parameters, and DET or equivalent development error reporting.",
+                )
+            )
+
+        if index.has_text("fault", "diagnostic", "interrupt", "error", "故障", "诊断", "中断") and not index.has_text(
+            "getdevfault",
+            "getdiag",
+            "故障读取",
+            "诊断读取",
+            "故障状态读取",
+            "诊断状态读取",
+        ):
+            findings.append(
+                ValidationFinding(
+                    rule=self.name,
+                    rule_group=self.group,
+                    status="failed",
+                    severity="warning",
+                    message="Fault/diagnostic behavior exists without a readable fault or diagnostic interface.",
+                    missing=["GetDevFault / GetDiag / 故障读取接口"],
+                    recommendation="Add a requirement for reading fault or diagnostic status when the module detects, reports, or tracks faults.",
+                )
+            )
+
         return findings
 
 

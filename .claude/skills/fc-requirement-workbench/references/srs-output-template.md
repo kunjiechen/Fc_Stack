@@ -86,17 +86,9 @@ Current Document version **<Document_Version>** is **TBD**.
 - 功能安全工程师
 - 项目质量和配置管理人员
 
-### 2.2 范围内
+### 2.2 适用范围
 
-本文档覆盖：
-
-{in_scope_items}
-
-### 2.3 范围外
-
-本文档不覆盖：
-
-{out_of_scope_items}
+本文档覆盖 `{module_short_name}` 模块的软件功能、接口、配置、诊断、时序及相关非功能需求，并给出需求来源、验证方式、验证阶段和需求状态。本文档不展开详细设计方案、代码实现方案和测试用例步骤。
 
 ---
 
@@ -118,11 +110,13 @@ Current Document version **<Document_Version>** is **TBD**.
 
 ## 4 概述
 
+本章仅保留理解需求所需的芯片和驱动背景信息，避免展开实现细节；正式软件责任以下文需求条目为准。
+
 ### 4.1 外设芯片介绍
 
 {peripheral_chip_summary}
 
-芯片具备以下与软件需求相关的能力：
+芯片支持以下功能：
 
 {peripheral_capability_items}
 
@@ -132,14 +126,6 @@ Current Document version **<Document_Version>** is **TBD**.
 
 {driver_function_items}
 
-**边界约束**：
-
-{driver_boundary_constraint_items}
-
-**待定项**：
-
-{driver_pending_items}
-
 ### 4.3 外设引脚介绍
 
 | 引脚 | 方向 | Pin口功能 |
@@ -148,7 +134,7 @@ Current Document version **<Document_Version>** is **TBD**.
 
 ### 4.4 状态机介绍
 
-> 若该外设芯片没有状态机跳转，则不生成此章节。若存在状态跳转，需给出状态机框图、状态介绍和跳转条件。
+> 仅当芯片或模块存在复杂状态跳转时生成此章节。若不存在明确状态跳转，则不生成此章节。
 
 {state_machine_summary}
 
@@ -160,23 +146,15 @@ Current Document version **<Document_Version>** is **TBD**.
 
 ### 4.5 通信参数
 
-> 若该芯片不涉及 SPI、I2C 等通信要求，则不生成此章节。若涉及，需提取通信参数和通信时序图。
+> 若该芯片不涉及 SPI、I2C 等通信要求，则不生成此章节。若涉及，仅保留与软件需求直接相关的关键通信参数。
 
-{bus_type} 总线支持以下速率模式：
+关键通信参数：
 
 {speed_mode_items}
 
-**器件寻址**：
+- 器件寻址：{device_addressing}
 
-{device_addressing}
-
-{timing_diagram_optional}
-
-| 参数 | 符号 | 条件 | 最小值 | 最大值 | 单位 |
-| --- | --- | --- | --- | --- | --- |
 {timing_param_rows}
-
-{register_map_summary}
 
 {timing_note}
 ```
