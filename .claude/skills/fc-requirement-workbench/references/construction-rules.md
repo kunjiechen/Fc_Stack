@@ -4,6 +4,13 @@ Use these rules when converting extracted requirement semantics into SRS require
 
 Generated requirements must be concrete, executable by software, verifiable, and traceable. If a source describes only a chip capability and no software action, interface, configuration, constraint, or verification responsibility exists, the capability should remain in the overview or source notes. Do not generate a formal SRS requirement for it unless the project scope assigns software responsibility.
 
+Boundary of this file:
+
+- This file owns per-category minimum required elements.
+- This file owns missing-field downgrade handling and category-level `Ready/Draft/open_issue/needs_source` judgment.
+- It does not define chapter layout or document prose style; those belong to `authoring-standard.md`.
+- It does not define local historical writing preferences; those belong to `calibration-rules.md`.
+
 ## 1. 功能需求 Functional Requirements
 
 Functional requirements describe observable software behavior, mode behavior, state behavior, data/control behavior, or user-visible module behavior.
@@ -224,7 +231,7 @@ Example:
 
 ## 7. 状态判断规则 Status Rules
 
-Status should be assigned by evidence maturity:
+Status should be assigned by evidence maturity. This section is the source of truth for construction-time downgrade logic:
 
 - `Ready`: all required elements are present, source evidence exists, behavior is software-actionable, and verification is defined.
 - `Draft`: required fields are missing, description is vague, acceptance criteria are incomplete, or construction is still being refined.
@@ -242,3 +249,5 @@ Any missing required element must prevent `Ready`.
 - If a feature is only provided by the chip but software has no action interface or responsibility, describe it in the overview or source context only.
 - Before generating an item, determine whether the function maps to software responsibility. If not, mark it as `NotApplicable` in intermediate analysis or omit it from SRS output.
 - All generated Ready items must follow the SRS output template field style and provide enough information for downstream design and verification.
+
+Document-level writing balance, language compactness, and overview-vs-requirement placement are defined in `authoring-standard.md`.

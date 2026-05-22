@@ -6,12 +6,21 @@ This folder contains the retained reference materials used by the local FC archi
 
 To reduce clutter, use the files by priority instead of reading everything.
 
+Responsibility boundary:
+
+- `rules/*.md` owns stable architecture rules and judgment criteria.
+- `templates/*.md` owns output shape and document layout.
+- this `README.md` owns only the index and the minimal retained loading guidance.
+- execution logic stays in `../SKILL.md`, not here.
+
 ## A. Core Rules
 
 These are the primary files for routine FC architecture design:
 
 - `rules/fc-architecture-rules.md`
   - FC file structure, layering, interface placement, MemMap strategy
+- `rules/release-workflow.md`
+  - architecture versioning, draft/release workflow, risk review, release gate
 - `rules/naming-rules.md`
   - identifier naming, type suffixes, variable naming, function naming
 - `rules/static-vs-dynamic.md`
@@ -19,7 +28,9 @@ These are the primary files for routine FC architecture design:
 - `rules/interface-selection.md`
   - when to use standard binding, macro replacement, callout, or fixed integration code
 - `templates/output-template.md`
-  - default final architecture document shape
+  - full architecture document shape
+- `templates/output-template-summary.md`
+  - concise validated architecture document shape
 
 ## B. Project Style
 
@@ -37,6 +48,16 @@ Use these only when doing deeper extraction or detailed design review:
 
 - `templates/extraction-debug-template.md`
   - structured extraction table for requirement analysis
+- `semantic-model.md`
+  - structured intermediate object model for external APIs, dependency APIs, config macros, runtime states, MemMap sections, file items, and risk items
+- `../scripts/check_architecture_markdown.py`
+  - lightweight guard for version/status metadata, risk table shape, release gate, and key file-carrier omissions
+- `../scripts/validate_architecture_objects.py`
+  - validates JSON architecture objects before rendering them into Markdown
+- `../scripts/extract_architecture_objects.py`
+  - extracts current architecture markdown back into semantic objects JSON for validation or regeneration
+
+These working aids are not stable rule sources and should not be treated as architecture policy documents.
 
 ## D. Source Provenance
 
@@ -52,6 +73,17 @@ Recommendation:
 - keep the PDFs only as provenance or audit backup
 - they are not required for daily architecture design
 - if you want a cleaner working set, they can be archived outside this folder after confirming the condensed Markdown rules are accepted as the retained source
+
+## Minimal Loading Contract
+
+For routine generation or review, load in this order:
+
+1. user requirement / architecture draft / target output file
+2. `../SKILL.md`
+3. one output template
+4. only the specific rule files needed by the question
+
+Do not load all rules, templates, demos, and learning notes by default.
 
 ## Minimal Retained Set
 

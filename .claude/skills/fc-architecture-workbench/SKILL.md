@@ -38,7 +38,7 @@ This skill supports:
 
 ## 1.1 Recent Project Corrections
 
-These corrections are hard rules for all future FC architecture generation and review:
+These corrections are hard rules for all future FC architecture generation and review. Stable file-structure, naming, and release-process details live in `references/rules/*.md`; use this section as the compact execution summary.
 
 - Architecture documents must include document metadata near the beginning and a closing metadata section at the end, including architecture version and generation time.
 - Architecture versioning uses integer major versions only: `V1`, `V2`, `V3`, and so on. Do not use `V1.0`, `V1.1`, or patch/minor versions.
@@ -52,72 +52,15 @@ These corrections are hard rules for all future FC architecture generation and r
 
 ## 1.2 Architecture Version And Release Workflow
 
-Architecture documents must carry both version and release state:
+Use `references/rules/release-workflow.md` as the source of truth for versioning, draft/release classification, risk-row handling, and release gate checks.
 
-```text
-Architecture Version: V1 / V2 / V3 / ...
-Architecture Status: Draft / Released
-Generation Time: concrete timestamp
-```
+Compact execution summary:
 
-Version strategy:
-
-- If the input contains only a requirement document, generate an initial architecture as `V1`.
-- If the generated initial architecture still has unreviewed or to-be-modified risk items, mark it as `V1 Draft`.
-- If the generated initial architecture has no pending confirmation items, it may be marked as `V1 Released`.
-- If the input contains a draft architecture file and optionally a requirement document, update the draft based on the architecture content and review decisions in `Architecture Risk and Pending Confirmation`; do not increment the version.
-- If all risk items in a draft are reviewed and no item remains to be modified, the draft may be promoted from `Vx Draft` to `Vx Released` without changing the version number.
-- If the input contains a released architecture file and a requirement document, perform an architecture upgrade and increment the major version by one, for example `V1 Released -> V2 Released`.
-- Subsequent released-architecture upgrades continue the same integer sequence, for example `V2 -> V3`.
-
-Input classification rules:
-
-- Treat an architecture as released only when metadata or document text clearly indicates `Released`, `正式发布`, or equivalent.
-- Treat an architecture as draft when metadata or document text indicates `Draft`, `草稿`, contains `待评审` / `待修改` risk items, or lacks release evidence.
-- When both requirement and architecture inputs are present, compare the requirement against the architecture and summarize the upgrade impact.
-- When only a draft architecture is present, focus on resolving or updating the draft's pending confirmations and risks; do not create a new version.
-
-Release gate:
-
-- A draft architecture must not be promoted to `Released` while any real risk item remains `待评审` or `待修改`.
-- Risk items must be converted to `已评审` before release.
-- The `其他` risk row may be `已评审` with a remark such as `无其他建议`; otherwise it blocks release like any other row.
-
-Risk review interaction rules:
-
-- Every risk row must have a stable index such as `R1`, `R2`, `R3`, and `R-OTHER`.
-- The risk table is user-editable in Markdown and also controllable from the chat window.
-- Supported risk statuses are exactly `待评审`, `已评审`, and `待修改`.
-- Use a `备注` column instead of `User Expected Action`.
-- If the user edits the Markdown table directly, read the `状态` and `备注` columns as the source of truth.
-- If the user answers in chat, parse either indexes or item names, for example `R1、R3 已评审；R5 待修改，备注：采用回调通知`.
-- If a row is `已评审`, do not change architecture content for that row unless the remark explicitly requests a change.
-- If a row is `待修改` and `备注` is empty, execute the row's `Recommended Action`.
-- If a row is `待修改` and `备注` is not empty, follow the user's remark first; use `Recommended Action` only as fallback context.
-- After executing a `待修改` row, update the architecture content, add a concise change-summary item, and change that row to `已评审` only when the requested modification is fully incorporated.
-- If the user says all rows are reviewed or requests direct release, verify that all real rows are `已评审`; if yes, update architecture status to `Released`; if not, list the blocking row indexes.
-
-Post-generation release guidance:
-
-- After generating or updating an architecture whose status is `Draft`, always guide the user toward release instead of ending with only a file summary.
-- The guidance must state the two supported review methods:
-  - edit the Markdown risk table directly by changing `状态` and `备注`
-  - reply in chat using risk indexes, such as `R1、R2 已评审；R4 待修改，备注：...`
-- The guidance must explain the fastest release path: `全部已评审，R-OTHER 无其他建议，直接发布`.
-- The guidance must explain the modification path: mark one or more rows as `待修改`; if `备注` is empty, the recommended action is executed; if `备注` is present, the remark is followed.
-- After each modification round, update the risk table, update the concise change summary, keep status as `Draft` if any row remains `待评审` or `待修改`, and prompt again for review/release.
-- Ideal flow: initial architecture `V1 Draft` -> all rows reviewed -> `V1 Released`.
-- Worst-case flow: initial architecture `V1 Draft` -> multiple review/modification rounds -> all rows reviewed -> `V1 Released`.
-- Do not upgrade the version during these draft review cycles.
-
-Every architecture upgrade or draft update must include a concise change summary covering only meaningful deltas, such as:
-
-- added, removed, or changed external interfaces
-- added, removed, or changed dependency interfaces
-- configuration, calibration, runtime-state, or MemMap changes
-- file structure or include-relationship changes
-- risks closed, risks added, or pending confirmations changed
-- release status changes
+- Requirement only -> initial `V1`, usually `V1 Draft` unless no real pending items exist.
+- Draft architecture input -> update draft without bumping version.
+- Released architecture + new requirement -> upgrade to next major version.
+- Keep `Draft` while any real risk row remains `待评审` or `待修改`.
+- Every update must carry a concise change summary.
 
 ## 2. Design Philosophy
 
@@ -141,6 +84,35 @@ over-analysis on every request
 ```
 
 The skill should dynamically scale reasoning depth while keeping final output mode stable and explicit.
+
+## 2.1 Rule Responsibilities
+
+Keep architecture guidance split by responsibility. Do not let `SKILL.md` grow into the long-term rule store.
+
+- `SKILL.md`
+  - execution entry
+  - when to use the skill
+  - input classification
+  - execution-level selection
+  - output-mode selection
+  - minimal source-loading strategy
+- `references/rules/*.md`
+  - stable architecture rules
+  - naming, file-carrier, dependency, release, and classification rules
+- `references/templates/*.md`
+  - output shape only
+  - concise vs full architecture document structure
+  - debug extraction layout
+- `references/README.md`
+  - retained reference index
+  - minimal loading guidance
+
+If a rule appears in multiple places, use this priority:
+
+1. stable architecture rule meaning -> `references/rules/*.md`
+2. output chapter shape and rendering contract -> `references/templates/*.md`
+3. loading guidance and retained index -> `references/README.md`
+4. execution flow and escalation logic -> `SKILL.md`
 
 ## 3. Source Priority
 
@@ -172,6 +144,7 @@ Main knowledge base:
 Rule layer:
 
 - `references/rules/fc-architecture-rules.md`
+- `references/rules/release-workflow.md`
 - `references/rules/project-style-rules.md`
 - `references/rules/naming-rules.md`
 - `references/rules/static-vs-dynamic.md`
@@ -190,6 +163,8 @@ Demo reference:
 - `demo-lib/summaries/`
 
 Demo summaries are reference only. If historical source-code paths are mentioned in the learning records, treat them as old study objects, not required live paths.
+
+Use only the minimum source set needed for the current task. Stable rules should be read from `references/rules/*.md`; final output shape should be read from `references/templates/*.md`. Do not repeat full rule content in this `SKILL.md`.
 
 ## 4.1 Source Loading Strategy
 
@@ -445,12 +420,39 @@ Default output mode:
 Validated Concise Architecture Output
 ```
 
+Default draft depth:
+
+```text
+Formal Draft
+```
+
 Use this output-mode decision rule before writing any deliverable:
 
 - **Validated Concise Architecture Output**: use by default for new architecture generation, architecture rewrite, architecture completion, architecture definition, architecture design, architecture review with requested corrections, and any request that does not explicitly ask for debug/trace details.
 - **Full Debug Architecture Output**: use only when the user explicitly asks for `debug`, `调试`, `完整版`, `完整模板`, `完整追踪`, `抽取过程`, `候选接口`, `反向追踪`, `遗漏矩阵`, `coverage matrix`, `full trace`, or equivalent process-level validation details.
 - **Both outputs**: use only when the user explicitly asks for both a validated concise architecture document and a full debug/trace document. Keep them as separate artifacts.
 - Updating or refining this skill based on prior architecture output deficiencies is not, by itself, a reason to generate a full debug output. First determine whether the requested deliverable is a skill update, a validated concise architecture document, or a debug/trace document.
+
+### 8.1 Draft Depth
+
+Draft depth controls how heavy the pending-risk section should be for draft architecture outputs.
+
+- **Quick Draft**
+  - use when the user asks for a quick draft, the FC is simple, or the goal is first-round discussion
+  - generate the architecture body first
+  - keep only the top `3..5` highest-value risk/pending-confirmation rows plus `R-OTHER`
+  - skip exhaustive omission matrices, full candidate rejection logic, and long risk backlogs
+- **Formal Draft**
+  - use by default
+  - generate the architecture body plus the full architecture risk and pending-confirmation table
+  - include all meaningful pending confirmations needed for release review
+
+Selection guidance:
+
+- `L1` + concise output -> prefer `Quick Draft`
+- `L2/L3` + concise output -> prefer `Formal Draft`
+- if the user explicitly asks for fast first version, discussion draft, or skeleton architecture, use `Quick Draft`
+- if the architecture is intended for review handoff or release preparation, use `Formal Draft`
 
 ## 9. Architecture Workflow
 
@@ -482,6 +484,8 @@ Classify into:
 - assumptions
 - pending confirmation items
 - low-confidence items
+
+When the task benefits from a structured intermediate layer, use `references/semantic-model.md` as the object contract before writing final Markdown. Prefer object-level validation first, then render into the selected output template.
 
 Final output must distinguish:
 
@@ -655,6 +659,8 @@ Do not expose global variables directly. Prefer function-based access such as:
 - `GetValue`
 - `SetRequest`
 - `UpdateRequest`
+
+If the requirement includes fault detection, diagnostic classification, interrupt anomaly tracking, or communication error reporting, prefer adding a readable fault/diagnostic query interface such as `GetFaultStatus` or `GetDiag` unless the source explicitly limits the behavior to internal-only handling.
 
 ## 17. Configuration Rules
 

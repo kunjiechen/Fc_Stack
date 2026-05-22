@@ -4,6 +4,13 @@ Use these rules to calibrate writing style, judgment habits, and requirement gra
 
 Each rule should guide SRS generation and review. If a generated requirement violates these rules, revise the requirement, downgrade its status, or create an open issue.
 
+Boundary of this file:
+
+- This file captures local preference and judgment calibration.
+- It does not redefine document chapter layout or rendering shape; that belongs to `authoring-standard.md` and `srs-output-template.md`.
+- It does not replace per-category minimum fields or downgrade rules; those belong to `construction-rules.md`.
+- Use this file to resolve ambiguous wording, granularity, capability-vs-project-support boundaries, and historical style choices.
+
 ## Rule 1: Separate Chip Capability From Project Support
 
 Rule Name: `capability_project_support_separation`

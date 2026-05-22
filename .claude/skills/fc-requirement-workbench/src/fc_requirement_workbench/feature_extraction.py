@@ -31,6 +31,14 @@ FeatureType = Literal[
     "feature_group",
 ]
 
+ChipType = Literal[
+    "gpio_expander",
+    "spi_device",
+    "transceiver",
+    "pwm_adc",
+    "generic",
+]
+
 
 @dataclass(frozen=True)
 class SubfunctionRecord:
@@ -126,7 +134,21 @@ class FeatureExtractor:
 
     def extract(self, parsed: ParsedDocument) -> list[FeatureRecord]:
         chunks = [chunk for chunk in parsed.chunks if not _skip_chunk(chunk)]
-        extractors = (
+        extractors = self._select_extractors(parsed, chunks)
+        with ThreadPoolExecutor(max_workers=min(8, len(extractors))) as executor:
+            batches = list(executor.map(lambda fn: fn(parsed, chunks), extractors))
+
+        candidates = [candidate for batch in batches for candidate in batch]
+        raw_records = self._materialize(_dedupe_candidates(candidates))
+        grouped_records = self._build_feature_groups(raw_records)
+        return _dedupe_records([*grouped_records, *raw_records])
+
+    def _select_extractors(
+        self,
+        parsed: ParsedDocument,
+        chunks: list[DocumentChunk],
+    ) -> tuple[Any, ...]:
+        all_extractors = (
             self._extract_identity,
             self._extract_capabilities,
             self._extract_pins,
@@ -140,13 +162,92 @@ class FeatureExtractor:
             self._extract_constraints,
             self._extract_project_mapping,
         )
-        with ThreadPoolExecutor(max_workers=min(8, len(extractors))) as executor:
-            batches = list(executor.map(lambda fn: fn(parsed, chunks), extractors))
+        chip_type = self._chip_type(parsed, chunks)
+        extractor_map: dict[ChipType, tuple[Any, ...]] = {
+            "gpio_expander": (
+                self._extract_identity,
+                self._extract_capabilities,
+                self._extract_pins,
+                self._extract_interfaces,
+                self._extract_registers,
+                self._extract_bitfields,
+                self._extract_diagnostics,
+                self._extract_timing,
+                self._extract_constraints,
+                self._extract_project_mapping,
+            ),
+            "spi_device": (
+                self._extract_identity,
+                self._extract_capabilities,
+                self._extract_pins,
+                self._extract_interfaces,
+                self._extract_registers,
+                self._extract_bitfields,
+                self._extract_diagnostics,
+                self._extract_timing,
+                self._extract_constraints,
+                self._extract_project_mapping,
+            ),
+            "transceiver": (
+                self._extract_identity,
+                self._extract_capabilities,
+                self._extract_interfaces,
+                self._extract_registers,
+                self._extract_bitfields,
+                self._extract_states,
+                self._extract_diagnostics,
+                self._extract_timing,
+                self._extract_electrical,
+                self._extract_constraints,
+                self._extract_project_mapping,
+            ),
+            "pwm_adc": (
+                self._extract_identity,
+                self._extract_capabilities,
+                self._extract_pins,
+                self._extract_interfaces,
+                self._extract_registers,
+                self._extract_diagnostics,
+                self._extract_timing,
+                self._extract_constraints,
+                self._extract_project_mapping,
+            ),
+            "generic": all_extractors,
+        }
+        return extractor_map.get(chip_type, all_extractors)
 
-        candidates = [candidate for batch in batches for candidate in batch]
-        raw_records = self._materialize(_dedupe_candidates(candidates))
-        grouped_records = self._build_feature_groups(raw_records)
-        return _dedupe_records([*grouped_records, *raw_records])
+    def _chip_type(
+        self,
+        parsed: ParsedDocument,
+        chunks: list[DocumentChunk],
+    ) -> ChipType:
+        text = " ".join(chunk.text.lower() for chunk in chunks[:20])
+        headings = " ".join(" ".join(chunk.heading_path).lower() for chunk in chunks[:20])
+        module_upper = self.module.upper()
+
+        if any(token in module_upper for token in ("NCA9539", "NCA95", "PCF857", "TCA95")):
+            return "gpio_expander"
+        if _contains_any(text + " " + headings, ("gpio expander", "i/o expander", "io expander")):
+            return "gpio_expander"
+        if ("gpio" in text or "port" in text or "quasi-bidirectional" in text) and "i2c" in text:
+            return "gpio_expander"
+
+        if any(token in module_upper for token in ("TLE62", "MC339", "DRV8", "EEPROM", "FLASH")):
+            return "spi_device"
+        if "spi" in text or "spi" in headings:
+            return "spi_device"
+
+        if _contains_any(module_upper, ("TJA", "TCAN", "ATA6", "SBC")):
+            return "transceiver"
+        if _contains_any(text + " " + headings, ("transceiver", "can fd", "lin bus", "physical layer", "bus wake", "bus sleep")):
+            return "transceiver"
+
+        if _contains_any(module_upper, ("ADC", "PWM", "SENSOR", "MONITOR")):
+            return "pwm_adc"
+        if _contains_any(text + " " + headings, ("adc", "analog-to-digital", "pwm", "duty cycle", "sensor", "monitor")):
+            return "pwm_adc"
+
+        return "generic"
 
     def _materialize(self, candidates: list[_Candidate]) -> list[FeatureRecord]:
         counters: Counter[str] = Counter()
@@ -1579,6 +1680,11 @@ def _timing_name(sentence: str) -> str:
     if re.search(r"\binterrupt|int\b", sentence, re.I):
         return "Interrupt Timing Value"
     return "Timing Value"
+
+
+def _contains_any(text: str, needles: tuple[str, ...]) -> bool:
+    haystack = text.lower()
+    return any(needle.lower() in haystack for needle in needles)
 
 
 def _has_text(records: list[FeatureRecord], *needles: str) -> bool:

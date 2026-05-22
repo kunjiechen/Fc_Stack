@@ -1,0 +1,105 @@
+{
+  "module": "Gp_NCA95xx",
+  "architecture_version": "V1",
+  "architecture_status": "Draft",
+  "output_mode": "Formal Draft",
+  "layer": "IoExtDev",
+  "change_summary": [
+    "Initial architecture generation."
+  ],
+  "external_apis": [
+    {
+      "name": "Gp_NCA95xx_GetFaultStatus",
+      "prototype": "Std_ReturnType Gp_NCA95xx_GetFaultStatus(uint16 Id_u16, uint32* FaultStatus_pu32)",
+      "description": "Returns the current fault and diagnostic status for one chip instance.",
+      "sync_mode": "Synchronous",
+      "reentrancy": "Reentrant",
+      "return_value": "E_OK / E_NOT_OK",
+      "constraints": [
+        "Id_u16 must map to a configured instance.",
+        "FaultStatus_pu32 must be non-null."
+      ],
+      "evidence": [
+        "SRS-Gp_NCA95xx-INTF-0006"
+      ],
+      "status": "Formal"
+    }
+  ],
+  "dependency_apis": [
+    {
+      "name": "Gp_NCA95xx_CalloutI2cRead",
+      "prototype": "Std_ReturnType Gp_NCA95xx_CalloutI2cRead(uint8 Addr_u8, uint8 Reg_u8, uint8* Data_pu8, uint16 Size_u16)",
+      "description": "Reads bytes from the external device over I2C.",
+      "implemented_by": "Project Adaptation",
+      "evidence": [
+        "I2C dependency for register access"
+      ],
+      "status": "Formal"
+    }
+  ],
+  "config_macros": [
+    {
+      "name": "GP_NCA95XX_CFG_DEV_ERROR_DETECT",
+      "purpose": "Global DET switch.",
+      "macro_type": "Development Error Detect",
+      "default_value": "STD_ON",
+      "usage_location": "Gp_NCA95xx_Cfg.h",
+      "evidence": [
+        "DET mandatory for externally callable module"
+      ],
+      "status": "Formal"
+    }
+  ],
+  "calibration_items": [],
+  "runtime_states": [
+    {
+      "name": "FaultState",
+      "owner": "Gp_NCA95xx.c",
+      "read_write_side": "Written by Init/MainFunction; read by external APIs.",
+      "lifecycle": "Initialized in Init and updated during runtime.",
+      "memory_section": "GP_NCA95xx_CLEAR_FAR_DATA_ALIGN4_COREx",
+      "concurrency_strategy": "Per-core ownership.",
+      "status": "Formal"
+    }
+  ],
+  "memmap_sections": [
+    {
+      "name": "CODE",
+      "target_content": "External APIs and internal helpers.",
+      "start_macro": "GP_NCA95xx_CODE_START",
+      "stop_macro": "GP_NCA95xx_CODE_STOP",
+      "used_files": [
+        "Gp_NCA95xx.c"
+      ],
+      "notes": "Standard code section.",
+      "status": "Formal"
+    }
+  ],
+  "file_items": [
+    {
+      "name": "Gp_NCA95xx_Reg.h",
+      "required_level": "Conditional",
+      "responsibility": "Register carrier for external-device communication.",
+      "key_content": "Register addresses and bit masks.",
+      "status": "Formal"
+    }
+  ],
+  "risk_items": [
+    {
+      "index": "R1",
+      "title": "Interrupt ownership",
+      "risk": "INT pin routing to MCU is not confirmed.",
+      "impact": "Interrupt handling strategy may need adjustment.",
+      "recommended_action": "Confirm whether polling or callback integration is used.",
+      "status": "待评审"
+    },
+    {
+      "index": "R-OTHER",
+      "title": "其他",
+      "risk": "User additional suggestions.",
+      "impact": "May affect final release decision.",
+      "recommended_action": "Capture user remarks in review.",
+      "status": "待评审"
+    }
+  ]
+}

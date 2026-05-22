@@ -28,6 +28,14 @@ Typical categories:
 - `Set...`
 - feature-specific control or query APIs
 
+If the FC detects, latches, classifies, or reports faults/diagnostic states, include a readable external status interface by default, such as:
+
+- `GetFaultStatus`
+- `GetDiag`
+- project-equivalent fault/status query API
+
+Do not hide fault visibility only inside internal flags when the requirement expects software-observable diagnosis.
+
 Do not use global variables as FC external interfaces.
 
 ## Selection Rules

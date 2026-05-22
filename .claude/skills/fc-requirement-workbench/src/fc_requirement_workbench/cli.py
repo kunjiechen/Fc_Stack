@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
+import pickle
 from typing import Any
 
 from .builder import RequirementBuilder
@@ -12,6 +14,10 @@ from .candidate_mapping import RequirementCandidateMapper, RequirementCandidateM
 from .candidate_pruner import CandidatePruningMarkdownRenderer, RequirementCandidatePruner
 from .feature_extraction import FeatureExtractionMarkdownRenderer, FeatureExtractor
 from .parser import MarkdownStructureParser
+from .profiles import (
+    build_chip_intro as build_profile_chip_intro,
+    build_overview as build_profile_overview,
+)
 from .raw_requirements import (
     RawInputLoader,
     RawRequirementCoverageAnalyzer,
@@ -104,32 +110,75 @@ def main() -> int:
         default=Path("artifacts/intermediate"),
         help="Directory for --with-intermediates outputs (default: artifacts/intermediate)",
     )
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=Path(".cache/fc_requirement_workbench"),
+        help="Directory for parser/extraction/planning cache files.",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable local cache reuse for parser/extraction/planning stages.",
+    )
     args = parser.parse_args()
+    cache_dir = args.cache_dir
+    use_cache = not args.no_cache
 
     # ---- Planned SRS pipeline (single path) ----
-    parsed = MarkdownStructureParser().parse_file(args.input)
-    features = FeatureExtractor(module=args.module).extract(parsed)
+    parsed = _cached_stage(
+        cache_dir,
+        "parsed",
+        _cache_key(args.input, args.module, "parsed"),
+        lambda: MarkdownStructureParser().parse_file(args.input),
+        enabled=use_cache,
+    )
+    features = _cached_stage(
+        cache_dir,
+        "features",
+        _cache_key(args.input, args.module, "features"),
+        lambda: FeatureExtractor(module=args.module).extract(parsed),
+        enabled=use_cache,
+    )
     if args.emit == "features-markdown":
         return _emit_text(
             FeatureExtractionMarkdownRenderer().render(features, args.module),
             args.output,
         )
 
-    candidates = RequirementCandidateMapper(module=args.module).map(features)
+    candidates = _cached_stage(
+        cache_dir,
+        "candidates",
+        _cache_key(args.input, args.module, "candidates"),
+        lambda: RequirementCandidateMapper(module=args.module).map(features),
+        enabled=use_cache,
+    )
     if args.emit == "candidates-markdown":
         return _emit_text(
             RequirementCandidateMarkdownRenderer().render(candidates, args.module),
             args.output,
         )
 
-    pruning = RequirementCandidatePruner().prune(candidates)
+    pruning = _cached_stage(
+        cache_dir,
+        "pruning",
+        _cache_key(args.input, args.module, "pruning"),
+        lambda: RequirementCandidatePruner().prune(candidates),
+        enabled=use_cache,
+    )
     if args.emit == "pruning-markdown":
         return _emit_text(
             CandidatePruningMarkdownRenderer().render(pruning, args.module),
             args.output,
         )
 
-    planning = RequirementPlanner(module=args.module).plan(pruning)
+    planning = _cached_stage(
+        cache_dir,
+        "planning",
+        _cache_key(args.input, args.module, "planning"),
+        lambda: RequirementPlanner(module=args.module).plan(pruning),
+        enabled=use_cache,
+    )
     if args.emit == "planning-markdown":
         return _emit_text(
             RequirementPlanningMarkdownRenderer().render(planning),
@@ -258,6 +307,34 @@ def _load_constraints(path: Path | None) -> ProjectConstraints:
     return ProjectConstraints.from_text(path.read_text(encoding="utf-8"))
 
 
+def _cache_key(input_path: Path, module: str, stage: str) -> str:
+    stat = input_path.stat()
+    raw = f"{input_path.resolve()}::{module}::{stage}::{stat.st_mtime_ns}::{stat.st_size}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+
+
+def _cached_stage(
+    cache_dir: Path,
+    stage: str,
+    key: str,
+    producer: Any,
+    *,
+    enabled: bool,
+) -> Any:
+    if not enabled:
+        return producer()
+    stage_dir = cache_dir / stage
+    stage_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = stage_dir / f"{key}.pkl"
+    if cache_file.exists():
+        with cache_file.open("rb") as handle:
+            return pickle.load(handle)
+    value = producer()
+    with cache_file.open("wb") as handle:
+        pickle.dump(value, handle)
+    return value
+
+
 def _emit_text(content: str, output: Path | None) -> int:
     if output is None:
         print(content, end="")
@@ -307,50 +384,10 @@ def _overview_from_features(features: list[Any], module: str) -> dict[str, Any]:
     chip_intro = _chip_intro(identity, groups, module)
     pin_rows: list[tuple[str, str, str]] = [_pin_row(pin) for pin in pins[:32]]
 
-    if module.upper() == "NCA9539":
-        return _nca9539_overview(chip_intro, pin_rows)
+    profile_overview = build_profile_overview(module, chip_intro, pin_rows)
+    if profile_overview is not None:
+        return profile_overview
     return _generic_overview(module, chip_intro, groups, pin_rows)
-
-
-def _nca9539_overview(chip_intro: str, pin_rows: list[tuple[str, str, str]]) -> dict[str, Any]:
-    return {
-        "chip_intro": chip_intro,
-        "chip_capabilities": [
-            "支持 16 路 GPIO 扩展，每路可独立配置为输入或输出。",
-            "支持输入状态读取、输出控制和输入极性反转。",
-            "支持 GPIO 方向配置和寄存器访问。",
-            "支持 INT 中断指示、RESET 复位和上电默认状态恢复。",
-            "支持通过 A0/A1 配置器件地址，同一总线最多挂载 4 片器件。",
-        ],
-        "driver_functions": [
-            "通过 I2C 总线读写芯片内部寄存器（Input、Output、Polarity Inversion、Configuration），实现对 16 路 GPIO 的软件控制。",
-            "在初始化阶段加载项目配置表，设置每路 GPIO 的方向（输入/输出）、默认输出电平及极性反转策略。",
-            "提供 GPIO 输入状态读取接口，按项目配置的 pin 或 port 粒度返回逻辑电平，支持极性反转后的逻辑值输出。",
-            "提供 GPIO 输出控制接口，在写单路 pin 时通过读-改-写操作保持同 port 内其余 pin 的输出值不变。",
-            "在 I2C 通信出现 NACK、timeout 或总线错误时，向上层返回明确的错误码，并支持故障状态读取。",
-            "若项目使用 INT 引脚且接入 MCU，支持中断状态检测与清除。",
-        ],
-        "pin_rows": pin_rows or [("待确认", "待确认", "待提取")],
-        "state_machine": None,
-        "communication": {
-            "bus_type": "I2C",
-            "summary": (
-                "NCA9539-Q1 通过 I2C 总线与主控制器通信，主控制器通过器件地址和命令字节访问内部寄存器。"
-            ),
-            "speed_modes": [
-                "Standard-mode：最高 100 kHz",
-                "Fast-mode：最高 400 kHz",
-            ],
-            "device_addressing": (
-                "7-bit 从机地址高 5 位固定，低 2 位由 A1/A0 决定，可形成 4 种器件地址。"
-            ),
-            "timing_params": [
-                {"name": "SCL 时钟频率", "symbol": "f_SCL", "condition": "Standard/Fast", "min": "0", "max": "400", "unit": "kHz"},
-                {"name": "RESET 脉宽", "symbol": "t_w(rst)", "condition": "RESET", "min": "6", "max": "—", "unit": "ns"},
-                {"name": "复位时长", "symbol": "t_rst", "condition": "RESET", "min": "400", "max": "—", "unit": "ns"},
-            ],
-        },
-    }
 
 
 def _generic_overview(
@@ -407,15 +444,12 @@ def _has_state_related_feature(feature: Any) -> bool:
 
 
 def _chip_intro(identity: Any, groups: list[Any], module: str) -> str:
+    profile_chip_intro = build_profile_chip_intro(module)
+    if profile_chip_intro is not None:
+        return profile_chip_intro
     names = "、".join(
         _feature_name_cn(getattr(g, "name", "")) for g in groups[:8]
     )
-    if module.upper() == "NCA9539":
-        return (
-            "NCA9539-Q1 是通过 I2C 总线访问的 16-bit GPIO 扩展器，适用于控制器 I/O 资源不足、"
-            "需要扩展输入采样、输出控制或外部状态检测的应用场景。芯片提供 GPIO 输入读取、输出控制、"
-            "输入极性反转、方向配置、中断指示、复位/上电默认状态以及寄存器访问能力。"
-        )
     if identity:
         return (
             f"`{module}` 外设芯片主要能力包括：{names or '外设访问、配置和状态处理'}。"

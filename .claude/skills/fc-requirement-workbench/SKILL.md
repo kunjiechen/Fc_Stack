@@ -83,6 +83,22 @@ Datasheet / 项目需求 / 参考SRS / Trace输入
 - SRS 只描述软件应做什么，不写设计或实现方案。
 - 需求提取时，判断一个外部芯片驱动是否需要 MainFunction 接口，先读取 [aurix2g-normative-patterns.md](references/aurix2g-normative-patterns.md) 的 1.2 MainFunction 规则和 1.1 接口分类法则。核心判断逻辑：存在异步（Asynchronous）Set 接口或周期轮询/SPI 诊断依赖 → 必须提供 MainFunction。纯 GPIO 直驱且无 SPI 状态读回 → 可不需要。
 
+##规则职责
+
+规则文件按职责分工，不要混用：
+
+- [authoring-standard.md](references/authoring-standard.md): 只负责 SRS 文档写法、章节组织、字段呈现、语言和版式约束。
+- [construction-rules.md](references/construction-rules.md): 只负责各类需求的最小必填项、缺失字段处理和构建完整性判断。
+- [calibration-rules.md](references/calibration-rules.md): 只负责本地写作偏好、粒度校准和历史案例形成的判断习惯。
+- [srs-output-template.md](references/srs-output-template.md): 只负责最终输出章节和渲染形态。
+
+如果同一规则同时出现在多份文件中，应按以下优先级收口：
+
+1. 字段是否齐全、缺失后如何降级：`construction-rules.md`
+2. 文档如何写、如何排、如何避免头重脚轻：`authoring-standard.md`
+3. 风格偏好、案例化判断和边界倾向：`calibration-rules.md`
+4. 流程边界和何时加载哪个规则：`SKILL.md`
+
 ##工作流
 
 开始处理工程级方案设计、阶段调整或规则升级时，先读取 [architecture-design.md](references/architecture-design.md)，确认当前整体架构、阶段边界和方案维护要求。
@@ -189,9 +205,9 @@ SRS-CAN-TIME-0001
 ```
 
 生成 SRS 时，优先读取 [srs-output-template.md](references/srs-output-template.md)。
-编写和评审 SRS 文档时，读取 [authoring-standard.md](references/authoring-standard.md)，遵循章节、字段、状态、语言、单位和粒度规范。
-构建 SRS 需求条目时，读取 [construction-rules.md](references/construction-rules.md)，并据此判断字段完整性和状态。
-校准写法、颗粒度、能力/项目支持边界、状态语义和 Ready/Draft 判断时，读取 [calibration-rules.md](references/calibration-rules.md)。
+编写和评审 SRS 文档时，读取 [authoring-standard.md](references/authoring-standard.md)，只遵循章节、语言、字段呈现和版式规范。
+构建 SRS 需求条目时，读取 [construction-rules.md](references/construction-rules.md)，并据此判断各类需求最小字段完整性和缺失处理。
+校准写法、颗粒度、能力/项目支持边界和历史偏好时，读取 [calibration-rules.md](references/calibration-rules.md)。
 生成 Trace/Coverage/Validation 辅助输出时，读取 [rendering-templates.md](references/rendering-templates.md)。
 
 ### 6. 输出物

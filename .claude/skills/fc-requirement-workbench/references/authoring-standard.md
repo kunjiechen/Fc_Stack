@@ -4,6 +4,13 @@ Use this standard when writing, reviewing, or validating SRS documents and SRS r
 
 This file defines the authoring rules for structure, requirement fields, status, language, units, and granularity. The concrete output layout must follow `srs-output-template.md` by default. If this authoring standard describes a full-process section that the calibrated output template omits or merges, the section intent must still be covered by requirement fields, source tables, appendix content, or internal validation rules.
 
+Boundary of this file:
+
+- This file defines document writing and rendering expectations.
+- It does not own per-category minimum required fields; that belongs to `construction-rules.md`.
+- It does not own local case-by-case writing preferences; that belongs to `calibration-rules.md`.
+- It may reference status vocabulary and field presence, but category-specific completeness and downgrade rules must be maintained in `construction-rules.md`.
+
 ## 0. Relationship To Output Template
 
 `srs-output-template.md` is the default rendering contract. This authoring standard is the quality and review contract.
@@ -68,7 +75,7 @@ For the calibrated FC output template, use this generated chapter layout unless 
 
 ## 2. Requirement Item Fields
 
-Each formal requirement item must include the following required fields:
+Each formal requirement item should render with the following common fields:
 
 | Field | Meaning | Required |
 | --- | --- | --- |
@@ -122,6 +129,7 @@ Field rules:
 - Use `范围边界` to carry project exclusions, unsupported modes, scope limits, and source-derived caveats.
 - `DET` or equivalent development error detection is a mandatory requirement topic for externally callable software modules.
 - If the module detects, latches, reports, or evaluates faults/diagnostic status, the SRS should include a readable fault/diagnostic status interface or an equivalent observable mechanism.
+- Whether a specific category has enough fields to be `Ready` is decided in `construction-rules.md`, not here.
 
 ## 3. Status Standard
 
@@ -141,7 +149,7 @@ Additional internal or generated statuses may be used in extraction, validation,
 | conflict | Sources or constraints disagree. |
 | NotApplicable | Source capability exists but does not map to software responsibility. |
 
-Rules:
+Rendering rules:
 
 - Missing required field prevents `Ready`.
 - Vague description prevents `Ready`.
@@ -149,6 +157,8 @@ Rules:
 - Conflicting source evidence prevents `Ready`.
 - A requirement with no source must be `Draft`, `needs_source`, or `Open Issue`.
 - In final SRS output, prefer `Ready`, `Draft`, and `Open Issue`. Use `needs_source`, `conflict`, or `NotApplicable` in intermediate reports unless the user requests diagnostic statuses in the SRS.
+
+Detailed category-specific downgrade conditions belong to `construction-rules.md`.
 
 ## 4. Language Style
 
@@ -242,6 +252,8 @@ Split when:
 - One part is Ready and another part is Draft/Open Issue.
 - One behavior is functional and another is nonfunctional.
 - One behavior is public API and another is internal state.
+
+Concrete category patterns and minimum construction elements belong to `construction-rules.md`.
 
 ## 8. Source And Traceability Authoring
 
