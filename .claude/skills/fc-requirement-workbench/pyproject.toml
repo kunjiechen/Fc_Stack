@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fc-requirement-workbench"
+version = "0.1.0"
+description = "Requirement semantic infrastructure and SRS generation for automotive embedded requirement engineering."
+requires-python = ">=3.11"
+dependencies = [
+  "python-docx>=1.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["fc_requirement_workbench*"]
+
+[project.scripts]
+fc-reqwb = "fc_requirement_workbench.cli:main"

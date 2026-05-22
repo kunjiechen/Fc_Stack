@@ -1,0 +1,8 @@
+interface:
+  display_name: "FC Requirement Workbench"
+  short_description: "Generate traceable automotive SRS requirements"
+  brand_color: "#2563EB"
+  default_prompt: "Use $fc-requirement-workbench to parse these automotive technical inputs into validated, traceable software requirements and SRS outputs."
+
+policy:
+  allow_implicit_invocation: true

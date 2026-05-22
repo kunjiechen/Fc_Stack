@@ -1,0 +1,1078 @@
+"""SRS structure generation and document rendering for Phase-3."""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+from html import escape
+from pathlib import Path
+from typing import Any
+
+from .builder import EngineeringRequirement
+from .rules import ValidationFinding
+
+
+SECTION_ORDER = [
+    ("5.1 模式需求", "mode_state"),
+    ("5.2 接口需求", "interface"),
+    ("5.3 配置需求", "configuration"),
+    ("5.4 诊断需求", "diagnostic"),
+    ("6.1 时序需求", "timing"),
+    ("6.2 安全等级需求", "safety"),
+    ("6.3 编码规范需求", "coding"),
+    ("6.4 资源消耗需求", "resource"),
+]
+
+
+@dataclass(frozen=True)
+class SrsDocument:
+    title: str
+    module: str
+    requirements: list[EngineeringRequirement]
+    findings: list[ValidationFinding] = field(default_factory=list)
+    overview: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "title": self.title,
+            "module": self.module,
+            "requirements": [req.to_dict() for req in self.requirements],
+            "coverage_matrix": coverage_matrix(self.requirements),
+            "trace_matrix": trace_matrix(self.requirements),
+            "findings": [finding.to_dict() for finding in self.findings],
+            "overview": self.overview,
+        }
+
+
+class SrsStructureGenerator:
+    def build_document(
+        self,
+        requirements: list[EngineeringRequirement],
+        module: str = "FC",
+        findings: list[ValidationFinding] | None = None,
+        overview: dict[str, Any] | None = None,
+    ) -> SrsDocument:
+        final_requirements = _with_default_nonfunctional_requirements(requirements, module)
+        return SrsDocument(
+            title=f"{module} 软件需求规范",
+            module=module,
+            requirements=sorted(final_requirements, key=lambda req: req.requirement_id),
+            findings=findings or [],
+            overview=overview or {},
+        )
+
+    def sections(self, document: SrsDocument) -> dict[str, list[EngineeringRequirement]]:
+        result: dict[str, list[EngineeringRequirement]] = {key: [] for _, key in SECTION_ORDER}
+        for req in document.requirements:
+            key = _section_key(req)
+            result.setdefault(key, []).append(req)
+        return result
+
+
+class MarkdownSrsRenderer:
+    def render(self, document: SrsDocument) -> str:
+        sections = SrsStructureGenerator().sections(document)
+        lines = _document_header_markdown(document)
+        lines.extend(_purpose_markdown(document))
+        lines.extend(_scope_markdown(document))
+        lines.extend(_terms_markdown())
+        lines.extend(_overview_markdown(document))
+        lines.extend(["## 5 功能需求", ""])
+        lines.append("本章描述模块必须实现的功能行为，包括模式、接口、配置和诊断。每条需求使用固定字段描述，以便后续生成设计、测试和追溯矩阵。")
+        lines.append("")
+        for heading, key in SECTION_ORDER[:4]:
+            reqs = sections.get(key, [])
+            if not reqs:
+                continue
+            lines.extend([f"### {heading}", ""])
+            for req in reqs:
+                lines.extend(_requirement_markdown(req))
+
+        lines.extend(["## 6 非功能需求", ""])
+        nonfunctional_rendered = False
+        for heading, key in SECTION_ORDER[4:]:
+            reqs = sections.get(key, [])
+            if not reqs:
+                continue
+            nonfunctional_rendered = True
+            lines.extend([f"### {heading}", ""])
+            for req in reqs:
+                lines.extend(_requirement_markdown(req))
+        if not nonfunctional_rendered:
+            lines.pop()  # remove the "## 6 非功能需求" heading
+            lines.pop()
+
+        lines.extend(_sources_markdown(document.requirements))
+        lines.extend(_requirement_list_markdown(document.requirements))
+        lines.extend(_supporting_files_markdown())
+        return "\n".join(lines).rstrip() + "\n"
+
+
+class HtmlSrsRenderer:
+    def render(self, document: SrsDocument) -> str:
+        markdown = MarkdownSrsRenderer().render(document)
+        body = _markdown_subset_to_html(markdown)
+        return "\n".join(
+            [
+                "<!doctype html>",
+                "<html>",
+                "<head>",
+                "  <meta charset=\"utf-8\">",
+                f"  <title>{escape(document.title)}</title>",
+                "  <style>body{font-family:Arial,sans-serif;line-height:1.45;margin:40px;max-width:1080px} table{border-collapse:collapse;width:100%;margin:12px 0} th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top} code{background:#f4f4f4;padding:1px 3px}</style>",
+                "</head>",
+                "<body>",
+                body,
+                "</body>",
+                "</html>",
+            ]
+        )
+
+
+class DocxSrsRenderer:
+    def render_to_file(self, document: SrsDocument, path: str | Path) -> Path:
+        from docx import Document
+        from docx.shared import Inches
+
+        output = Path(path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        doc = Document()
+        for section in doc.sections:
+            section.top_margin = Inches(0.75)
+            section.bottom_margin = Inches(0.75)
+            section.left_margin = Inches(0.75)
+            section.right_margin = Inches(0.75)
+
+        doc.add_heading(document.title, level=0)
+        _add_matrix_docx(
+            doc,
+            ["项目", "内容"],
+            [
+                ("文档编号", f"SRS-{_normalize_doc_token(document.module)}-001"),
+                ("文档名称", document.title),
+                ("模块名称", document.module),
+                ("模块简称", document.module),
+                ("文档状态", "Draft"),
+                ("安全等级", "QM"),
+            ],
+        )
+        doc.add_heading("1 目的", level=1)
+        doc.add_paragraph(f"本文档定义 {document.module} 模块的软件需求。")
+        doc.add_heading("2 适用范围", level=1)
+        doc.add_paragraph(f"本文档适用于 {document.module} 模块的软件开发、评审、集成、测试和交付活动。")
+        doc.add_heading("3 定义和缩写", level=1)
+        _add_matrix_docx(doc, ["缩写", "英文全称", "中文说明"], _default_abbreviations())
+        doc.add_heading("4 概述", level=1)
+        doc.add_paragraph(f"{document.module} 模块需求由输入材料和需求语义对象生成。")
+
+        sections = SrsStructureGenerator().sections(document)
+        doc.add_heading("5 功能需求", level=1)
+        for heading, key in SECTION_ORDER[:4]:
+            doc.add_heading(heading, level=2)
+            reqs = sections.get(key, [])
+            if not reqs:
+                doc.add_paragraph("本节暂无生成需求。")
+                continue
+            for req in reqs:
+                _add_requirement_docx(doc, req)
+
+        doc.add_heading("6 非功能需求", level=1)
+        for heading, key in SECTION_ORDER[4:]:
+            doc.add_heading(heading, level=2)
+            reqs = sections.get(key, [])
+            if not reqs:
+                doc.add_paragraph("本节暂无生成需求。")
+                continue
+            for req in reqs:
+                _add_requirement_docx(doc, req)
+
+        doc.add_heading("7 需求来源", level=1)
+        _add_matrix_docx(doc, ["来源类别", "来源名称", "与本文档关系", "状态"], _source_rows(document.requirements))
+        doc.add_heading("附录A 需求清单", level=1)
+        _add_matrix_docx(doc, ["需求ID", "类别", "需求名称", "验证方式", "验证阶段", "状态"], _requirement_list_rows(document.requirements))
+        doc.add_heading("附录B 支持和相关性文件", level=1)
+        _add_matrix_docx(doc, ["序号", "文件名称", "文件编号/版本", "来源", "与本文档关系"], _supporting_file_rows())
+        doc.save(output)
+        return output
+
+
+def coverage_matrix(requirements: list[EngineeringRequirement]) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for req in requirements:
+        rows.append(
+            [
+                req.requirement_id,
+                _source_summary(req),
+                "Warnings" if req.validation else "Passed",
+                req.verification,
+            ]
+        )
+    return rows
+
+
+def trace_matrix(requirements: list[EngineeringRequirement]) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for req in requirements:
+        if not req.source:
+            rows.append(["", req.requirement_id])
+            continue
+        for source in req.source:
+            source_id = source.get("chunk_id") or source.get("document", "")
+            rows.append([source_id, req.requirement_id])
+    return rows
+
+
+def _section_key(req: EngineeringRequirement) -> str:
+    if req.requirement_type == "state":
+        return "mode_state"
+    if req.requirement_type == "functional":
+        return "mode_state"
+    if req.requirement_type == "timing":
+        return "timing"
+    return req.requirement_type
+
+
+def _document_header_markdown(document: SrsDocument) -> list[str]:
+    return [
+        f"# 《{document.title}》",
+        "",
+        f"**{document.module}_需求规范**",
+        "",
+        f"**{document.module}_Requirements Specification**",
+        "",
+        f"项目编号/Project number:{document.module}",
+        "保密性/Security:**内部使用**",
+        "",
+        "**Document Properties**",
+        "Status:**草稿**",
+        "版本:**Draft**",
+        "Author:待填写",
+        "Created:待填写",
+        "",
+        "**Approved Versions**",
+        "Current Document version **Draft** is **TBD**.",
+        "",
+        "**Approved Versions:**",
+        "",
+        "- TBD",
+        "",
+        "**Document Signatures**",
+        "",
+        "| 版本 | 状态 | 审批人 | 日期 | 意见 |",
+        "| --- | --- | --- | --- | --- |",
+        "| Draft | 草稿 | TBD | TBD | TBD |",
+        "",
+        "## 适用说明",
+        "",
+        f"本文档适用于 `{document.module}` 模块的软件需求定义。本文档仅描述软件应满足的需求，不描述详细设计方案、代码实现方案或测试用例步骤。",
+        "",
+        "---",
+        "",
+        "## 文档修订记录",
+        "",
+        "| 版本 | 日期 | 作者 | 变更说明 | 状态 |",
+        "| --- | --- | --- | --- | --- |",
+        "| Draft | 待填写 | 待填写 | 初版生成 | Draft |",
+        "",
+        "---",
+        "",
+        "## 目录",
+        "",
+        "- [1 目的](#1-目的)",
+        "- [2 适用范围](#2-适用范围)",
+        "- [3 定义和缩写](#3-定义和缩写)",
+        "- [4 概述](#4-概述)",
+        "- [5 功能需求](#5-功能需求)",
+        "- [6 非功能需求](#6-非功能需求)",
+        "- [7 需求来源](#7-需求来源)",
+        "- [附录A 需求清单](#附录a-需求清单)",
+        "- [附录B 支持和相关性文件](#附录b-支持和相关性文件)",
+        "",
+        "---",
+        "",
+    ]
+
+
+def _purpose_markdown(document: SrsDocument) -> list[str]:
+    return [
+        "## 1 目的",
+        "",
+        f"本文档定义 `{document.module}` 模块的软件需求，明确模块的功能边界、对外接口、状态行为、配置约束、诊断状态、时序要求、非功能约束和验证要求。",
+        "",
+        f"本文档作为 `{document.module}` 模块软件架构设计、详细设计、编码实现、单元测试、集成测试和系统测试的上游输入。所有正式需求均应具备需求 ID、来源、约束、验收准则和验证方式。",
+        "",
+        "---",
+        "",
+    ]
+
+
+def _scope_markdown(document: SrsDocument) -> list[str]:
+    return [
+        "## 2 适用范围",
+        "",
+        f"本文档适用于 `{document.module}` 模块的软件开发、评审、集成、测试和交付活动。",
+        "",
+        "### 2.1 适用对象",
+        "",
+        "- 软件需求工程师",
+        "- 软件架构和详细设计工程师",
+        "- 软件开发工程师",
+        "- 软件测试工程师",
+        "- 功能安全工程师",
+        "- 项目质量和配置管理人员",
+        "",
+        "### 2.2 范围内",
+        "",
+        "本文档覆盖：",
+        "",
+        f"- `{document.module}` 模块的软件功能、接口、配置、状态、诊断、时序和非功能需求。",
+        "- 需求来源、验证方式、验证阶段和需求状态。",
+        "",
+        "### 2.3 范围外",
+        "",
+        "本文档不覆盖：",
+        "",
+        "- 详细设计方案、代码实现方案和测试用例步骤。",
+        "- 未由项目输入明确分配给本模块的软件责任。",
+        "",
+        "---",
+        "",
+    ]
+
+
+def _terms_markdown() -> list[str]:
+    lines = [
+        "## 3 定义和缩写",
+        "",
+        "### 3.1 定义",
+        "",
+        "| 术语 | 定义 |",
+        "| --- | --- |",
+        "| 对外支持行为 | 项目要求模块通过接口、配置或状态对外提供的软件行为。 |",
+        "| 硬件能力 | 芯片或平台具备的能力，不自动等同于软件需求。 |",
+        "| 软件责任 | 项目明确要求模块实现、拒绝、配置、验证或报告的行为。 |",
+        "",
+        "### 3.2 缩写",
+        "",
+        "| 缩写 | 英文全称 | 中文说明 |",
+        "| --- | --- | --- |",
+    ]
+    lines.extend(f"| {abbr} | {full} | {cn} |" for abbr, full, cn in _default_abbreviations())
+    lines.extend(["", "---", ""])
+    return lines
+
+
+def _overview_markdown(document: SrsDocument) -> list[str]:
+    overview = document.overview or {}
+    lines = ["## 4 概述", ""]
+
+    # ---- 4.1 外设芯片介绍 ----
+    lines.extend(_chip_overview_markdown(document, overview))
+
+    # ---- 4.2 驱动功能介绍 ----
+    lines.extend(_driver_functions_markdown(document, overview))
+
+    # ---- 4.3 外设引脚介绍 ----
+    lines.extend(_pin_table_markdown(overview))
+
+    # ---- 4.4 状态机介绍（按需生成） ----
+    state_lines = _state_machine_markdown(document, overview)
+    has_state_machine = bool(state_lines)
+    if has_state_machine:
+        lines.extend(state_lines)
+
+    # ---- 通信参数（按需生成：仅 I2C/SPI 器件），编号跟随是否有状态机 ----
+    comm_section_num = "4.5" if has_state_machine else "4.4"
+    lines.extend(_communication_params_markdown(document, overview, section_num=comm_section_num))
+
+    lines.extend(["---", ""])
+    return lines
+
+
+def _chip_overview_markdown(document: SrsDocument, overview: dict[str, Any]) -> list[str]:
+    chip_intro = overview.get("chip_intro", "")
+    chip_capabilities = overview.get("chip_capabilities") or overview.get("capability_items") or []
+    lines = ["### 4.1 外设芯片介绍", ""]
+    if chip_intro:
+        lines.extend([chip_intro, ""])
+    if chip_capabilities:
+        lines.append("芯片具备以下与软件需求相关的能力：")
+        lines.append("")
+        lines.extend(f"- {item}" for item in chip_capabilities)
+        lines.append("")
+    if not chip_intro and not chip_capabilities:
+        lines.extend([
+            f"`{document.module}` 外设芯片用于扩展控制器外部控制和状态采集能力，"
+            "驱动负责封装芯片访问、配置和运行时控制行为。",
+            "",
+        ])
+    return lines
+
+
+def _driver_functions_markdown(document: SrsDocument, overview: dict[str, Any]) -> list[str]:
+    functions = overview.get("driver_functions") or [
+        "初始化并配置外设工作参数。",
+        "提供外设读写、状态处理和错误处理接口。",
+    ]
+    constraints = overview.get("driver_boundary_constraints") or [
+        "驱动不控制芯片硬件复位引脚，复位由硬件电路管理。",
+        "驱动不控制总线电气特性（上拉电阻、总线电容），由硬件设计保证。",
+    ]
+    pending = overview.get("driver_pending_items") or [
+        "项目 GPIO 使用清单和默认配置表。",
+        "设备地址和 I2C 通道分配。",
+    ]
+
+    lines = [
+        "### 4.2 驱动功能介绍",
+        "",
+        f"`{document.module}` 驱动应实现以下软件功能：",
+        "",
+    ]
+    lines.extend(f"{idx}. {item}" for idx, item in enumerate(functions, start=1))
+    lines.append("")
+
+    lines.extend([
+        "**边界约束**：",
+        "",
+    ])
+    lines.extend(f"- {item}" for item in constraints)
+    lines.append("")
+
+    lines.extend([
+        "**待定项**：",
+        "",
+    ])
+    lines.extend(f"- {item}" for item in pending)
+    lines.append("")
+    return lines
+
+
+def _pin_table_markdown(overview: dict[str, Any]) -> list[str]:
+    pin_rows = overview.get("pin_rows") or [("待确认", "待确认", "待提取")]
+    normalized: list[tuple[str, str, str]] = []
+    for row in pin_rows:
+        if len(row) >= 3:
+            normalized.append((str(row[0]), str(row[1]), str(row[2])))
+        else:
+            normalized.append((str(row[0]), str(row[1]), ""))
+    lines = [
+        "### 4.3 外设引脚介绍",
+        "",
+        "| 引脚 | 方向 | Pin口功能 |",
+        "| --- | --- | --- |",
+    ]
+    lines.extend(
+        f"| {_escape_table_text(pin)} | {_escape_table_text(direction)} | {_escape_table_text(function)} |"
+        for pin, direction, function in normalized
+    )
+    lines.append("")
+    return lines
+
+
+def _state_machine_markdown(document: SrsDocument, overview: dict[str, Any]) -> list[str]:
+    sm_data = overview.get("state_machine")
+    if not sm_data or not isinstance(sm_data, dict):
+        return []
+    states = sm_data.get("states", [])
+    diagram = sm_data.get("diagram", "")
+    summary = sm_data.get("summary", "")
+    if not summary and not states and not diagram:
+        return []
+    lines = [
+        "### 4.4 状态机介绍",
+        "",
+    ]
+    if summary:
+        lines.extend([summary, ""])
+    if diagram:
+        lines.extend([diagram, ""])
+    if states:
+        lines.extend([
+            "| 状态 | 说明 | 进入条件 | 退出条件 |",
+            "| --- | --- | --- | --- |",
+        ])
+        for state in states:
+            lines.append(
+                f"| {_escape_table_text(state.get('name', ''))} "
+                f"| {_escape_table_text(state.get('description', ''))} "
+                f"| {_escape_table_text(state.get('entry', ''))} "
+                f"| {_escape_table_text(state.get('exit', ''))} |"
+            )
+        lines.append("")
+    return lines
+
+
+def _communication_params_markdown(document: SrsDocument, overview: dict[str, Any], section_num: str = "4.5") -> list[str]:
+    comm = overview.get("communication")
+    if not comm or not isinstance(comm, dict):
+        return []
+    bus_type = comm.get("bus_type", "")
+    summary = comm.get("summary", "")
+    speed_modes = comm.get("speed_modes", [])
+    addressing = comm.get("device_addressing", "")
+    timing_params = comm.get("timing_params", [])
+    timing_diagram = comm.get("timing_diagram", "")
+    reg_map = comm.get("register_map_summary", "")
+    if not summary and not speed_modes and not timing_params and not reg_map:
+        return []
+    lines = [
+        f"### {section_num} {bus_type} 通信参数" if bus_type else f"### {section_num} 通信参数",
+        "",
+    ]
+    if summary:
+        lines.extend([summary, ""])
+    if speed_modes:
+        lines.append(f"{bus_type} 总线支持以下速率模式：" if bus_type else "总线支持以下速率模式：")
+        lines.append("")
+        lines.extend(f"- {mode}" for mode in speed_modes)
+        lines.append("")
+
+    if addressing:
+        lines.extend([
+            "**器件寻址**：",
+            "",
+            addressing,
+            "",
+        ])
+
+    if timing_diagram:
+        lines.extend([timing_diagram, ""])
+
+    if timing_params:
+        lines.extend([
+            "| 参数 | 符号 | 条件 | 最小值 | 最大值 | 单位 |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ])
+        for param in timing_params:
+            lines.append(
+                f"| {_escape_table_text(param.get('name', ''))} "
+                f"| {_escape_table_text(param.get('symbol', ''))} "
+                f"| {_escape_table_text(param.get('condition', ''))} "
+                f"| {_escape_table_text(param.get('min', ''))} "
+                f"| {_escape_table_text(param.get('max', ''))} "
+                f"| {_escape_table_text(param.get('unit', ''))} |"
+            )
+        lines.append("")
+
+    if reg_map:
+        lines.extend([reg_map, ""])
+
+    return lines
+
+
+def _requirement_markdown(req: EngineeringRequirement) -> list[str]:
+    # Single rendering contract for requirement items:
+    # heading + status tags + prose description + type-specific bullet block.
+    # Do not reintroduce per-item Markdown field tables here.
+    category_tag = _short_category_tag(req.requirement_type)
+    asil = "QM"
+    method = _verification_method(req.verification)
+    stage = _verification_stage(req.verification)
+    verify_tag = method if method == stage else f"{method} / {stage}"
+    status = _requirement_status(req)
+    source = _source_summary(req)
+
+    status_tags = [category_tag, asil, verify_tag, status]
+    if source:
+        status_tags.append(f"来源: {source}")
+    status_bar = "`" + "` `".join(status_tags) + "`"
+
+    lines = [
+        f"#### {req.requirement_id} {req.title}",
+        "",
+        status_bar,
+        "",
+    ]
+
+    if req.description:
+        lines.extend([req.description, ""])
+
+    # Constraint block — title & fields depend on requirement type
+    block_title = _BLOCK_TITLES.get(req.requirement_type, "约束定义")
+    block_fields = _BLOCK_FIELDS.get(req.requirement_type, [])
+
+    description_text = (req.description or "").strip()
+    bullets: list[str] = []
+    for label, attr_name in block_fields:
+        value = _block_attr_value(req, attr_name)
+        if not value:
+            continue
+        # Skip when field value duplicates the prose description already shown above
+        if value.strip() == description_text:
+            continue
+        bullets.append(f"- **{label}**：{_escape_inline(value)}")
+
+    if bullets:
+        lines.append(f"**{block_title}**")
+        lines.append("")
+        lines.extend(bullets)
+        lines.append("")
+
+    if req.validation:
+        warnings = "；".join(item["message"] for item in req.validation)
+        lines.append(f"> 评审提示：{_escape_inline(warnings)}")
+        lines.append("")
+
+    return lines
+
+
+# ---------------------------------------------------------------------------
+# New format: block title & field mappings per requirement type
+# ---------------------------------------------------------------------------
+
+_BLOCK_TITLES: dict[str, str] = {
+    "interface": "接口约束",
+    "functional": "功能约束",
+    "configuration": "配置约束",
+    "state": "状态约束",
+    "timing": "时序约束",
+    "safety": "约束定义",
+    "coding": "约束定义",
+    "resource": "约束定义",
+}
+
+_BLOCK_FIELDS: dict[str, list[tuple[str, str]]] = {
+    "interface": [
+        ("前置条件", "pre_condition"),
+        ("触发条件", "trigger"),
+        ("输入", "input"),
+        ("输出", "output"),
+        ("异常处理", "exception"),
+        ("验收准则", "verification"),
+    ],
+    "functional": [
+        ("输入", "input"),
+        ("输出", "output"),
+        ("行为边界", "constraint"),
+        ("异常处理", "exception"),
+        ("验收准则", "verification"),
+    ],
+    "configuration": [
+        ("配置项", "constraint"),
+        ("前置条件", "pre_condition"),
+        ("验收准则", "verification"),
+    ],
+    "state": [
+        ("状态描述", "description"),
+        ("触发条件", "trigger"),
+        ("转换规则", "constraint"),
+        ("验收准则", "verification"),
+    ],
+    "timing": [
+        ("时序约束", "constraint"),
+        ("验收准则", "verification"),
+    ],
+    "safety": [
+        ("约束内容", "description"),
+        ("适用范围", "constraint"),
+        ("验收准则", "verification"),
+    ],
+    "coding": [
+        ("约束内容", "description"),
+        ("适用范围", "constraint"),
+        ("验收准则", "verification"),
+    ],
+    "resource": [
+        ("约束内容", "description"),
+        ("适用范围", "constraint"),
+        ("验收准则", "verification"),
+    ],
+}
+
+
+def _short_category_tag(req_type: str) -> str:
+    return {
+        "functional": "功能需求",
+        "state": "状态需求",
+        "interface": "接口需求",
+        "configuration": "配置需求",
+        "timing": "时序需求",
+        "safety": "安全需求",
+        "coding": "编码需求",
+        "resource": "资源需求",
+    }.get(req_type, req_type)
+
+
+def _block_attr_value(req: EngineeringRequirement, attr_name: str) -> str:
+    if attr_name == "verification":
+        return _acceptance_criteria(req)
+    return (getattr(req, attr_name, "") or "").strip()
+
+
+def _escape_inline(value: str) -> str:
+    return str(value).replace("|", "\\|").replace("\n", "；")
+
+
+def _sources_markdown(requirements: list[EngineeringRequirement]) -> list[str]:
+    return [
+        "## 7 需求来源",
+        "",
+        "| 来源类别 | 来源名称 | 与本文档关系 | 状态 |",
+        "| --- | --- | --- | --- |",
+        *_source_rows_markdown(requirements),
+        "",
+        "---",
+        "",
+    ]
+
+
+def _requirement_list_markdown(requirements: list[EngineeringRequirement]) -> list[str]:
+    lines = [
+        "## 附录A 需求清单",
+        "",
+        "| 需求ID | 类别 | 需求名称 | 验证方式 | 验证阶段 | 状态 |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    lines.extend(
+        f"| {req.requirement_id} | {_category_label(req)} | {_escape_table_text(req.title)} | {_verification_method(req.verification)} | {_verification_stage(req.verification)} | {_requirement_status(req)} |"
+        for req in requirements
+    )
+    lines.extend(["", "---", ""])
+    return lines
+
+
+def _supporting_files_markdown() -> list[str]:
+    lines = [
+        "## 附录B 支持和相关性文件",
+        "",
+        "| 序号 | 文件名称 | 文件编号/版本 | 来源 | 与本文档关系 |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    lines.extend(
+        f"| {seq} | {name} | {version} | {source} | {relation} |"
+        for seq, name, version, source, relation in _supporting_file_rows()
+    )
+    lines.append("")
+    return lines
+
+
+def _category_label(req: EngineeringRequirement) -> str:
+    return _short_category_tag(req.requirement_type)
+
+
+def _acceptance_criteria(req: EngineeringRequirement) -> str:
+    if req.verification:
+        return req.verification.rstrip(".。")
+    return "通过评审、分析或测试确认需求行为满足。"
+
+
+def _verification_method(verification: str) -> str:
+    lowered = verification.lower()
+    methods: list[str] = []
+    if "review" in lowered or "inspection" in lowered or "评审" in verification or "检查" in verification:
+        methods.append("Review")
+    if "analysis" in lowered or "分析" in verification:
+        methods.append("Analysis")
+    if "test" in lowered or "测试" in verification:
+        methods.append("Test")
+    if not methods:
+        methods.append("Review")
+    return "/".join(dict.fromkeys(methods))
+
+
+def _verification_stage(verification: str) -> str:
+    lowered = verification.lower()
+    stages: list[str] = []
+    if "unit" in lowered or "ut" in lowered or "功能测试" in verification or "边界测试" in verification:
+        stages.append("UT")
+    if "integration" in lowered or "it" in lowered or "interface" in lowered or "接口" in verification or "集成" in verification:
+        stages.append("IT")
+    if "system" in lowered or "st" in lowered or "系统" in verification:
+        stages.append("ST")
+    if "review" in lowered or "inspection" in lowered or "analysis" in lowered or "评审" in verification or "分析" in verification:
+        stages.append("Review")
+    if not stages:
+        stages.append("UT")
+    return "/".join(dict.fromkeys(stages))
+
+
+def _requirement_status(req: EngineeringRequirement) -> str:
+    is_candidate = any(
+        source.get("document") == "RequirementCandidate"
+        or str(source.get("chunk_id", "")).startswith("CAND-")
+        for source in req.source
+    )
+    is_planned = any(source.get("document") == "RequirementPlan" for source in req.source)
+    status_text = " ".join(
+        [
+            req.description,
+            req.constraint,
+            req.pre_condition,
+            req.trigger,
+            req.input,
+            req.output,
+            req.exception,
+            req.verification,
+            _source_summary(req),
+        ]
+    ).lower()
+    if (
+        "needs review" in status_text
+        or "project input required" in status_text
+        or "open issue" in status_text
+        or "缺失输入" in status_text
+        or "需确认" in status_text
+        or "需项目输入确认" in status_text
+    ):
+        return "Open Issue"
+    if is_candidate:
+        return "Draft"
+    if is_planned:
+        return "Draft"
+    if "draft candidate" in status_text or "required inputs:" in status_text or "draft template default" in status_text:
+        return "Draft"
+    if req.validation:
+        return "Draft"
+    if not req.source or not req.description:
+        return "Draft"
+    return "Ready"
+
+
+def _escape_table_text(value: str) -> str:
+    return str(value).replace("|", "\\|").replace("\n", "<br>")
+
+
+def _normalize_doc_token(value: str) -> str:
+    token = "".join(ch for ch in value.upper() if ch.isalnum())
+    return token or "FC"
+
+
+def _default_abbreviations() -> list[tuple[str, str, str]]:
+    return [
+        ("SRS", "Software Requirement Specification", "软件需求规范"),
+        ("SDD", "Software Design Description", "软件设计说明"),
+        ("UT", "Unit Test", "单元测试"),
+        ("IT", "Integration Test", "集成测试"),
+        ("ST", "System Test", "系统测试"),
+        ("QM", "Quality Management", "质量管理等级"),
+        ("GPIO", "General Purpose Input/Output", "通用输入输出"),
+        ("I2C", "Inter-Integrated Circuit", "双线串行总线"),
+    ]
+
+
+def _source_rows_markdown(requirements: list[EngineeringRequirement]) -> list[str]:
+    rows = _source_rows(requirements)
+    return [
+        f"| {_escape_table_text(category)} | {_escape_table_text(name)} | {_escape_table_text(relation)} | {_escape_table_text(status)} |"
+        for category, name, relation, status in rows
+    ]
+
+
+def _source_rows(requirements: list[EngineeringRequirement]) -> list[tuple[str, str, str, str]]:
+    seen: set[str] = set()
+    rows: list[tuple[str, str, str, str]] = []
+    for req in requirements:
+        for source in req.source:
+            name = _public_source_name(source)
+            if name in seen:
+                continue
+            seen.add(name)
+            rows.append(("输入材料", name, "需求来源", "已接入"))
+    if not rows:
+        rows.append(("输入材料", "待补充", "需求来源", "待补充"))
+    return rows
+
+
+def _requirement_list_rows(
+    requirements: list[EngineeringRequirement],
+) -> list[tuple[str, str, str, str, str, str]]:
+    return [
+        (
+            req.requirement_id,
+            _category_label(req),
+            req.title,
+            _verification_method(req.verification),
+            _verification_stage(req.verification),
+            _requirement_status(req),
+        )
+        for req in requirements
+    ]
+
+
+def _supporting_file_rows() -> list[tuple[str, str, str, str, str]]:
+    return [
+        ("1", "项目需求文档", "待填写", "项目输入", "软件需求来源"),
+        ("2", "Datasheet", "待填写", "芯片资料", "芯片能力、引脚、状态和时序约束来源"),
+        ("3", "项目开发规范", "待填写", "项目规范", "编码、资源和过程约束来源"),
+    ]
+
+
+def _with_default_nonfunctional_requirements(
+    requirements: list[EngineeringRequirement],
+    module: str,
+) -> list[EngineeringRequirement]:
+    existing = {req.requirement_type for req in requirements}
+    result = list(requirements)
+    token = _normalize_doc_token(module)
+    if "safety" not in existing:
+        result.append(
+            EngineeringRequirement(
+                requirement_id=f"SRS-{token}-SAFE-0001",
+                semantic_id=f"DEFAULT-{token}-SAFE-0001",
+                requirement_type="safety",
+                title="安全等级默认要求",
+                description="若项目未提供功能安全等级输入，软件需求默认按 QM 等级管理；若后续项目输入给出 ASIL/QM 要求，应按项目输入更新本需求。",
+                constraint="需确认：项目安全等级、ASIL 分配、诊断覆盖目标。",
+                verification="通过安全需求评审验证。",
+                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-SAFETY-QM", "evidence": "No project safety input; default QM requirement generated."}],
+            )
+        )
+    if "coding" not in existing:
+        result.append(
+            EngineeringRequirement(
+                requirement_id=f"SRS-{token}-CODE-0001",
+                semantic_id=f"DEFAULT-{token}-CODE-0001",
+                requirement_type="coding",
+                title="编码规范符合性要求",
+                description="软件实现应遵循项目编码规范、命名规范、静态检查规则和评审要求；若项目提供具体编码规范，应按项目规范替换或细化本需求。",
+                constraint="需确认：项目编码规范版本、MISRA/静态检查规则、复杂度阈值。",
+                verification="通过代码评审、静态分析和编码规范检查验证。",
+                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-CODING-STANDARD", "evidence": "Default coding standard requirement generated from template."}],
+            )
+        )
+    if "resource" not in existing:
+        result.append(
+            EngineeringRequirement(
+                requirement_id=f"SRS-{token}-RES-0001",
+                semantic_id=f"DEFAULT-{token}-RES-0001",
+                requirement_type="resource",
+                title="资源消耗默认要求",
+                description="软件资源消耗应满足项目资源预算；若项目未提供预算，需在设计和集成阶段统计 ROM、RAM、栈、CPU、I/O 和总线访问占用并形成评审结论。",
+                constraint="需确认：ROM/RAM/栈/CPU/I/O/I2C 总线预算和测量方法。",
+                verification="通过资源统计、集成测试或评审验证。",
+                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-RESOURCE-BUDGET", "evidence": "No project resource budget input; default resource requirement generated."}],
+            )
+        )
+    return result
+
+
+def _constraints_markdown(findings: list[ValidationFinding]) -> list[str]:
+    lines = ["## 10. Constraints", ""]
+    if not findings:
+        return lines + ["No validation warnings injected.", ""]
+    lines += ["| Severity | Rule | Requirement | Finding | Recommendation |", "|---|---|---|---|---|"]
+    for finding in findings:
+        ids = ", ".join(finding.requirement_ids)
+        lines.append(
+            f"| {finding.severity} | {finding.rule} | {ids} | {finding.message} | {finding.recommendation} |"
+        )
+    lines.append("")
+    return lines
+
+
+def _verification_markdown(requirements: list[EngineeringRequirement]) -> list[str]:
+    lines = ["## 11. Verification Strategy", "", "| Requirement | Verification |", "|---|---|"]
+    for req in requirements:
+        lines.append(f"| {req.requirement_id} | {req.verification} |")
+    lines.append("")
+    return lines
+
+
+def _traceability_markdown(requirements: list[EngineeringRequirement]) -> list[str]:
+    lines = ["## 12. Traceability", "", "### Trace Matrix", "", "| Source | Requirement ID |", "|---|---|"]
+    for source, req_id in trace_matrix(requirements):
+        lines.append(f"| {source} | {req_id} |")
+    lines += ["", "### Coverage Matrix", "", "| Requirement | Source | Validation | Test |", "|---|---|---|---|"]
+    for req_id, source, validation, test in coverage_matrix(requirements):
+        lines.append(f"| {req_id} | {source} | {validation} | {test} |")
+    lines.append("")
+    return lines
+
+
+def _source_summary(req: EngineeringRequirement) -> str:
+    if not req.source:
+        return ""
+    return "; ".join(dict.fromkeys(_public_source_name(source) for source in req.source if _public_source_name(source)))
+
+
+def _public_source_name(source: dict[str, Any]) -> str:
+    document = source.get("document", "")
+    chunk_id = source.get("chunk_id", "")
+    if document == "RequirementCandidate" or str(chunk_id).startswith("CAND-"):
+        return "芯片手册"
+    if document == "RequirementPlan":
+        return "芯片手册"
+    if document == "SRS Template":
+        return "需求规范模板"
+    return document or chunk_id or "输入材料"
+
+
+def _markdown_subset_to_html(markdown: str) -> str:
+    lines = markdown.splitlines()
+    html_lines: list[str] = []
+    in_table = False
+    for line in lines:
+        if line.startswith("|") and line.endswith("|"):
+            cells = [escape(cell.strip()) for cell in line.strip("|").split("|")]
+            if all(set(cell) <= {"-", ":"} for cell in cells):
+                continue
+            if not in_table:
+                html_lines.append("<table>")
+                in_table = True
+            tag = "th" if not html_lines[-1].startswith("<tr>") and len(html_lines) >= 1 else "td"
+            html_lines.append("<tr>" + "".join(f"<{tag}>{cell}</{tag}>" for cell in cells) + "</tr>")
+            continue
+        if in_table:
+            html_lines.append("</table>")
+            in_table = False
+        if line.startswith("# "):
+            html_lines.append(f"<h1>{escape(line[2:])}</h1>")
+        elif line.startswith("## "):
+            html_lines.append(f"<h2>{escape(line[3:])}</h2>")
+        elif line.startswith("### "):
+            html_lines.append(f"<h3>{escape(line[4:])}</h3>")
+        elif line.startswith("- "):
+            html_lines.append(f"<p>{escape(line[2:])}</p>")
+        elif line:
+            html_lines.append(f"<p>{escape(line)}</p>")
+    if in_table:
+        html_lines.append("</table>")
+    return "\n".join(html_lines)
+
+
+def _add_requirement_docx(doc: Any, req: EngineeringRequirement) -> None:
+    doc.add_heading(f"{req.requirement_id} {req.title}", level=2)
+    rows = [
+        ("Requirement ID", req.requirement_id),
+        ("Requirement Type", req.requirement_type),
+        ("Description", req.description),
+        ("Pre-condition", req.pre_condition),
+        ("Trigger", req.trigger),
+        ("Input", req.input),
+        ("Output", req.output),
+        ("Exception", req.exception),
+        ("Constraint", req.constraint),
+        ("Verification", req.verification),
+        ("Source", _source_summary(req)),
+    ]
+    if req.validation:
+        rows.append(("Warning", "; ".join(item["message"] for item in req.validation)))
+    _add_matrix_docx(doc, ["Field", "Value"], rows)
+
+
+def _add_findings_table_docx(doc: Any, findings: list[ValidationFinding]) -> None:
+    if not findings:
+        doc.add_paragraph("No validation warnings injected.")
+        return
+    rows = [
+        [
+            finding.severity,
+            finding.rule,
+            ", ".join(finding.requirement_ids),
+            finding.message,
+            finding.recommendation,
+        ]
+        for finding in findings
+    ]
+    _add_matrix_docx(doc, ["Severity", "Rule", "Requirement", "Finding", "Recommendation"], rows)
+
+
+def _add_matrix_docx(doc: Any, headers: list[str], rows: list[list[str] | tuple[str, ...]]) -> None:
+    table = doc.add_table(rows=1, cols=len(headers))
+    table.style = "Table Grid"
+    for index, header in enumerate(headers):
+        table.rows[0].cells[index].text = str(header)
+    for row in rows:
+        cells = table.add_row().cells
+        for index, value in enumerate(row):
+            cells[index].text = str(value)
