@@ -57,6 +57,7 @@ class InterfaceRequirementObject:
     direction: str
     dependency: str
     evidence: str
+    function_name: str = ""
     source: list[SourceRef] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -152,6 +153,7 @@ def requirement_from_dict(data: dict[str, Any]) -> RequirementObject:
             direction=data.get("direction", ""),
             dependency=data.get("dependency", ""),
             evidence=data.get("evidence", ""),
+            function_name=data.get("function_name", ""),
             source=sources,
         )
     if requirement_type == "configuration":

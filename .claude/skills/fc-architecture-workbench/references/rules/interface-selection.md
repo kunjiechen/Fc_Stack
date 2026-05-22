@@ -28,10 +28,10 @@ Typical categories:
 - `Set...`
 - feature-specific control or query APIs
 
-If the FC detects, latches, classifies, or reports faults/diagnostic states, include a readable external status interface by default, such as:
+If the FC detects, latches, classifies, or reports faults/diagnostic states, include a readable external status interface by default. The naming depends on the AUTOSAR layer:
 
-- `GetFaultStatus`
-- `GetDiag`
+- `GetDevFaultSig` — IoExtDev chip-level fault diagnosis (external chip drivers)
+- `GetXxxSigDiag` / `GetDiag` — IoMcu signal-level diagnostic (MCU peripheral drivers)
 - project-equivalent fault/status query API
 
 Do not hide fault visibility only inside internal flags when the requirement expects software-observable diagnosis.

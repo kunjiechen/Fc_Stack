@@ -71,6 +71,7 @@ class SrsStructureGenerator:
 class MarkdownSrsRenderer:
     def render(self, document: SrsDocument) -> str:
         sections = SrsStructureGenerator().sections(document)
+        safety_level = (document.overview or {}).get("safety_level", "QM")
         lines = _document_header_markdown(document)
         lines.extend(_purpose_markdown(document))
         lines.extend(_scope_markdown(document))
@@ -85,7 +86,7 @@ class MarkdownSrsRenderer:
                 continue
             lines.extend([f"### {heading}", ""])
             for req in reqs:
-                lines.extend(_requirement_markdown(req))
+                lines.extend(_requirement_markdown(req, safety_level))
 
         lines.extend(["## 6 非功能需求", ""])
         nonfunctional_rendered = False
@@ -96,7 +97,7 @@ class MarkdownSrsRenderer:
             nonfunctional_rendered = True
             lines.extend([f"### {heading}", ""])
             for req in reqs:
-                lines.extend(_requirement_markdown(req))
+                lines.extend(_requirement_markdown(req, safety_level))
         if not nonfunctional_rendered:
             lines.pop()  # remove the "## 6 非功能需求" heading
             lines.pop()
@@ -152,7 +153,7 @@ class DocxSrsRenderer:
                 ("模块名称", document.module),
                 ("模块简称", document.module),
                 ("文档状态", "Draft"),
-                ("安全等级", "QM"),
+                ("安全等级", (document.overview or {}).get("safety_level", "QM")),
             ],
         )
         doc.add_heading("1 目的", level=1)
@@ -519,12 +520,12 @@ def _communication_params_markdown(document: SrsDocument, overview: dict[str, An
     return lines
 
 
-def _requirement_markdown(req: EngineeringRequirement) -> list[str]:
+def _requirement_markdown(req: EngineeringRequirement, safety_level: str = "QM") -> list[str]:
     # Single rendering contract for requirement items:
     # heading + status tags + prose description + type-specific bullet block.
     # Do not reintroduce per-item Markdown field tables here.
     category_tag = _short_category_tag(req.requirement_type)
-    asil = "QM"
+    asil = safety_level
     method = _verification_method(req.verification)
     stage = _verification_stage(req.verification)
     verify_tag = method if method == stage else f"{method} / {stage}"

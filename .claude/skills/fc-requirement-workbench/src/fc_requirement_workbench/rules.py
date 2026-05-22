@@ -91,6 +91,7 @@ class RequirementRuleEngine:
             OwnershipRule(),
             DependencyRule(),
             ConfigurationRule(),
+            NamingRule(),
             TraceRule(),
         ]
 
@@ -501,6 +502,46 @@ class ConfigurationRule(RequirementRule):
                         recommendation="Add interrupt enable and callback configuration requirements.",
                     )
                 )
+
+        return findings
+
+
+class NamingRule(RequirementRule):
+    name = "naming"
+    group = "naming"
+
+    # IoExtDev chip-level fault must use GetDevFaultSig, not GetDiag
+    _FAULT_NAMING_FORBIDDEN = {
+        "IoExtDev": ["GetDiag", "GetFaultStatus"],
+    }
+
+    def evaluate(
+        self, requirements: list[RequirementObject], constraints: ProjectConstraints
+    ) -> list[ValidationFinding]:
+        findings: list[ValidationFinding] = []
+        for req in requirements:
+            item = req.to_dict()
+            if item.get("type") != "interface":
+                continue
+            func_name = item.get("function_name", "")
+            if not func_name:
+                continue
+
+            for layer, forbidden in self._FAULT_NAMING_FORBIDDEN.items():
+                for bad_name in forbidden:
+                    if bad_name in func_name:
+                        findings.append(
+                            ValidationFinding(
+                                rule=self.name,
+                                rule_group=self.group,
+                                status="failed",
+                                severity="error",
+                                message=f"Interface function name '{func_name}' uses '{bad_name}' which is forbidden for {layer} layer. Use 'GetDevFaultSig' for chip-level fault diagnosis.",
+                                requirement_ids=[item["id"]],
+                                conflict=[func_name, f"{layer} requires GetDevFaultSig"],
+                                recommendation=f"Rename to use GetDevFaultSig instead of {bad_name}.",
+                            )
+                        )
 
         return findings
 

@@ -1,0 +1,2 @@
+[console_scripts]
+fc-reqwb = fc_requirement_workbench.cli:main

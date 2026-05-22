@@ -57,6 +57,7 @@ class EngineeringRequirement:
     exception: str = ""
     constraint: str = ""
     verification: str = ""
+    function_name: str = ""
     source: list[dict[str, Any]] = field(default_factory=list)
     validation: list[dict[str, Any]] = field(default_factory=list)
 
@@ -82,11 +83,105 @@ class RequirementIdEngine:
         return requirement_id
 
 
+# ---------------------------------------------------------------------------
+# Naming classification: semantic category -> correct C function name suffix
+# per AUTOSAR layer.  Mirrors aurix2g-normative-patterns 1.1 + 6.1.
+# ---------------------------------------------------------------------------
+_LAYER_NAMING_TABLE: dict[str, dict[str, str]] = {
+    "IoExtDev": {
+        "init": "Init",
+        "mainfunction": "MainFunction",
+        "fault": "GetDevFaultSig",
+        "diag": "GetDevFaultSig",
+        "input_read": "GetInSig",
+        "output_write": "SetOutSig",
+        "direction": "SetDirSig",
+        "polarity": "SetPolSig",
+        "mode_set": "SetDevModeOutSig",
+        "mode_get": "GetDevModeInSig",
+        "reset": "ResetChip",
+    },
+    "IoMcu": {
+        "init": "Init",
+        "mainfunction": "MainFunction",
+        "fault": "GetDiag",
+        "diag": "GetXxxSigDiag",
+        "input_read": "GetXxxRaw",
+        "output_write": "SetXxxOutSig",
+    },
+    "Srv": {
+        "init": "Init",
+        "mainfunction": "MainFunction",
+        "fault": "GetDiag",
+        "diag": "GetDiag",
+        "input_read": "GetXxxSig",
+        "output_write": "SetXxxSig",
+    },
+}
+
+
+def _classify_interface_semantic(interface_name: str, description: str, direction: str) -> str:
+    """Classify an interface's semantic category from its Chinese name or description."""
+    text = f"{interface_name} {description}".lower()
+
+    # Lifecycle interfaces are independent of direction
+    if any(kw in text for kw in ("mainfunction", "周期调度", "main function")):
+        return "mainfunction"
+    if any(kw in text for kw in ("init", "初始化")):
+        return "init"
+
+    # Fault/diagnostic detection — check before direction-based classification
+    if any(kw in text for kw in ("故障", "诊断", "fault", "diag", "devfaultsig", "getdevfault")):
+        return "fault"
+
+    if direction == "output":
+        if any(kw in text for kw in ("输入", "读取", "read", "input", "get", "in")):
+            return "input_read"
+        if any(kw in text for kw in ("模式", "状态", "mode", "state")):
+            return "mode_get"
+        return "input_read"
+    if direction == "input":
+        if any(kw in text for kw in ("复位", "reset")):
+            return "reset"
+        if any(kw in text for kw in ("输出", "写入", "write", "output", "set", "out")):
+            return "output_write"
+        if any(kw in text for kw in ("方向", "dir")):
+            return "direction"
+        if any(kw in text for kw in ("极性", "pol")):
+            return "polarity"
+        if any(kw in text for kw in ("模式", "mode")):
+            return "mode_set"
+        if any(kw in text for kw in ("读取", "read", "get", "输入", "in")):
+            return "input_read"
+        return "output_write"
+    return "output_write"
+
+
+def _resolve_interface_name(
+    module: str,
+    semantic: str,
+    layer: str,
+    interface_name: str,
+) -> str:
+    """Resolve the correct C function name for an interface.
+
+    Returns the full function name like ``Gp_NCA9539_GetDevFaultSig``.
+    Falls back to ``Gp_{module}_{interface_name}`` when no rule matches.
+    """
+    table = _LAYER_NAMING_TABLE.get(layer, {})
+    suffix = table.get(semantic)
+    clean = _strip_gp_prefix(module)
+    if suffix:
+        return f"Gp_{clean}_{suffix}"
+    return f"Gp_{clean}_{interface_name}"
+
+
 class RequirementBuilder:
     """Map semantic requirement objects to engineering requirement instances."""
 
-    def __init__(self, module: str = "FC") -> None:
+    def __init__(self, module: str = "FC", layer: str = "IoExtDev") -> None:
         self.module = module
+        self.layer = layer
         self.id_engine = RequirementIdEngine(module)
 
     def build(
@@ -171,11 +266,14 @@ class RequirementBuilder:
     ) -> EngineeringRequirement:
         interface = item.get("interface_name") or "Interface"
         direction = item.get("direction") or "unknown"
-        description = _interface_description(interface)
-        if direction == "input":
-            description = _interface_description(interface)
-        elif direction == "output":
-            description = _interface_description(interface)
+
+        # Resolve the correct C function name
+        function_name = item.get("function_name", "")
+        if not function_name:
+            semantic = _classify_interface_semantic(interface, item.get("dependency", ""), direction)
+            function_name = _resolve_interface_name(self.module, semantic, self.layer, interface)
+
+        description = self._resolve_interface_description(interface, function_name)
         return self._base(
             item,
             findings,
@@ -185,7 +283,28 @@ class RequirementBuilder:
             output=interface if direction == "output" else "",
             constraint=item.get("dependency", ""),
             verification=_planned_verification(interface, req_type="interface"),
+            function_name=function_name,
         )
+
+    def _resolve_interface_description(self, interface: str, function_name: str) -> str:
+        """Generate a description for an interface based on its resolved function name."""
+        if "Init" in function_name and "init" not in interface.lower():
+            return "软件应提供初始化接口，用于加载项目配置、建立 I2C 访问上下文、配置 GPIO 默认状态，并在配置非法或初始化失败时返回错误。"
+        if "MainFunction" in function_name and "mainfunction" not in interface.lower():
+            return "软件应提供 MainFunction 接口，用于周期推进异步请求、处理超时、刷新运行时状态和执行诊断轮询，接口不得执行长时间阻塞操作。"
+        if "GetDevFaultSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，返回指定芯片实例的诊断状态位掩码（uint32），包括 I2C 通信错误、参数合法性错误、未初始化访问和中断状态信息。"
+        if "GetInSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，通过 uint16 Id 解析目标 chip/port/pin 并返回 GPIO 输入状态，对非法 Id 或 I2C 读失败返回错误。"
+        if "SetOutSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，通过 uint16 Id 解析目标 chip/port/pin 并设置 GPIO 输出电平，写入单个 pin 时保持同 port 其他 bit 不变。"
+        if "SetDirSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，配置指定 pin 的 GPIO 方向，运行时方向变更策略须项目确认。"
+        if "SetPolSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，配置指定 pin 的极性反转策略。"
+        if "ResetChip" in function_name:
+            return f"软件应提供 `{function_name}` 接口，对指定芯片实例执行硬件复位。仅当 RESET 引脚归属本驱动时适用。"
+        return _interface_description(interface)
 
     def _build_configuration(
         self, item: dict[str, Any], findings: list[ValidationFinding]
@@ -271,6 +390,11 @@ def _findings_by_requirement(
 def _normalize_module(module: str) -> str:
     normalized = re.sub(r"[^A-Za-z0-9]+", "", module).upper()
     return normalized or "FC"
+
+
+def _strip_gp_prefix(module: str) -> str:
+    """Strip leading Gp_/gp_ prefix so we don't double it in function names."""
+    return re.sub(r"^[Gg][Pp]_", "", module)
 
 
 def _default_verification(req_type: str) -> str:

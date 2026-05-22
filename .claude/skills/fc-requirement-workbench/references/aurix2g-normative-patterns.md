@@ -646,6 +646,35 @@ Init → Normal → Standby → Wake → PORST
 - MainFunction 或中断回调 ← 取决于实现
 - 捕获模式（边沿/周期/占空比）
 
+### 8.8 I2C GPIO 扩展器驱动
+
+**参考**：Gp_NCA9539
+
+**层级**：IoExtDev
+
+**必须接口（基准 4-6 个）**：
+- Init(void) — 初始化当前核所有芯片实例，加载配置表，回写默认方向/输出/极性
+- MainFunction(void) ← 仅当存在中断轮询或异步操作时必需
+- GetXxxInSig(uint16 Id, ...) — 通过 uint16 Id 解析 chip/port/pin，返回 GPIO 输入状态
+- SetXxxOutSig(uint16 Id, ...) — 通过 uint16 Id 解析 chip/port/pin，设置 GPIO 输出电平
+- GetDevFaultSig(uint16 Id, uint32* Fault) — 读取芯片故障/诊断信息
+
+**可选接口**：
+- ResetChip ← 仅当 RESET 引脚归属本驱动
+- SetXxxDirSig ← 仅当项目允许运行时方向变更
+- SetXxxPolSig ← 仅当项目使用极性反转
+
+**配置项**：
+- I2C 设备地址（A0/A1 硬件决定，支持 4 片同总线）
+- 每核芯片实例数量（0-4）
+- 每芯片默认方向表、默认输出电平、默认极性
+- I2C 通道与速率
+- 中断使能与去抖配置
+
+**命名关键约束**：
+- 故障诊断接口必须使用 `GetDevFaultSig`，**不得**使用 `GetDiag`（`GetDiag` 是 IoMcu 层信号级诊断接口名）
+- 输入/输出接口使用语义命名（`GetXxxInSig` / `SetXxxOutSig`），不按寄存器名命名（如 `ReadInputPort`）
+
 ---
 
 ## 九、命名与编码规范

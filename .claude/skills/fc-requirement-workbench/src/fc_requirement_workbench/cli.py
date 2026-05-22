@@ -14,10 +14,6 @@ from .candidate_mapping import RequirementCandidateMapper, RequirementCandidateM
 from .candidate_pruner import CandidatePruningMarkdownRenderer, RequirementCandidatePruner
 from .feature_extraction import FeatureExtractionMarkdownRenderer, FeatureExtractor
 from .parser import MarkdownStructureParser
-from .profiles import (
-    build_chip_intro as build_profile_chip_intro,
-    build_overview as build_profile_overview,
-)
 from .raw_requirements import (
     RawInputLoader,
     RawRequirementCoverageAnalyzer,
@@ -216,14 +212,17 @@ def main() -> int:
 
     planned_requirements = merge_requirements(planning.requirements, raw_semantic_requirements)
     findings = RequirementRuleEngine().validate(planned_requirements, constraints)
-    engineering = RequirementBuilder(module=args.module).build(
+
+    builder_module = (raw_document.module_name if raw_document and raw_document.module_name else args.module)
+    safety_level = raw_document.safety_level if raw_document else "QM"
+    engineering = RequirementBuilder(module=builder_module).build(
         planned_requirements, findings
     )
     srs_document = SrsStructureGenerator().build_document(
         engineering,
-        module=args.module,
+        module=builder_module,
         findings=findings,
-        overview=_overview_from_features(features, args.module),
+        overview=_overview_from_features(features, builder_module, safety_level),
     )
 
     # ---- SRS outputs ----
@@ -373,9 +372,9 @@ def _write_intermediates(
         (output_dir / filename).write_text(content, encoding="utf-8")
 
 
-def _overview_from_features(features: list[Any], module: str) -> dict[str, Any]:
+def _overview_from_features(features: list[Any], module: str, safety_level: str = "QM") -> dict[str, Any]:
     if not features:
-        return {}
+        return {"safety_level": safety_level}
     groups = [f for f in features if getattr(f, "type", "") == "feature_group"]
     identity = next(
         (f for f in features if getattr(f, "type", "") == "identity"), None
@@ -384,10 +383,7 @@ def _overview_from_features(features: list[Any], module: str) -> dict[str, Any]:
     chip_intro = _chip_intro(identity, groups, module)
     pin_rows: list[tuple[str, str, str]] = [_pin_row(pin) for pin in pins[:32]]
 
-    profile_overview = build_profile_overview(module, chip_intro, pin_rows)
-    if profile_overview is not None:
-        return profile_overview
-    return _generic_overview(module, chip_intro, groups, pin_rows)
+    return _generic_overview(module, chip_intro, groups, pin_rows, safety_level)
 
 
 def _generic_overview(
@@ -395,6 +391,7 @@ def _generic_overview(
     chip_intro: str,
     groups: list[Any],
     pin_rows: list[tuple[str, str, str]],
+    safety_level: str = "QM",
 ) -> dict[str, Any]:
     functions = [_feature_summary(g) for g in groups[:12]]
     state_group = next((g for g in groups if _has_state_related_feature(g)), None)
@@ -426,6 +423,7 @@ def _generic_overview(
         "pin_rows": pin_rows or [("待确认", "待确认", "待提取")],
         "state_machine": sm_data,
         "communication": None,
+        "safety_level": safety_level,
     }
 
 
@@ -444,9 +442,6 @@ def _has_state_related_feature(feature: Any) -> bool:
 
 
 def _chip_intro(identity: Any, groups: list[Any], module: str) -> str:
-    profile_chip_intro = build_profile_chip_intro(module)
-    if profile_chip_intro is not None:
-        return profile_chip_intro
     names = "、".join(
         _feature_name_cn(getattr(g, "name", "")) for g in groups[:8]
     )

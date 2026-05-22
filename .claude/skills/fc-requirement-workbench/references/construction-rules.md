@@ -58,6 +58,7 @@ Required elements:
 
 - Title
 - Description, including Input/Output behavior and Pre/Post conditions
+- Interface function name (matching `aurix2g-normative-patterns.md` 1.1 classification rules for the module's AUTOSAR layer)
 - Source
 - ASIL/Level
 - Verification Method
@@ -76,6 +77,7 @@ Missing handling:
 - If any required element is missing, set `Status` to `Draft`.
 - If ownership is unclear for a critical interface, set `Status` to `open_issue`.
 - If return value or failure postcondition is undefined, set `Status` to `Draft`.
+- If interface function name does not match the naming classification for the module's AUTOSAR layer (e.g., IoExtDev chip-level fault must use `GetDevFaultSig`, not `GetDiag`; IoMcu signal-level diagnostic uses `GetXxxSigDiag`), set `Status` to `Draft`.
 
 Example:
 

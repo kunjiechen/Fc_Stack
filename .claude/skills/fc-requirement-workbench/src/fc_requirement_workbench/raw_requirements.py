@@ -157,6 +157,7 @@ class RawRequirementExtractor:
             module_abbr=module_abbr,
             source=f"{raw_input.source_type}:{raw_input.source_name}",
             date=str(date.today()),
+            safety_level=_extract_safety_level(raw_input),
             functional_reqs=items["FUNC"],
             interface_reqs=items["INTF"],
             config_reqs=items["CFG"],
@@ -455,6 +456,19 @@ def _extract_module_hints(text: str) -> dict[str, str]:
         hints["module_name"] = module_match.group(1)
         hints["module_abbr"] = _module_token(module_match.group(1))
     return hints
+
+
+def _extract_safety_level(raw_input: UnifiedRawInput) -> str:
+    """Extract ASIL/QM safety level from raw input text."""
+    for entry in raw_input.entries:
+        match = re.search(r'\b(QM|ASIL[- ]?[ABCD])\b', entry.raw_text, re.IGNORECASE)
+        if match:
+            return match.group(1).upper().replace(" ", "-")
+    for hint_text in raw_input.module_hints.values():
+        match = re.search(r'\b(QM|ASIL[- ]?[ABCD])\b', hint_text, re.IGNORECASE)
+        if match:
+            return match.group(1).upper().replace(" ", "-")
+    return "QM"
 
 
 def _entry_from_text(
