@@ -1,0 +1,137 @@
+version: 1
+last_updated: 2026-05-23
+scope_file: references/grounding/grounding_scope.md
+
+modules:
+  - name: Gp_TPT1145
+    layer: IoExtDev
+    role: primary
+    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TPT1145
+    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145
+    tags:
+      - ioextdev
+      - with_mainfunction
+      - callout_based
+      - chip_runtime
+      - single_array_runtime
+      - memmap
+    use_for:
+      - external_interface_shape
+      - internal_function_granularity
+      - register_driver_interface_style
+      - wakeup_and_mode_control_pattern
+      - conf_cfgdata_mapping
+    summary: references/grounding/modules/Gp_TPT1145/summary.md
+    facts: references/grounding/modules/Gp_TPT1145/facts.yaml
+
+  - name: Gp_TLE92104
+    layer: IoExtDev
+    role: primary
+    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TLE92104
+    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104
+    tags:
+      - ioextdev
+      - with_mainfunction
+      - multicore
+      - callout_get_core_id
+      - chip_cfg_rt_split
+      - fault_monitoring
+      - memmap
+    use_for:
+      - dependency_interface_shape
+      - multicore_runtime_pattern
+      - chip_cfg_rt_split_pattern
+      - fault_and_mode_control_pattern
+      - conf_cfg_callout_mapping
+    summary: references/grounding/modules/Gp_TLE92104/summary.md
+    facts: references/grounding/modules/Gp_TLE92104/facts.yaml
+
+  - name: Gp_DRV8889
+    layer: IoExtDev
+    role: primary
+    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_DRV8889
+    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889
+    tags:
+      - ioextdev
+      - with_mainfunction
+      - multicore
+      - callout_get_core_id
+      - cfg_rt_container
+      - optional_interfaces
+      - memmap
+    use_for:
+      - external_interface_shape
+      - optional_interface_governance
+      - runtime_container_pattern
+      - chip_mainfunction_pattern
+      - feature_switch_pattern
+    summary: references/grounding/modules/Gp_DRV8889/summary.md
+    facts: references/grounding/modules/Gp_DRV8889/facts.yaml
+
+  - name: Gp_WkUpSrcP
+    layer: BswSys_Gp
+    role: secondary
+    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/BswSys_Gp/Gp_WkUpSrcP
+    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_BswSys_Gp/Conf_Gp_WkUpSrcP
+    tags:
+      - lightweight_fc
+      - no_mainfunction
+      - signal_runtime
+      - cfgdata
+      - memmap
+    use_for:
+      - lightweight_fc_style
+      - small_runtime_pattern
+      - signal_state_pattern
+    summary: references/grounding/modules/Gp_WkUpSrcP/summary.md
+    facts: references/grounding/modules/Gp_WkUpSrcP/facts.yaml
+
+  - name: Gp_06_Adc3ph
+    layer: Cdd
+    role: secondary
+    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Cdd/Gp_06_Adc3ph
+    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_Cdd/Conf_Gp_06_Adc3ph
+    tags:
+      - cdd
+      - multicore
+      - callout_get_core_id
+      - no_mainfunction
+      - code_ram_copy
+      - memmap
+    use_for:
+      - multicore_access_pattern
+      - minimal_interface_shape
+      - code_ram_copy_pattern
+    summary: references/grounding/modules/Gp_06_Adc3ph/summary.md
+    facts: references/grounding/modules/Gp_06_Adc3ph/facts.yaml
+
+  - name: IoMcu
+    layer: IoMcu
+    role: primary_dependency_family
+    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoMcu
+    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoMcu
+    tags:
+      - dependency_provider
+      - multicore
+      - callout_get_core_id
+      - cfg_containers
+      - rt_containers
+      - memmap
+      - callout_options
+    use_for:
+      - dependency_interface_shape
+      - cfgdata_and_conf_mapping
+      - per_core_container_pattern
+      - callout_option_pattern
+      - lower_layer_api_style
+    summary: references/grounding/modules/IoMcu/summary.md
+    facts: references/grounding/modules/IoMcu/facts.yaml
+
+patterns:
+  - references/grounding/patterns/external_interface_pattern.md
+  - references/grounding/patterns/dependency_interface_pattern.md
+  - references/grounding/patterns/runtime_container_pattern.md
+  - references/grounding/patterns/config_conf_pattern.md
+  - references/grounding/patterns/memmap_pattern.md
+  - references/grounding/patterns/internal_function_granularity_pattern.md
+  - references/grounding/selection_rules.md

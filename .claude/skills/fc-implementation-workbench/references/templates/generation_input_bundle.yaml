@@ -1,0 +1,19 @@
+module: TARGET_MODULE
+grounding_modules: []
+grounding_patterns: []
+grounding_rejections: []
+requirements: []
+architecture:
+  module: TARGET_MODULE
+  grounding_modules: []
+  external_interfaces: []
+  dependency_interfaces: []
+  config_items: []
+detailed_design:
+  module: TARGET_MODULE
+  external_interfaces: []
+  internal_interfaces: []
+  dependency_interfaces: []
+conf_evidence: []
+assumptions: []
+risks: []

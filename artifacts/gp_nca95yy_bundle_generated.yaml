@@ -1,0 +1,520 @@
+module: "Gp_NCA95yy"
+grounding_modules:
+  - "Gp_TLE92104"
+  - "Gp_DRV8889"
+  - "IoMcu"
+grounding_patterns:
+  - "per_core_runtime_container"
+  - "dependency_interface_shape"
+  - "chip_mainfunction_pattern"
+  - "conf_cfg_mapping"
+  - "runtime_capability_reserved_in_config"
+  - "interrupt_polling_mainfunction"
+grounding_rejections:
+  - "conditional_external_interfaces"
+  - "single_array_runtime"
+requirements:
+  - id: "SRS-GPNCA95YY-FUNC-0001"
+    category: "functional"
+    statement: "驱动初始化"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-FUNC-0002"
+    category: "functional"
+    statement: "GPIO 方向配置"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "pending_confirm"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+    decision: "V1 keeps direction handling inside init configuration only"
+    decision_reason: "architecture freeze keeps this capability behind reserved configuration until project confirmation"
+    impacts:
+      - "architecture.config_items"
+      - "architecture.external_interfaces"
+      - "detailed_design.config"
+  - id: "SRS-GPNCA95YY-FUNC-0003"
+    category: "functional"
+    statement: "GPIO 输入读取"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "ready"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-FUNC-0004"
+    category: "functional"
+    statement: "GPIO 输出写入"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-FUNC-0005"
+    category: "functional"
+    statement: "输入极性反转配置"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "pending_confirm"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+    decision: "V1 keeps polarity handling inside init configuration only"
+    decision_reason: "architecture freeze keeps this capability behind reserved configuration until project confirmation"
+    impacts:
+      - "architecture.config_items"
+      - "architecture.external_interfaces"
+      - "detailed_design.config"
+  - id: "SRS-GPNCA95YY-FUNC-0006"
+    category: "functional"
+    statement: "中断检测与响应"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-FUNC-0007"
+    category: "functional"
+    statement: "芯片复位处理"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-FUNC-0008"
+    category: "functional"
+    statement: "MainFunction 周期处理"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-IF-0001"
+    category: "interface"
+    statement: "`Gp_NCA95yy` 模块应提供 `Gp_NCA95yy_Init(void)` 接口，完成当前核所有已配置芯片实例的初始化。"
+    source: "AURIX2G 规范-1.1 接口分类法则；原始需求-Init"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+      - "Gp_NCA95yy_Init"
+  - id: "SRS-GPNCA95YY-IF-0002"
+    category: "interface"
+    statement: "`Gp_NCA95yy` 模块应提供 `Gp_NCA95yy_MainFunction(void)` 周期性驱动接口，执行 INT 引脚状态采样和中断响应处理。"
+    source: "AURIX2G 规范-1.2 MainFunction 接口规则；芯片手册-6.2.3"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+      - "Gp_NCA95yy_MainFunction"
+  - id: "SRS-GPNCA95YY-IF-0003"
+    category: "interface"
+    statement: "`Gp_NCA95yy` 模块应提供 `Gp_NCA95yy_GetGpInSig(uint16 Id_u16, uint8* State_pu8)` 接口，解析信号 Id 后通过 I2C 读取对应 Input Port 寄存器，应用极性反转后返回该引脚的逻辑状态。"
+    source: "芯片手册-6.5.3 Input Port Registers；原始需求-GetGpInSig"
+    status: "ready"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+      - "Gp_NCA95yy_GetGpInSig"
+  - id: "SRS-GPNCA95YY-IF-0004"
+    category: "interface"
+    statement: "`Gp_NCA95yy` 模块应提供 `Gp_NCA95yy_SetGpOutSig(uint16 Id_u16, uint8 State_u8)` 接口，解析信号 Id 后通过读改写方式设置目标引脚的输出电平，保证同 port 其他 bit 不受影响。"
+    source: "芯片手册-6.5.4 Output Port Registers；原始需求-SetGpOutSig"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+      - "Gp_NCA95yy_SetGpOutSig"
+  - id: "SRS-GPNCA95YY-IF-0005"
+    category: "interface"
+    statement: "`Gp_NCA95yy` 模块应提供 `Gp_NCA95yy_GetDevFaultSig(uint16 Id_u16, uint32* Fault_pu32)` 接口，返回指定芯片实例的当前故障诊断信息，包括 I2C 通信错误、中断异常状态和初始化失败标志。"
+    source: "AURIX2G 规范-8.8 IoExtDev 接口；芯片手册-6.2.3 INT；原始需求-GetDevFaultSig"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+      - "Gp_NCA95yy_GetDevFaultSig"
+  - id: "SRS-GPNCA95YY-IF-0006"
+    category: "interface"
+    statement: "`Gp_NCA95yy` 模块的所有对外接口应实现 DET (Development Error Tracer) 错误检测：当接口被调用时传入非法参数（Id 越界、空指针、State 非法值等），应通过 DET 机制报告开发错误并返回 E_NOT_OK。"
+    source: "原始需求-所有接口必须支持DET错误检测"
+    status: "ready"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-CFG-0001"
+    category: "config"
+    statement: "I2C 设备地址配置"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-CFG-0002"
+    category: "config"
+    statement: "芯片实例数量配置"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-CFG-0003"
+    category: "config"
+    statement: "GPIO 默认方向配置"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-CFG-0004"
+    category: "config"
+    statement: "GPIO 默认输出电平配置"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-CFG-0005"
+    category: "config"
+    statement: "中断使能与去抖配置"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-DIAG-0001"
+    category: "diag"
+    statement: "I2C 通信故障检测"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-DIAG-0002"
+    category: "diag"
+    statement: "未初始化访问检测"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-DIAG-0003"
+    category: "diag"
+    statement: "中断异常监控"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-DIAG-0004"
+    category: "diag"
+    statement: "参数有效性检查"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-TIM-0001"
+    category: "timing"
+    statement: "I2C 总线时序约束"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-TIM-0002"
+    category: "timing"
+    statement: "复位恢复时序"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-TIM-0003"
+    category: "timing"
+    statement: "中断响应时序"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-TIM-0004"
+    category: "timing"
+    statement: "MainFunction 调用周期"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-SAFE-0001"
+    category: "safety"
+    statement: "安全等级要求"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "ready"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-CODE-0001"
+    category: "resource"
+    statement: "编码规范符合性"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "ready"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+  - id: "SRS-GPNCA95YY-RES-0001"
+    category: "resource"
+    statement: "资源消耗约束"
+    source: "artifacts/srs_Gp_NCA95yy.md"
+    status: "draft"
+    evidence:
+      - "artifacts/srs_Gp_NCA95yy.md"
+architecture:
+  module: "Gp_NCA95yy"
+  grounding_modules:
+    - "Gp_TLE92104"
+    - "Gp_DRV8889"
+    - "IoMcu"
+  external_interfaces:
+    - name: "Gp_NCA95yy_Init"
+      prototype: "void Gp_NCA95yy_Init"
+      sync: "Synchronous"
+      reentrancy: "Non-reentrant"
+      status: "formal"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0001"
+    - name: "Gp_NCA95yy_MainFunction"
+      prototype: "void Gp_NCA95yy_MainFunction"
+      sync: "Synchronous"
+      reentrancy: "Non-reentrant"
+      status: "formal"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0002"
+    - name: "Gp_NCA95yy_GetGpInSig"
+      prototype: "Std_ReturnType Gp_NCA95yy_GetGpInSig"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      status: "formal"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0003"
+    - name: "Gp_NCA95yy_SetGpOutSig"
+      prototype: "Std_ReturnType Gp_NCA95yy_SetGpOutSig"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      status: "formal"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0004"
+    - name: "Gp_NCA95yy_GetDevFaultSig"
+      prototype: "Std_ReturnType Gp_NCA95yy_GetDevFaultSig"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      status: "formal"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0005"
+  dependency_interfaces:
+    - name: "Gp_NCA95yy_CalloutI2cWrite"
+      prototype: "Std_ReturnType Gp_NCA95yy_CalloutI2cWrite"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      status: "formal"
+      evidence:
+        - "SRS-GPNCA95YY-FUNC-0001 (Init writes)"
+        - "SRS-GPNCA95YY-FUNC-0004 (output write)"
+        - "chip manual I2C interface."
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0001"
+        - "SRS-GPNCA95YY-FUNC-0004"
+    - name: "Gp_NCA95yy_CalloutI2cRead"
+      prototype: "Std_ReturnType Gp_NCA95yy_CalloutI2cRead"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      status: "formal"
+      evidence:
+        - "SRS-GPNCA95YY-FUNC-0003 (input read)"
+        - "SRS-GPNCA95YY-FUNC-0006 (interrupt Input Port read)"
+        - "chip manual I2C interface."
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0003"
+        - "SRS-GPNCA95YY-FUNC-0006"
+    - name: "Gp_NCA95yy_CalloutReadDio"
+      prototype: "Std_ReturnType Gp_NCA95yy_CalloutReadDio"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      status: "formal"
+      evidence:
+        - "SRS-GPNCA95YY-FUNC-0006 (INT detection)"
+        - "SRS-GPNCA95YY-FUNC-0008 (MainFunction INT sampling)."
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0006"
+        - "SRS-GPNCA95YY-FUNC-0008"
+    - name: "Gp_NCA95yy_CalloutGetCoreId"
+      prototype: "uint32 Gp_NCA95yy_CalloutGetCoreId"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      status: "formal"
+      evidence:
+        - "Existing per-core FC pattern in current codebase"
+        - "per-core runtime and MemMap strategy in this architecture."
+  config_items:
+    - name: "GP_NCA95YY_CFG_DEV_ERROR_DETECT"
+      status: "formal"
+      evidence:
+        - "SRS-GPNCA95YY-IF-0006"
+        - "SRS-GPNCA95YY-DIAG-0004"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0006"
+        - "SRS-GPNCA95YY-DIAG-0004"
+    - name: "GP_NCA95YY_CFG_RUNTIME_DIRECTION_CHANGE"
+      status: "reserved"
+      evidence:
+        - "SRS-GPNCA95YY-FUNC-0002 (项目确认)"
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0002"
+    - name: "GP_NCA95YY_CFG_RUNTIME_POLARITY_CHANGE"
+      status: "reserved"
+      evidence:
+        - "SRS-GPNCA95YY-FUNC-0005 (项目确认)"
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0005"
+    - name: "GP_NCA95YY_SW_MAJOR_VERSION"
+      status: "formal"
+      evidence:
+        - "AUTOSAR standard module versioning."
+    - name: "GP_NCA95YY_SW_MINOR_VERSION"
+      status: "formal"
+      evidence:
+        - "AUTOSAR standard module versioning."
+    - name: "GP_NCA95YY_SW_PATCH_VERSION"
+      status: "formal"
+      evidence:
+        - "AUTOSAR standard module versioning."
+detailed_design:
+  module: "Gp_NCA95yy"
+  external_interfaces:
+    - name: "Gp_NCA95yy_Init"
+      relationship_links:
+        - "Gp_NCA95yy_Prv_InitChip"
+        - "Gp_NCA95yy_Prv_WriteChipRegs"
+        - "Gp_NCA95yy_Prv_UpdateFaultState"
+        - "Gp_NCA95yy_CalloutI2cWrite"
+        - "Gp_NCA95yy_CalloutI2cRead"
+      prototype: "void Gp_NCA95yy_Init"
+      sync: "Synchronous"
+      reentrancy: "Non-reentrant"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0001"
+    - name: "Gp_NCA95yy_MainFunction"
+      relationship_links:
+        - "Gp_NCA95yy_Prv_SampleInt"
+        - "Gp_NCA95yy_Prv_HandleInt"
+        - "Gp_NCA95yy_Prv_UpdateFaultState"
+        - "Gp_NCA95yy_CalloutReadDio"
+        - "Gp_NCA95yy_CalloutI2cRead"
+      prototype: "void Gp_NCA95yy_MainFunction"
+      sync: "Synchronous"
+      reentrancy: "Non-reentrant"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0002"
+    - name: "Gp_NCA95yy_GetGpInSig"
+      relationship_links:
+        - "Gp_NCA95yy_Prv_CheckAccess"
+        - "Gp_NCA95yy_Prv_ReadRegister"
+        - "Gp_NCA95yy_Prv_UpdateFaultState"
+        - "Gp_NCA95yy_CalloutI2cRead"
+      prototype: "Std_ReturnType Gp_NCA95yy_GetGpInSig"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0003"
+    - name: "Gp_NCA95yy_SetGpOutSig"
+      relationship_links:
+        - "Gp_NCA95yy_Prv_CheckAccess"
+        - "Gp_NCA95yy_Prv_RmwWriteOutput"
+        - "Gp_NCA95yy_Prv_UpdateFaultState"
+        - "Gp_NCA95yy_CalloutI2cRead"
+        - "Gp_NCA95yy_CalloutI2cWrite"
+      prototype: "Std_ReturnType Gp_NCA95yy_SetGpOutSig"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0004"
+    - name: "Gp_NCA95yy_GetDevFaultSig"
+      relationship_links:
+        []
+      prototype: "Std_ReturnType Gp_NCA95yy_GetDevFaultSig"
+      sync: "Synchronous"
+      reentrancy: "Reentrant"
+      trace_ids:
+        - "SRS-GPNCA95YY-IF-0005"
+  internal_interfaces:
+    - name: "Gp_NCA95yy_Prv_CheckAccess"
+      relationship_links:
+        - "Gp_NCA95yy_GetGpInSig"
+        - "Gp_NCA95yy_SetGpOutSig"
+        - "Gp_NCA95yy_GetDevFaultSig"
+        - "Det_ReportError"
+      evidence:
+        - "统一完成 Id 解码、指针检查、初始化检查和参数范围检查，并在失败时记录 DET。"
+    - name: "Gp_NCA95yy_Prv_InitChip"
+      relationship_links:
+        - "Gp_NCA95yy_Init"
+        - "Gp_NCA95yy_CalloutI2cWrite"
+      evidence:
+        - "初始化单个芯片，调用寄存器写入并同步运行态缓存。"
+    - name: "Gp_NCA95yy_Prv_WriteChipRegs"
+      relationship_links:
+        - "Gp_NCA95yy_Init"
+        - "Gp_NCA95yy_CalloutI2cWrite"
+      evidence:
+        - "按既定顺序写 Output / Config / Polarity 寄存器。"
+    - name: "Gp_NCA95yy_Prv_ReadRegister"
+      relationship_links:
+        - "Gp_NCA95yy_GetGpInSig"
+        - "Gp_NCA95yy_MainFunction"
+        - "Gp_NCA95yy_SetGpOutSig"
+        - "Gp_NCA95yy_CalloutI2cRead"
+      evidence:
+        - "通用 I2C 读寄存器封装。"
+    - name: "Gp_NCA95yy_Prv_WriteRegister"
+      relationship_links:
+        - "Gp_NCA95yy_Init"
+        - "Gp_NCA95yy_SetGpOutSig"
+        - "Gp_NCA95yy_CalloutI2cWrite"
+      evidence:
+        - "通用 I2C 写寄存器封装。"
+    - name: "Gp_NCA95yy_Prv_RmwWriteOutput"
+      relationship_links:
+        - "Gp_NCA95yy_SetGpOutSig"
+        - "Gp_NCA95yy_CalloutI2cRead"
+        - "Gp_NCA95yy_CalloutI2cWrite"
+      evidence:
+        - "执行 Output Port 的读改写序列并返回新值。"
+    - name: "Gp_NCA95yy_Prv_HandleInt"
+      relationship_links:
+        - "Gp_NCA95yy_MainFunction"
+        - "Gp_NCA95yy_CalloutI2cRead"
+      evidence:
+        - "读 Input Port、比较缓存、识别变化并更新缓存。"
+    - name: "Gp_NCA95yy_Prv_UpdateFaultState"
+      relationship_links:
+        - "Gp_NCA95yy_Init"
+        - "Gp_NCA95yy_MainFunction"
+        - "Gp_NCA95yy_GetGpInSig"
+        - "Gp_NCA95yy_SetGpOutSig"
+      evidence:
+        - "统一记录或清除故障位，并维护必要的恢复计数。"
+  dependency_interfaces:
+    - name: "Gp_NCA95yy_CalloutI2cWrite"
+      relationship_links:
+        - "Gp_NCA95yy_Prv_WriteRegister"
+        - "Gp_NCA95yy_Prv_WriteChipRegs"
+        - "Gp_NCA95yy_Prv_RmwWriteOutput"
+      prototype: "Std_ReturnType Gp_NCA95yy_CalloutI2cWrite"
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0001"
+        - "SRS-GPNCA95YY-FUNC-0004"
+    - name: "Gp_NCA95yy_CalloutI2cRead"
+      relationship_links:
+        - "Gp_NCA95yy_Prv_ReadRegister"
+        - "Gp_NCA95yy_Prv_HandleInt"
+        - "Gp_NCA95yy_Prv_RmwWriteOutput"
+      prototype: "Std_ReturnType Gp_NCA95yy_CalloutI2cRead"
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0003"
+        - "SRS-GPNCA95YY-FUNC-0006"
+    - name: "Gp_NCA95yy_CalloutReadDio"
+      relationship_links:
+        - "Gp_NCA95yy_Prv_SampleInt"
+        - "Gp_NCA95yy_MainFunction"
+      prototype: "Std_ReturnType Gp_NCA95yy_CalloutReadDio"
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0006"
+        - "SRS-GPNCA95YY-FUNC-0008"
+conf_evidence:
+  - "Gp_TLE92104_Cfg.h"
+  - "Gp_TLE92104_Callout.h"
+  - "Gp_DRV8889_Cfg.h"
+  - "Gp_DRV8889_Callout.h"
+assumptions:
+  - "A1 | 假设 | 运行时方向/极性修改默认关闭，仅 Init 阶段生效。 | `SetGpDirection`/`SetGpPolarity` 接口条件编译。"
+  - "A2 | 假设 | RESET 引脚不由本模块控制，由硬件或上层复位管理模块处理。 | 复位恢复仅通过 MainFunction 内部检测触发，无外部 Reset API。"
+  - "A3 | 假设 | INT 引脚通过 `CalloutReadDio` 读取；若项目已有标准 IoExtDev INT 机制，Callout 形式需调整。 | MainFunction INT 采样路径。"
+  - "A4 | 假设 | 中断事件通过 `MainFunction` 更新内部状态缓存 + `GetDevFaultSig` 暴露异常，上层轮询读取。 | 无独立回调注册机制。"
+  - "A5 | 假设 | I2C 故障恢复阈值为连续 3 次成功通信。 | `FaultConfirm` 内部逻辑。"
+  - "A6 | 假设 | 单核独立部署，不同核不共享 I2C 总线或芯片实例。 | per-core 运行态和配置表，无跨核同步点。"
+  - "A7 | 待确认 | 去抖时间单位（MainFunction 周期数 vs 毫秒）。 | `DebounceCounter` 阈值来源。"
+  - "A8 | 待确认 | MainFunction 调用周期精确值。 | 去抖绝对时间计算。"
+risks:
+  []

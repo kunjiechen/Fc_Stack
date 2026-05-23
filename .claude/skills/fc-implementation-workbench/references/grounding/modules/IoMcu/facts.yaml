@@ -1,0 +1,14 @@
+name: IoMcu
+layer: IoMcu
+family: true
+reviewed_modules:
+  - Gp_IoMcuAdc
+  - Gp_IoMcuDio
+  - Gp_IoMcuIcu
+  - Gp_IoMcuPwm
+multicore: true
+callout_get_core_id: true
+cfgdata_header: true
+memmap: true
+runtime_pattern: per_core_cfg_and_rt_containers
+callout_options: true

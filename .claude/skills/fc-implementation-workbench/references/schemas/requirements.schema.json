@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FC Requirements Model",
+  "type": "object",
+  "required": ["module", "requirements"],
+  "properties": {
+    "module": { "type": "string" },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "statement", "source", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": ["functional", "interface", "config", "diag", "timing", "safety", "resource"]
+          },
+          "statement": { "type": "string" },
+          "source": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "ready", "confirmed", "pending_confirm", "derived"]
+          },
+          "decision": { "type": "string" },
+          "decision_reason": { "type": "string" },
+          "impacts": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

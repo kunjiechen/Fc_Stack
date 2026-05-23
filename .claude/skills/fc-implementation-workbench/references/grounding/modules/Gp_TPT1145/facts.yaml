@@ -1,0 +1,47 @@
+name: Gp_TPT1145
+layer: IoExtDev
+code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TPT1145
+conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145
+mainfunction: true
+multicore: false
+callout_get_core_id: false
+cfgdata_header: true
+cfg_header: true
+memmap: true
+runtime_pattern: chip_indexed_runtime_array
+config_pattern: global_cfg_container
+det_enabled: unknown
+active_cores: []
+cfg_symbols:
+  - Gp_TPT1145_cfgCont_vcatst
+conf_evidence:
+  - Gp_TPT1145_Cfg.h
+  - Gp_TPT1145_Cfg.c
+  - Gp_TPT1145_CfgData.h
+  - Gp_TPT1145_Callout.h
+  - Gp_TPT1145_Callout.c
+callout_interfaces:
+  - Gp_TPT1145_CbkReportWakeup
+  - Gp_TPT1145_SpiTransSync
+selection_guidance:
+  preferred_when:
+    - target is IoExtDev and chip-centric
+    - target has MainFunction but no per-core routing
+    - target needs CfgData-backed global config container
+  avoid_when:
+    - target formally requires CalloutGetCoreId
+    - target needs per-core cfg/runtime front containers
+external_interfaces:
+  - Gp_TPT1145_Init
+  - Gp_TPT1145_MainFunction
+  - Gp_TPT1145_SetOpMode
+  - Gp_TPT1145_GetOpMode
+  - Gp_TPT1145_GetBusWuReason
+  - Gp_TPT1145_SetWakeupMode
+  - Gp_TPT1145_GetTrcvSystemData
+  - Gp_TPT1145_ClearTrcvWufFlag
+  - Gp_TPT1145_ReadTrcvTimeoutFlag
+  - Gp_TPT1145_ClearTrcvTimeoutFlag
+  - Gp_TPT1145_ReadTrcvSilenceFlag
+  - Gp_TPT1145_CheckWakeupFlag
+  - Gp_TPT1145_SetPNActivationState

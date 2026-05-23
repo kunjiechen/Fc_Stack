@@ -1,0 +1,59 @@
+name: Gp_TLE92104
+layer: IoExtDev
+code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TLE92104
+conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104
+mainfunction: true
+multicore: true
+callout_get_core_id: true
+cfgdata_header: false
+cfg_header: true
+memmap: true
+runtime_pattern: per_core_runtime_container
+config_pattern: chip_cfg_embedded_in_runtime_container
+det_enabled: true
+active_cores:
+  - CORE1
+  - CORE2
+cfg_symbols:
+  - Gp_TLE92104_cfgSigMap_vcatst
+  - Gp_TLE92104_cfgChipCore1_lcatst
+  - Gp_TLE92104_cfgChipCore2_lcatst
+conf_evidence:
+  - Gp_TLE92104_Cfg.h
+  - Gp_TLE92104_Cfg.c
+  - Gp_TLE92104_Callout.h
+  - Gp_TLE92104_Callout.c
+  - Gp_TLE92104_Reg.h
+callout_interfaces:
+  - Gp_TLE92104_CalloutGetCoreId
+  - Gp_TLE92104_CalloutDelayUs
+  - Gp_TLE92104_CalloutSpiSetupEB
+  - Gp_TLE92104_CalloutSpiSyncTransmit
+  - Gp_TLE92104_CalloutSetDoSig
+  - Gp_TLE92104_CalloutGetDiSig
+  - Gp_TLE92104_CalloutSetEcuPwmOutSig
+feature_switches:
+  - GP_TLE92104_MCAL_EN
+  - GP_TLE92104_DET_EN
+  - GP_TLE92104_CORE0_ENABLE
+  - GP_TLE92104_CORE1_ENABLE
+  - GP_TLE92104_CORE2_ENABLE
+  - GP_TLE92104_CORE3_ENABLE
+  - GP_TLE92104_CORE4_ENABLE
+  - GP_TLE92104_CORE5_ENABLE
+selection_guidance:
+  preferred_when:
+    - target needs CalloutGetCoreId
+    - target uses per-core chip routing
+    - target needs explicit DET and fault polling evidence
+  avoid_when:
+    - target is single-core and chip-direct
+    - target does not justify multi-core runtime indirection
+external_interfaces:
+  - Gp_TLE92104_Init
+  - Gp_TLE92104_MainFunction
+  - Gp_TLE92104_SetHbOutSig
+  - Gp_TLE92104_GetDevModeInSig
+  - Gp_TLE92104_SetDevModeOutSig
+  - Gp_TLE92104_GetDevFaultSig
+  - Gp_TLE92104_GetHBVOUT

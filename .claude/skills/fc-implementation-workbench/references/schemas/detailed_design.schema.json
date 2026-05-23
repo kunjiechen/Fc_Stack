@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FC Detailed Design Model",
+  "type": "object",
+  "required": ["module", "external_interfaces", "internal_interfaces", "dependency_interfaces"],
+  "properties": {
+    "module": { "type": "string" },
+    "grounding_modules": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "grounding_patterns": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "grounding_rejections": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "external_interfaces": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/interface" }
+    },
+    "internal_interfaces": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/interface" }
+    },
+    "dependency_interfaces": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/interface" }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "conf_evidence": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "interface": {
+      "type": "object",
+      "required": ["name", "relationship_links"],
+      "properties": {
+        "name": { "type": "string" },
+        "trace_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "relationship_links": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

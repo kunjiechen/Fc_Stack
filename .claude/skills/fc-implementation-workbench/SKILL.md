@@ -7,19 +7,17 @@ description: Use when the user wants to design, review, refine, or draft FC impl
 
 ## 1. Purpose
 
-This skill supports embedded automotive FC implementation design work.
+This skill is the current implementation carrier for FC detailed-design generation and implementation-oriented review.
 
-It is not a pure code generator. Its job is to bridge:
+Its job is to bridge:
 
 ```text
-Requirement / Architecture / Chip Constraint
-  -> Implementation Understanding
-  -> Code-Design Object Modeling
-  -> Execution-Level Selection
-  -> Output-Mode Selection
+Requirement / Architecture / Reference FC / Chip Constraint
+  -> Grounding Selection
+  -> Structured Design Objects
   -> Detailed Design Generation
-  -> Coding Scaffold Guidance
-  -> Validation & Refinement
+  -> Validation
+  -> Refinement
 ```
 
 This skill supports:
@@ -35,12 +33,8 @@ This skill supports:
 - runtime-state and NoClear design
 - fault handling and reset-coupling design
 - implementation review and refinement
-
-Output discipline:
-
-- flowcharts must describe implementation steps, not code statements
-- interface workflow must be written as ordered steps and subfunctions, not only as API purpose text
-- non-trivial interfaces must show where checks, subfunction execution, state updates, and failure handling occur
+- grounding-driven design normalization against real project FCs
+- structured-input and validator-assisted detailed design stability
 
 This skill does not replace:
 
@@ -92,7 +86,7 @@ User requirement
 -> User architecture / design draft
 -> Project local coding rules
 -> This skill's retained implementation rules
--> Historical FC patterns
+-> Grounding baseline summaries from real project FCs
 -> AI inference
 ```
 
@@ -101,6 +95,7 @@ If sources conflict:
 - prefer the explicit current project input
 - prefer architecture constraints over demo habits
 - use retained rules as default style only
+- use grounding as style evidence, not as architecture override
 - do not silently overwrite user-specified naming or layering
 
 ## 4. Primary Sources
@@ -115,16 +110,30 @@ Rule layer:
 - `references/rules/flowchart-rules.md`
 - `references/rules/implementation-review-checklist.md`
 
+Grounding layer:
+
+- `references/grounding/index.yaml`
+- `references/grounding/grounding_scope.md`
+- selected files under `references/grounding/modules/`
+- selected files under `references/grounding/patterns/`
+
 Model layer:
 
 - `references/semantic-model.md`
+- `references/schemas/requirements.schema.json`
+- `references/schemas/architecture.schema.json`
+- `references/schemas/detailed_design.schema.json`
+- `references/schemas/field_dictionary.md`
+
+Workflow layer:
+
+- `references/workflow.md`
+- `references/validation_rules.md`
 
 Templates:
 
 - `references/templates/output-template.md`
 - `references/templates/output-template-summary.md`
-
-The engineering-study markdown files under workspace `docs/` are provenance and local learning records. They are not required routine loads once the retained rules are sufficient.
 
 ## 4.1 Source Loading Strategy
 
@@ -133,7 +142,24 @@ Default minimal loading:
 1. read the user requirement, architecture draft, implementation draft, or target FC file
 2. read this `SKILL.md`
 3. read one output template
-4. load only the specific rule files needed for the current task
+4. read `references/workflow.md` if the task is full generation or workflow refactor
+5. load only the specific grounding, rule, and schema files needed for the current task
+
+Load `references/grounding/index.yaml` and `grounding_scope.md` when:
+
+- the task is a new FC detailed design
+- the module family or layer is unclear
+- you need to choose representative reference FCs
+
+Load selected files under `references/grounding/modules/` when:
+
+- you need evidence for interface shape
+- you need evidence for `CalloutGetCoreId`, per-core runtime, cfg/runtime split, or MainFunction style
+- you need IoExtDev normalization against real project FCs
+
+Load selected files under `references/grounding/patterns/` when:
+
+- you need normalized style rules distilled from the reference modules
 
 Load `code-structure-rules.md` when the task concerns:
 
@@ -172,7 +198,11 @@ Load `implementation-review-checklist.md` when the task concerns:
 - generated-design quality checks
 - checklist-based acceptance or rejection
 
-Load `semantic-model.md` only when you need structured objects or want generation consistency across modules.
+Load `semantic-model.md` and the schema files when:
+
+- you need structured design objects
+- you need generation consistency across modules
+- you are converting raw input, SRS, architecture, and detailed design into a stable intermediate model
 
 ## 5. When To Use This Skill
 
@@ -271,7 +301,43 @@ Determine:
 - whether NoClear/reset continuity is needed
 - whether state machine exists or should exist
 
-### 8.2 Execution-Level Selection
+### 8.2 Grounding Pass
+
+Before finalizing a new detailed design, choose the minimum useful grounding set from:
+
+- `Gp_TPT1145`
+- `Gp_TLE92104`
+- `Gp_DRV8889`
+- `Gp_WkUpSrcP`
+- `Gp_06_Adc3ph`
+- `IoMcu`
+
+Use the grounding pass to decide:
+
+- external interface rhythm
+- dependency interface shape
+- whether `CalloutGetCoreId` is warranted
+- whether per-core runtime containers are appropriate
+- how heavy the internal fault and state design should be
+- how cfg and `Conf_*` mapping should be described
+
+Do not load every module summary by default. Choose the modules that match the target FC layer and behavior.
+
+### 8.3 Structured Modeling
+
+For full generation work, normalize the inputs into an intermediate model before markdown:
+
+1. requirement facts
+2. architecture-frozen external interfaces
+3. architecture-frozen dependency interfaces
+4. internal interfaces derived from repeated responsibilities
+5. cfg/runtime/fault/state objects
+6. relationship links
+7. assumptions and pending confirmations
+
+Use the schema files under `references/schemas/` as the structure contract.
+
+### 8.4 Execution-Level Selection
 
 Choose only the depth that the task needs.
 
@@ -286,6 +352,7 @@ Choose only the depth that the task needs.
 - file family, APIs, cfg, state machine, runtime, DET, fault, MemMap
 - interface execution steps and subfunction decomposition
 - flowchart sections for key external and internal flows
+- grounding choices and architecture-consistency preservation
 
 `Code Scaffold Mode`
 
@@ -300,7 +367,19 @@ Choose only the depth that the task needs.
 - findings first
 - focus on design defects, missing pieces, layering violations, testability risks
 
-### 8.3 Output-Mode Selection
+### 8.5 Validation Gate
+
+For full detailed-design generation, run validation before finalizing:
+
+- architecture and detailed design external-interface consistency
+- architecture and detailed design dependency-interface consistency
+- formal dependency-interface coverage
+- required `关联接口` field presence
+- obvious unresolved relationship reference drift
+
+Use `scripts/validate_fc_docs.py` for the current markdown validator baseline.
+
+### 8.6 Output-Mode Selection
 
 Default:
 
@@ -388,6 +467,8 @@ Validate the design against these questions:
 6. Are internal functions decomposed by responsibility rather than by accidental code order?
 7. Are runtime variables owned, typed, and lifecycle-defined?
 8. Are assumptions clearly isolated from confirmed facts?
+9. Does the design stay aligned with architecture-frozen external and dependency interface sets?
+10. Is the selected style grounded in real project FC evidence instead of pure chip-manual decomposition?
 
 ## 13. Review Mode Rules
 
@@ -419,5 +500,7 @@ This skill may produce one or more of:
 - implementation object checklist
 - coding scaffold plan
 - review findings
+- grounding summary
+- validation result summary
 
 If the user asks for actual source creation after the design, this skill should first ensure the design is sufficiently explicit, then derive code from the design rather than skipping straight to implementation.

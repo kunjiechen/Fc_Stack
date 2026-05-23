@@ -1,0 +1,47 @@
+module: Gp_NCA95yy
+grounding_modules:
+  - Gp_TLE92104
+  - Gp_DRV8889
+  - IoMcu
+grounding_patterns:
+  - per_core_runtime_container
+  - dependency_interface_shape
+grounding_rejections:
+  - conditional_external_interfaces
+conf_evidence:
+  - Gp_TLE92104_Callout.h
+  - Gp_DRV8889_Cfg.h
+
+external_interfaces:
+  - name: Gp_NCA95yy_Init
+    trace_ids:
+      - SRS-GPNCA95YY-FUNC-0001
+    relationship_links:
+      - Gp_NCA95yy_Prv_InitChip
+      - Gp_NCA95yy_CalloutI2cWrite
+      - Gp_NCA95yy_CalloutGetCoreId
+    evidence:
+      - Gp_TLE92104_Init
+
+internal_interfaces:
+  - name: Gp_NCA95yy_Prv_InitChip
+    relationship_links:
+      - Gp_NCA95yy_Init
+      - Gp_NCA95yy_CalloutI2cWrite
+    evidence:
+      - Gp_DRV8889_ChipMainFunction
+
+dependency_interfaces:
+  - name: Gp_NCA95yy_CalloutGetCoreId
+    relationship_links:
+      - Gp_NCA95yy_Init
+      - Gp_NCA95yy_MainFunction
+    evidence:
+      - Gp_TLE92104_CalloutGetCoreId
+      - Gp_DRV8889_CalloutGetCoreId
+
+assumptions:
+  - RESET ownership stays outside the FC in V1
+
+risks:
+  - INT report-up mechanism still needs project confirmation

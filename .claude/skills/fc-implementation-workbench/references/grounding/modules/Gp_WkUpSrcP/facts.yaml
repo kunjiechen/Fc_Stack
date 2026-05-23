@@ -1,0 +1,11 @@
+name: Gp_WkUpSrcP
+layer: BswSys_Gp
+mainfunction: false
+multicore: false
+callout_get_core_id: false
+cfgdata_header: true
+memmap: true
+runtime_pattern: signal_runtime_array
+external_interfaces:
+  - Gp_WkUpSrcP_Init
+  - Gp_WkUpSrcP_GetWkUpSts

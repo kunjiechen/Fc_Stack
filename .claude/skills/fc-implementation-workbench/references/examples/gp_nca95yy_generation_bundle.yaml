@@ -1,0 +1,164 @@
+module: Gp_NCA95yy
+grounding_modules:
+  - Gp_TLE92104
+  - Gp_DRV8889
+  - IoMcu
+grounding_patterns:
+  - per_core_runtime_container
+  - dependency_interface_shape
+grounding_rejections:
+  - conditional_external_interfaces
+
+requirements:
+  - id: SRS-GPNCA95YY-FUNC-0001
+    category: functional
+    statement: Init current-core configured chip instances and write default direction, output, and polarity.
+    source: artifacts/srs_Gp_NCA95yy.md
+    status: draft
+    evidence:
+      - Gp_TLE92104
+      - Gp_DRV8889
+
+  - id: SRS-GPNCA95YY-FUNC-0002
+    category: functional
+    statement: Support GPIO direction configuration.
+    source: artifacts/raw_input_Gp_NCA95yy.txt
+    status: pending_confirm
+    decision: V1 architecture keeps direction change in init phase only
+    decision_reason: architecture freeze should not add conditional external interfaces
+    impacts:
+      - architecture.external_interfaces
+      - detailed_design.config
+      - risk_list
+    evidence:
+      - artifacts/raw_input_Gp_NCA95yy.txt
+      - references/grounding/modules/Gp_DRV8889/summary.md
+
+architecture:
+  module: Gp_NCA95yy
+  grounding_modules:
+    - Gp_TLE92104
+    - Gp_DRV8889
+    - IoMcu
+  external_interfaces:
+    - name: Gp_NCA95yy_Init
+      prototype: void Gp_NCA95yy_Init(void)
+      sync: Synchronous
+      reentrancy: Non-reentrant
+      status: formal
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
+      evidence:
+        - Gp_TLE92104_Init
+        - Gp_DRV8889_Init
+    - name: Gp_NCA95yy_MainFunction
+      prototype: void Gp_NCA95yy_MainFunction(void)
+      sync: Synchronous
+      reentrancy: Non-reentrant
+      status: formal
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
+      evidence:
+        - Gp_TLE92104_MainFunction
+        - Gp_DRV8889_MainFunction
+
+  dependency_interfaces:
+    - name: Gp_NCA95yy_CalloutI2cWrite
+      prototype: Std_ReturnType Gp_NCA95yy_CalloutI2cWrite(uint8 Addr_u8, uint8 Reg_u8, const uint8* Data_pcu8, uint16 Size_u16)
+      sync: Synchronous
+      reentrancy: Reentrant
+      status: formal
+      evidence:
+        - Gp_TLE92104_CalloutSpiSyncTransmit
+        - Gp_DRV8889_CalloutSpiTransSync
+    - name: Gp_NCA95yy_CalloutI2cRead
+      prototype: Std_ReturnType Gp_NCA95yy_CalloutI2cRead(uint8 Addr_u8, uint8 Reg_u8, uint8* Data_pu8, uint16 Size_u16)
+      sync: Synchronous
+      reentrancy: Reentrant
+      status: formal
+    - name: Gp_NCA95yy_CalloutReadDio
+      prototype: Std_ReturnType Gp_NCA95yy_CalloutReadDio(uint16 Id_u16, uint8* State_pu8)
+      sync: Synchronous
+      reentrancy: Reentrant
+      status: formal
+    - name: Gp_NCA95yy_CalloutGetCoreId
+      prototype: uint32 Gp_NCA95yy_CalloutGetCoreId(void)
+      sync: Synchronous
+      reentrancy: Reentrant
+      status: formal
+      evidence:
+        - Gp_TLE92104_CalloutGetCoreId
+        - Gp_DRV8889_CalloutGetCoreId
+  config_items:
+    - name: Gp_NCA95yy_cfgCont_vcatst
+      status: formal
+      evidence:
+        - Gp_TPT1145_cfgCont_vcatst
+        - Gp_DRV8889_cfgCont_vcatst
+
+detailed_design:
+  module: Gp_NCA95yy
+  external_interfaces:
+    - name: Gp_NCA95yy_Init
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
+      relationship_links:
+        - Gp_NCA95yy_Prv_InitChip
+        - Gp_NCA95yy_CalloutI2cWrite
+        - Gp_NCA95yy_CalloutGetCoreId
+      evidence:
+        - Gp_TLE92104_Init
+    - name: Gp_NCA95yy_MainFunction
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
+      relationship_links:
+        - Gp_NCA95yy_Prv_HandleInt
+        - Gp_NCA95yy_CalloutReadDio
+        - Gp_NCA95yy_CalloutI2cRead
+        - Gp_NCA95yy_CalloutGetCoreId
+      evidence:
+        - Gp_DRV8889_MainFunction
+
+  internal_interfaces:
+    - name: Gp_NCA95yy_Prv_InitChip
+      relationship_links:
+        - Gp_NCA95yy_Init
+        - Gp_NCA95yy_CalloutI2cWrite
+      evidence:
+        - Gp_TPT1145_cfgCont_vcatst
+    - name: Gp_NCA95yy_Prv_HandleInt
+      relationship_links:
+        - Gp_NCA95yy_MainFunction
+        - Gp_NCA95yy_CalloutI2cRead
+      evidence:
+        - Gp_TLE92104_GetDevFaultSig
+
+  dependency_interfaces:
+    - name: Gp_NCA95yy_CalloutI2cWrite
+      relationship_links:
+        - Gp_NCA95yy_Prv_InitChip
+      evidence:
+        - Gp_DRV8889_CalloutSpiTransSync
+    - name: Gp_NCA95yy_CalloutI2cRead
+      relationship_links:
+        - Gp_NCA95yy_Prv_HandleInt
+    - name: Gp_NCA95yy_CalloutReadDio
+      relationship_links:
+        - Gp_NCA95yy_MainFunction
+    - name: Gp_NCA95yy_CalloutGetCoreId
+      relationship_links:
+        - Gp_NCA95yy_Init
+        - Gp_NCA95yy_MainFunction
+      evidence:
+        - Gp_TLE92104_CalloutGetCoreId
+        - Gp_DRV8889_CalloutGetCoreId
+
+conf_evidence:
+  - Gp_TPT1145_CfgData.h
+  - Gp_TLE92104_Callout.h
+  - Gp_DRV8889_Cfg.h
+assumptions:
+  - RESET ownership stays outside the FC in V1
+
+risks:
+  - INT report-up mechanism still needs project confirmation

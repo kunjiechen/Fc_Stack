@@ -8,10 +8,23 @@ Responsibility boundary:
 
 - `rules/*.md`
   - stable implementation rules and judgment criteria
+- `grounding/`
+  - curated real-project FC grounding baseline, module facts, and normalized patterns
+- `schemas/`
+  - structured input and intermediate model contracts for requirement, architecture, and detailed design
+  - `field_dictionary.md` defines cross-layer field semantics
 - `templates/*.md`
   - output shape and document layout
 - `semantic-model.md`
   - implementation object model for repeatable generation
+- `workflow.md`
+  - generation pipeline and validator gate
+- `validation_rules.md`
+  - current validator contract
+- `../scripts/build_generation_bundle.py`
+  - helper that converts SRS, architecture, and DD markdown into a reusable YAML bundle skeleton
+- `../scripts/validate_generation_bundle.py`
+  - validates bundle structure, grounding references, and key cross-layer consistency
 - this `README.md`
   - index and minimal loading guidance only
 - execution logic stays in `../SKILL.md`
@@ -35,14 +48,39 @@ Primary files for routine FC implementation work:
 - `templates/output-template-summary.md`
   - concise coding-oriented output shape
 
-## B. Working Aids
+## B. Grounding
+
+Use these when the task is full detailed-design generation or when the style needs to be normalized against real company FCs:
+
+- `grounding/index.yaml`
+  - grounding entry index and module-to-pattern mapping
+- `grounding/grounding_scope.md`
+  - frozen grounding scope and source boundaries
+- `grounding/modules/*`
+  - per-module summaries and facts
+- `grounding/patterns/*`
+  - normalized patterns extracted from the reviewed FC set
+
+## C. Working Aids
 
 Use these only when the task needs structured generation consistency:
 
 - `semantic-model.md`
   - normalized implementation object model
+- `schemas/*.json`
+  - structured contracts for requirement, architecture, and detailed design intermediate models
+- `schemas/field_dictionary.md`
+  - field-level semantics and authoring rules for cross-layer objects
+- `examples/*.yaml`
+  - example generation bundles and per-layer objects showing how grounded inputs map into the intermediate model
+- `workflow.md`
+  - recommended generation sequence
+- `validation_rules.md`
+  - current validator capability summary
+- `golden_checks.md`
+  - staged acceptance checklist for the evolving pipeline
 
-## C. Provenance
+## D. Provenance
 
 The rules in this folder are condensed from the local engineering study and code-design study already performed in this workspace.
 
@@ -62,5 +100,6 @@ For routine implementation design:
 2. `../SKILL.md`
 3. one output template
 4. only the specific rule files needed by the question
+5. load grounding only when style grounding or pipeline generation is needed
 
 Do not load every rule and template by default.

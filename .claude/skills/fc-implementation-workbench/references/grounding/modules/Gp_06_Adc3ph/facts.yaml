@@ -1,0 +1,12 @@
+name: Gp_06_Adc3ph
+layer: Cdd
+mainfunction: false
+multicore: true
+callout_get_core_id: true
+cfgdata_header: true
+memmap: true
+code_ram_copy: true
+runtime_pattern: per_core_runtime_container
+external_interfaces:
+  - Gp_06_Adc3ph_Init
+  - Gp_06_Adc3ph_GetEcuRawSigIn

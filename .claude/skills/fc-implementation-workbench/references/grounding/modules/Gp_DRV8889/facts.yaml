@@ -1,0 +1,59 @@
+name: Gp_DRV8889
+layer: IoExtDev
+code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_DRV8889
+conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889
+mainfunction: true
+multicore: true
+callout_get_core_id: true
+cfgdata_header: false
+cfg_header: true
+memmap: true
+runtime_pattern: per_core_multi_chip_runtime_container
+config_pattern: per_core_cfg_container
+conditional_external_interfaces: true
+det_enabled: true
+active_cores:
+  - CORE0
+  - CORE2
+cfg_symbols:
+  - Gp_DRV8889_cfgCont_vcatst
+  - Gp_DRV8889_cfgSigMapping_vcatst
+  - Gp_DRV8889_cfgChipCore0_lcatst
+  - Gp_DRV8889_cfgChipCore2_lcatst
+conf_evidence:
+  - Gp_DRV8889_Cfg.h
+  - Gp_DRV8889_Cfg.c
+  - Gp_DRV8889_Callout.h
+  - Gp_DRV8889_Callout.c
+callout_interfaces:
+  - Gp_DRV8889_CalloutGetCoreId
+  - Gp_DRV8889_CalloutSpiSetEB
+  - Gp_DRV8889_CalloutSpiTransSync
+  - Gp_DRV8889_CalloutSetDoSig
+  - Gp_DRV8889_CalloutGetDiSig
+  - Gp_DRV8889_CalloutSetEcuPwmOutSig
+feature_switches:
+  - GP_DRV8889_MCAL_ENABLE
+  - GP_DRV8889_DET_EN
+  - GP_DRV8889_GETCOUNT_ENABLE
+  - GP_DRV8889_SETDAC_ENABLE
+  - GP_DRV8889_STEP_DO_EN
+  - GP_DRV8889_STEP_REG_EN
+selection_guidance:
+  preferred_when:
+    - target needs per-core cfg container plus chip-level helper dispatch
+    - target has optional external features behind formal architecture gates
+    - target needs strong cfg-to-register initialization evidence
+  avoid_when:
+    - target architecture forbids optional external interface families
+    - target is simple enough for a single runtime array
+external_interfaces:
+  - Gp_DRV8889_Init
+  - Gp_DRV8889_MainFunction
+  - Gp_DRV8889_GetDevModeInSig
+  - Gp_DRV8889_SetHbOutSig
+  - Gp_DRV8889_GetDevFaultSig
+  - Gp_DRV8889_SetDevModeOutSig
+optional_external_interfaces:
+  - Gp_DRV8889_SetDevDacOutSig
+  - Gp_DRV8889_GetDevCountInSig
