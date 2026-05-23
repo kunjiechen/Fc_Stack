@@ -1,0 +1,8 @@
+interface:
+  display_name: "FC Implementation Workbench"
+  short_description: "Design FC detailed implementation and coding scaffolds"
+  brand_color: "#0F766E"
+  default_prompt: "Use $fc-implementation-workbench to turn these FC inputs into implementation-level detailed design, coding scaffolds, cfg layout, state machine, DET, runtime-state, and fault-handling outputs."
+
+policy:
+  allow_implicit_invocation: true
