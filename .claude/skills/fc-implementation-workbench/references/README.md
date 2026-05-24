@@ -21,10 +21,20 @@ Responsibility boundary:
   - generation pipeline and validator gate
 - `validation_rules.md`
   - current validator contract
+- `detailed_design_quality_contract.md`
+  - defines what a good FC detailed design must achieve
+- `bundle_to_dd_mapping.md`
+  - maps structured bundle fields into detailed-design chapters
+- `chapter_generation_rules.md`
+  - chapter-by-chapter writing and rendering rules
 - `../scripts/build_generation_bundle.py`
   - helper that converts SRS, architecture, and DD markdown into a reusable YAML bundle skeleton
 - `../scripts/validate_generation_bundle.py`
   - validates bundle structure, grounding references, and key cross-layer consistency
+- `../scripts/render_detailed_design.py`
+  - renders a first-pass detailed design markdown from the structured bundle
+- `../scripts/extract_cfg_objects.py`
+  - extracts real `Cfg.c` objects, fields, and per-core or per-chip layout cues from grounding FC sources
 - this `README.md`
   - index and minimal loading guidance only
 - execution logic stays in `../SKILL.md`

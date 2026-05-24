@@ -116,6 +116,26 @@ def validate_bundle(bundle: dict, root: Path) -> list[str]:
     if unknown_grounding:
         errors.append(f"unknown grounding modules: {', '.join(unknown_grounding)}")
 
+    cfg_objects = bundle.get("cfg_objects", [])
+    if cfg_objects and not isinstance(cfg_objects, list):
+        errors.append("cfg_objects must be a list when present")
+        cfg_objects = []
+    for index, item in enumerate(cfg_objects):
+        if not isinstance(item, dict):
+            errors.append(f"cfg_objects[{index}] must be an object")
+            continue
+        module_name = str(item.get("module", ""))
+        symbol = str(item.get("symbol", ""))
+        cfg_path = str(item.get("cfg_path", ""))
+        if not module_name:
+            errors.append(f"cfg_objects[{index}] missing module")
+        elif module_name not in top_grounding:
+            errors.append(f"cfg_objects[{index}] module not selected in grounding_modules: {module_name}")
+        if not symbol:
+            errors.append(f"cfg_objects[{index}] missing symbol")
+        if not cfg_path:
+            errors.append(f"cfg_objects[{index}] missing cfg_path")
+
     if architecture.get("module") != module:
         errors.append("architecture.module does not match bundle.module")
     if detailed_design.get("module") != module:

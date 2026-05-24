@@ -97,6 +97,11 @@ Use this file before extending schemas or examples.
 - `conf_evidence`
   - optional list of `Conf_*` file names or symbols that justify config or callout design
 
+- `cfg_objects`
+  - optional list of real `Cfg.c` configuration objects extracted from grounding modules
+  - use this to drive `15. 配置宏参设计` with actual config containers, fields, and per-core or per-chip layout cues
+  - prefer this over requirement-only config-point guesses when source `Cfg.c` is available
+
 ## Authoring Rules
 
 - Record downgraded requirements instead of silently deleting them.

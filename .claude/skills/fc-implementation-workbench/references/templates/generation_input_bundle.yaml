@@ -15,5 +15,6 @@ detailed_design:
   internal_interfaces: []
   dependency_interfaces: []
 conf_evidence: []
+cfg_objects: []
 assumptions: []
 risks: []

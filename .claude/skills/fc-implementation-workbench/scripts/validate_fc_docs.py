@@ -27,6 +27,14 @@ def section_slice(text: str, start_heading: str) -> str:
     return remainder[:next_h2]
 
 
+def first_existing_section(text: str, headings: list[str]) -> str:
+    for heading in headings:
+        section = section_slice(text, heading)
+        if section:
+            return section
+    return ""
+
+
 def extract_interface_names(section_text: str) -> list[str]:
     return HEADING_RE.findall(section_text)
 
@@ -131,7 +139,7 @@ def validate(arch_path: Path, dd_path: Path, srs_path: Path | None = None) -> li
     arch_external_names = extract_interface_names(arch_external)
     arch_dependency_names = extract_interface_names(arch_dependency)
     dd_external_names = extract_interface_names(dd_external)
-    dd_internal = section_slice(dd_text, "## 8. 内部函数设计")
+    dd_internal = first_existing_section(dd_text, ["## 8. 内部函数设计", "## 8. 内部接口设计"])
     dd_internal_names = extract_backticked_names(dd_internal)
     dd_dependency_names = extract_interface_names(dd_dependency)
     defined_names = set(dd_external_names) | set(dd_internal_names) | set(dd_dependency_names)

@@ -9,6 +9,8 @@ import re
 from pathlib import Path
 from typing import Iterable
 
+from extract_cfg_objects import extract_cfg_objects_for_modules
+
 
 HEADING_H3_RE = re.compile(r"^###(?:\s+\d+(?:\.\d+)*)?\s+`?([A-Za-z0-9_]+)`?\s*$", re.MULTILINE)
 HEADING_H4_REQ_RE = re.compile(r"^####\s+(SRS-[A-Z0-9-]+)\s+(.+?)\s*$", re.MULTILINE)
@@ -684,12 +686,32 @@ def collect_conf_evidence(grounding_modules: list[str]) -> list[str]:
     return dedupe(evidence)
 
 
+def flatten_cfg_objects(cfg_sources: list[dict[str, object]]) -> list[dict[str, object]]:
+    flattened: list[dict[str, object]] = []
+    for source in cfg_sources:
+        module = str(source.get("module", ""))
+        cfg_path = str(source.get("cfg_path", ""))
+        includes = source.get("includes", [])
+        if not isinstance(includes, list):
+            includes = []
+        for item in source.get("cfg_objects", []) if isinstance(source.get("cfg_objects"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            entry = dict(item)
+            entry["module"] = module
+            entry["cfg_path"] = cfg_path
+            entry["includes"] = includes
+            flattened.append(entry)
+    return flattened
+
+
 def build_bundle(
     module: str,
     srs_path: Path,
     arch_path: Path,
     dd_path: Path,
     grounding_modules: list[str],
+    source_root: Path | None = None,
 ) -> dict[str, object]:
     srs_text = srs_path.read_text(encoding="utf-8")
     arch_text = arch_path.read_text(encoding="utf-8")
@@ -709,6 +731,8 @@ def build_bundle(
     assign_dd_trace_ids(dd_external, dd_internal, dd_dependency, arch_external, arch_dependency)
 
     conf_evidence = collect_conf_evidence(grounding_modules)
+    cfg_sources = extract_cfg_objects_for_modules(source_root, grounding_modules) if source_root else []
+    cfg_objects = flatten_cfg_objects(cfg_sources)
     grounding_patterns, grounding_rejections = infer_grounding_patterns(
         grounding_modules,
         arch_external,
@@ -738,6 +762,7 @@ def build_bundle(
             "dependency_interfaces": dd_dependency,
         },
         "conf_evidence": conf_evidence,
+        "cfg_objects": cfg_objects,
         "assumptions": parse_dd_assumptions(dd_text),
         "risks": parse_dd_risks(dd_text),
     }
@@ -764,6 +789,7 @@ def main() -> int:
         dest="grounding_modules",
         help="Grounding module to include in the generated bundle; may be supplied multiple times.",
     )
+    parser.add_argument("--source-root", help="Optional AURIX2G source root for real Cfg.c object extraction")
     parser.add_argument("--output", required=True, help="Path to write the YAML bundle")
     args = parser.parse_args()
 
@@ -772,8 +798,9 @@ def main() -> int:
     dd_path = Path(args.dd)
     module = args.module or infer_module_name(dd_path)
     grounding_modules = dedupe(args.grounding_modules)
+    source_root = Path(args.source_root) if args.source_root else None
 
-    bundle = build_bundle(module, srs_path, arch_path, dd_path, grounding_modules)
+    bundle = build_bundle(module, srs_path, arch_path, dd_path, grounding_modules, source_root)
     output_path = Path(args.output)
     output_path.write_text(dump_yaml(bundle) + "\n", encoding="utf-8")
     print(f"OK: wrote bundle to {output_path}")

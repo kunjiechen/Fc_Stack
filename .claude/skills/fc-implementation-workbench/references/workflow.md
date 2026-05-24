@@ -24,6 +24,7 @@ Move from prompt-heavy document generation to a repeatable workflow:
 - Normalize field usage with `references/schemas/field_dictionary.md`
 - Record each downgrade, freeze, or pending confirmation explicitly
 - Use `scripts/build_generation_bundle.py` when source artifacts already exist as markdown and need to be converted into a reusable bundle skeleton
+- When source `Cfg.c` exists, use `scripts/extract_cfg_objects.py` or the `--source-root` option on `build_generation_bundle.py` to attach real config objects instead of only requirement-side config points
 
 ### 3. Generate grounding summary
 
@@ -43,6 +44,12 @@ When the source artifacts already exist, `build_generation_bundle.py` may infer 
 - derive internal interfaces from repeated responsibilities
 - attach relationship links explicitly
 - attach grounding evidence and `Conf_*` evidence where they influenced the design
+
+For detailed-design narrative generation, also use:
+
+- `references/detailed_design_quality_contract.md`
+- `references/bundle_to_dd_mapping.md`
+- `references/chapter_generation_rules.md`
 
 ### 5. Render markdown
 

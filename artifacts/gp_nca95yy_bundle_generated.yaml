@@ -1,5 +1,6 @@
 module: "Gp_NCA95yy"
 grounding_modules:
+  - "Gp_TPT1145"
   - "Gp_TLE92104"
   - "Gp_DRV8889"
   - "IoMcu"
@@ -12,7 +13,6 @@ grounding_patterns:
   - "interrupt_polling_mainfunction"
 grounding_rejections:
   - "conditional_external_interfaces"
-  - "single_array_runtime"
 requirements:
   - id: "SRS-GPNCA95YY-FUNC-0001"
     category: "functional"
@@ -244,6 +244,7 @@ requirements:
 architecture:
   module: "Gp_NCA95yy"
   grounding_modules:
+    - "Gp_TPT1145"
     - "Gp_TLE92104"
     - "Gp_DRV8889"
     - "IoMcu"
@@ -503,10 +504,364 @@ detailed_design:
         - "SRS-GPNCA95YY-FUNC-0006"
         - "SRS-GPNCA95YY-FUNC-0008"
 conf_evidence:
+  - "Gp_TPT1145_CfgData.h"
+  - "Gp_TPT1145_Callout.h"
   - "Gp_TLE92104_Cfg.h"
   - "Gp_TLE92104_Callout.h"
   - "Gp_DRV8889_Cfg.h"
   - "Gp_DRV8889_Callout.h"
+cfg_objects:
+  - module: "Gp_TPT1145"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145/Gp_TPT1145_Cfg.c"
+    symbol: "Gp_TPT1145_PnRegCfg_lcatst"
+    type: "Gp_TPT1145_PnRegCfgType"
+    dimensions:
+      - "GP_TPT1145_MAX_CHIP_NUM"
+    container_level: "per_chip"
+    role: "register_frame_config"
+    fields:
+      - "CanCtl_u16"
+      - "DataRate_u16"
+      - "Id0_u16"
+      - "Id1_u16"
+      - "Id2_u16"
+      - "Id3_u16"
+      - "Id0Mask_u16"
+      - "Id1Mask_u16"
+      - "Id2Mask_u16"
+      - "Id3Mask_u16"
+      - "FrameCtrl_u16"
+      - "Data0Mask_u16"
+      - "Data1Mask_u16"
+      - "Data2Mask_u16"
+      - "Data3Mask_u16"
+      - "Data4Mask_u16"
+      - "Data5Mask_u16"
+      - "Data6Mask_u16"
+      - "Data7Mask_u16"
+    references:
+      []
+    semantic_tags:
+      - "register_init"
+      - "per_chip_layout"
+    summary: "寄存器或帧初始化配置，重点字段包括 CanCtl_u16, DataRate_u16, Id0_u16, Id1_u16。"
+    includes:
+      - "Gp_TPT1145_CfgData.h"
+      - "Spi.h"
+      - "Gp_TPT1145_MemMap.h"
+  - module: "Gp_TPT1145"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145/Gp_TPT1145_Cfg.c"
+    symbol: "Gp_TPT1145_SpiCfg_lcatst"
+    type: "Gp_TPT1145_SpiChCfgType"
+    dimensions:
+      - "GP_TPT1145_MAX_CHIP_NUM"
+    container_level: "per_chip"
+    role: "bus_mapping_config"
+    fields:
+      - "SpiCh_u8"
+      - "SpiSq_u8"
+    references:
+      []
+    semantic_tags:
+      - "bus_mapping"
+      - "per_chip_layout"
+    summary: "总线/通道映射配置，重点字段包括 SpiCh_u8, SpiSq_u8。"
+    includes:
+      - "Gp_TPT1145_CfgData.h"
+      - "Spi.h"
+      - "Gp_TPT1145_MemMap.h"
+  - module: "Gp_TPT1145"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145/Gp_TPT1145_Cfg.c"
+    symbol: "Gp_TPT1145_cfgCont_vcatst"
+    type: "Gp_TPT1145_CfgType"
+    dimensions:
+      - "GP_TPT1145_MAX_CHIP_NUM"
+    container_level: "top_level"
+    role: "top_level_cfg_container"
+    fields:
+      []
+    references:
+      - "Gp_TPT1145_PnRegCfg_lcatst"
+      - "Gp_TPT1145_SpiCfg_lcatst"
+    semantic_tags:
+      - "composite_container"
+      - "per_chip_layout"
+    summary: "顶层配置容器，聚合 Gp_TPT1145_PnRegCfg_lcatst, Gp_TPT1145_SpiCfg_lcatst 等子配置对象。"
+    includes:
+      - "Gp_TPT1145_CfgData.h"
+      - "Spi.h"
+      - "Gp_TPT1145_MemMap.h"
+  - module: "Gp_TLE92104"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104/Gp_TLE92104_Cfg.c"
+    symbol: "Gp_TLE92104_cfgChipCore0_lcatst"
+    type: "Gp_TLE92104_ChipCfgType"
+    dimensions:
+      - "GP_TLE92104_CHIP_NUM_IN_CORE0"
+    container_level: "per_core"
+    role: "per_core_chip_config_array"
+    fields:
+      - "MwRegDataCmd_au32"
+      - "MrRegData_au32"
+      - "GENCTRL1_u16"
+      - "GENCTRL2_u16"
+      - "VDS1_u16"
+      - "VDS2_u16"
+      - "CCP_BLK1_u16"
+      - "HBMODE_u16"
+      - "PWMSET_u16"
+      - "TPRECHG_u16"
+      - "HBIDIAG_u16"
+      - "CCP_BLK2_ACT_u16"
+      - "ST_ICHG_u16"
+      - "PWM_ICHG_ACT_u16"
+      - "PWM_IDCHG_ACT_u16"
+      - "PWM_ICHGMAX_CCP_BLK3_ACT_u16"
+      - "CCP_BLK2_FW_u16"
+      - "PWM_PCHG_INIT_u16"
+      - "PWM_ICHG_FW_u16"
+      - "PWM_PDCHG_INIT_u16"
+      - "PWM_ICHGMAX_CCP_BLK3_FW_u16"
+      - "TDON_OFF1_u16"
+      - "TDON_OFF2_u16"
+      - "TDON_OFF3_u16"
+      - "EnChnId_u16"
+      - "SpiChnId_u8"
+      - "SpiSeqId_u8"
+      - "PwmChnId_au8"
+    references:
+      []
+    semantic_tags:
+      - "bus_mapping"
+      - "io_mapping"
+      - "register_init"
+      - "per_core_layout"
+      - "per_chip_layout"
+    summary: "按 core 组织芯片配置数组，用于多核实例或核内资源分区。"
+    includes:
+      - "Gp_TLE92104_Cfg.h"
+      - "Gp_TLE92104_MemMap.h"
+  - module: "Gp_TLE92104"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104/Gp_TLE92104_Cfg.c"
+    symbol: "Gp_TLE92104_cfgChipCore1_lcatst"
+    type: "Gp_TLE92104_ChipCfgType"
+    dimensions:
+      - "GP_TLE92104_CHIP_NUM_IN_CORE1"
+    container_level: "per_core"
+    role: "per_core_chip_config_array"
+    fields:
+      - "MwRegDataCmd_au32"
+      - "MrRegData_au32"
+      - "GENCTRL1_u16"
+      - "GENCTRL2_u16"
+      - "VDS1_u16"
+      - "VDS2_u16"
+      - "CCP_BLK1_u16"
+      - "HBMODE_u16"
+      - "PWMSET_u16"
+      - "TPRECHG_u16"
+      - "HBIDIAG_u16"
+      - "CCP_BLK2_ACT_u16"
+      - "ST_ICHG_u16"
+      - "PWM_ICHG_ACT_u16"
+      - "PWM_IDCHG_ACT_u16"
+      - "PWM_ICHGMAX_CCP_BLK3_ACT_u16"
+      - "CCP_BLK2_FW_u16"
+      - "PWM_PCHG_INIT_u16"
+      - "PWM_ICHG_FW_u16"
+      - "PWM_PDCHG_INIT_u16"
+      - "PWM_ICHGMAX_CCP_BLK3_FW_u16"
+      - "TDON_OFF1_u16"
+      - "TDON_OFF2_u16"
+      - "TDON_OFF3_u16"
+      - "EnChnId_u16"
+      - "SpiChnId_u8"
+      - "SpiSeqId_u8"
+      - "PwmChnId_au8"
+    references:
+      []
+    semantic_tags:
+      - "bus_mapping"
+      - "io_mapping"
+      - "register_init"
+      - "per_core_layout"
+      - "per_chip_layout"
+    summary: "按 core 组织芯片配置数组，用于多核实例或核内资源分区。"
+    includes:
+      - "Gp_TLE92104_Cfg.h"
+      - "Gp_TLE92104_MemMap.h"
+  - module: "Gp_TLE92104"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104/Gp_TLE92104_Cfg.c"
+    symbol: "Gp_TLE92104_cfgChipCore2_lcatst"
+    type: "Gp_TLE92104_ChipCfgType"
+    dimensions:
+      - "GP_TLE92104_CHIP_NUM_IN_CORE2"
+    container_level: "per_core"
+    role: "per_core_chip_config_array"
+    fields:
+      - "MwRegDataCmd_au32"
+      - "MrRegData_au32"
+      - "GENCTRL1_u16"
+      - "GENCTRL2_u16"
+      - "VDS1_u16"
+      - "VDS2_u16"
+      - "CCP_BLK1_u16"
+      - "HBMODE_u16"
+      - "PWMSET_u16"
+      - "TPRECHG_u16"
+      - "HBIDIAG_u16"
+      - "CCP_BLK2_ACT_u16"
+      - "ST_ICHG_u16"
+      - "PWM_ICHG_ACT_u16"
+      - "PWM_IDCHG_ACT_u16"
+      - "PWM_ICHGMAX_CCP_BLK3_ACT_u16"
+      - "CCP_BLK2_FW_u16"
+      - "PWM_PCHG_INIT_u16"
+      - "PWM_ICHG_FW_u16"
+      - "PWM_PDCHG_INIT_u16"
+      - "PWM_ICHGMAX_CCP_BLK3_FW_u16"
+      - "TDON_OFF1_u16"
+      - "TDON_OFF2_u16"
+      - "TDON_OFF3_u16"
+      - "EnChnId_u16"
+      - "SpiChnId_u8"
+      - "SpiSeqId_u8"
+      - "PwmChnId_au8"
+    references:
+      []
+    semantic_tags:
+      - "bus_mapping"
+      - "io_mapping"
+      - "register_init"
+      - "per_core_layout"
+      - "per_chip_layout"
+    summary: "按 core 组织芯片配置数组，用于多核实例或核内资源分区。"
+    includes:
+      - "Gp_TLE92104_Cfg.h"
+      - "Gp_TLE92104_MemMap.h"
+  - module: "Gp_TLE92104"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104/Gp_TLE92104_Cfg.c"
+    symbol: "Gp_TLE92104_cfgSigMap_vcatst"
+    type: "Gp_TLE92104_SigMapCfgType"
+    dimensions:
+      - "GP_TLE92104_SIG_NUM"
+    container_level: "per_chip"
+    role: "array_config_container"
+    fields:
+      []
+    references:
+      []
+    semantic_tags:
+      []
+    summary: "数组型配置对象，维度为 GP_TLE92104_SIG_NUM。"
+    includes:
+      - "Gp_TLE92104_Cfg.h"
+      - "Gp_TLE92104_MemMap.h"
+  - module: "Gp_DRV8889"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889/Gp_DRV8889_Cfg.c"
+    symbol: "Gp_DRV8889_cfgChipCore0_lcatst"
+    type: "Gp_DRV8889_ChipCfgType"
+    dimensions:
+      - "GP_DRV8889_CHIP_NUM_IN_CORE0"
+    container_level: "per_core"
+    role: "per_core_chip_config_array"
+    fields:
+      - "InitRegData_au16"
+      - "ThdReg_u16"
+      - "CTRL1reg_DacHold_u16"
+      - "DO_SLEEP_u16"
+      - "DO_DRVOFF_u16"
+      - "DO_DIR_u16"
+      - "DI_FAULT_u16"
+      - "STEP_ID_u16"
+      - "SpiChn_u8"
+      - "SpiSeq_u8"
+    references:
+      []
+    semantic_tags:
+      - "bus_mapping"
+      - "io_mapping"
+      - "register_init"
+      - "fault_threshold"
+      - "per_core_layout"
+      - "per_chip_layout"
+    summary: "按 core 组织芯片配置数组，用于多核实例或核内资源分区。"
+    includes:
+      - "Gp_DRV8889_Cfg.h"
+      - "Gp_DRV8889_MemMap.h"
+  - module: "Gp_DRV8889"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889/Gp_DRV8889_Cfg.c"
+    symbol: "Gp_DRV8889_cfgChipCore2_lcatst"
+    type: "Gp_DRV8889_ChipCfgType"
+    dimensions:
+      - "GP_DRV8889_CHIP_NUM_IN_CORE2"
+    container_level: "per_core"
+    role: "per_core_chip_config_array"
+    fields:
+      - "InitRegData_au16"
+      - "ThdReg_u16"
+      - "CTRL1reg_DacHold_u16"
+      - "DO_SLEEP_u16"
+      - "DO_DRVOFF_u16"
+      - "DO_DIR_u16"
+      - "DI_FAULT_u16"
+      - "STEP_ID_u16"
+      - "SpiChn_u8"
+      - "SpiSeq_u8"
+    references:
+      []
+    semantic_tags:
+      - "bus_mapping"
+      - "io_mapping"
+      - "register_init"
+      - "fault_threshold"
+      - "per_core_layout"
+      - "per_chip_layout"
+    summary: "按 core 组织芯片配置数组，用于多核实例或核内资源分区。"
+    includes:
+      - "Gp_DRV8889_Cfg.h"
+      - "Gp_DRV8889_MemMap.h"
+  - module: "Gp_DRV8889"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889/Gp_DRV8889_Cfg.c"
+    symbol: "Gp_DRV8889_cfgCont_vcatst"
+    type: "Gp_DRV8889_CfgType"
+    dimensions:
+      - "GP_DRV8889_CORE_NUM"
+    container_level: "top_level"
+    role: "top_level_cfg_container"
+    fields:
+      []
+    references:
+      - "Gp_DRV8889_cfgChipCore0_lcatst"
+      - "Gp_DRV8889_cfgChipCore1_lcatst"
+      - "Gp_DRV8889_cfgChipCore2_lcatst"
+      - "Gp_DRV8889_cfgChipCore3_lcatst"
+      - "Gp_DRV8889_cfgChipCore4_lcatst"
+      - "Gp_DRV8889_cfgChipCore5_lcatst"
+    semantic_tags:
+      - "composite_container"
+      - "per_core_layout"
+    summary: "顶层配置容器，聚合 Gp_DRV8889_cfgChipCore0_lcatst, Gp_DRV8889_cfgChipCore1_lcatst, Gp_DRV8889_cfgChipCore2_lcatst, Gp_DRV8889_cfgChipCore3_lcatst 等子配置对象。"
+    includes:
+      - "Gp_DRV8889_Cfg.h"
+      - "Gp_DRV8889_MemMap.h"
+  - module: "Gp_DRV8889"
+    cfg_path: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889/Gp_DRV8889_Cfg.c"
+    symbol: "Gp_DRV8889_cfgSigMapping_vcatst"
+    type: "Gp_DRV8889_SigMappingCfgType"
+    dimensions:
+      - "GP_DRV8889_SIG_NUM"
+    container_level: "per_chip"
+    role: "array_config_container"
+    fields:
+      []
+    references:
+      []
+    semantic_tags:
+      []
+    summary: "数组型配置对象，维度为 GP_DRV8889_SIG_NUM。"
+    includes:
+      - "Gp_DRV8889_Cfg.h"
+      - "Gp_DRV8889_MemMap.h"
 assumptions:
   - "A1 | 假设 | 运行时方向/极性修改默认关闭，仅 Init 阶段生效。 | `SetGpDirection`/`SetGpPolarity` 接口条件编译。"
   - "A2 | 假设 | RESET 引脚不由本模块控制，由硬件或上层复位管理模块处理。 | 复位恢复仅通过 MainFunction 内部检测触发，无外部 Reset API。"
