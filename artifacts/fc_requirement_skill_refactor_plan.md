@@ -40,10 +40,35 @@
 3. 缺少 requirement bundle 级别的正式生成、校验和回放机制
 4. 缺少对“为什么这样写、为什么这样裁剪、为什么降级为 Draft/Open Issue”的 decision 收敛机制
 5. 缺少面向下游架构和测试的稳定种子输出
+6. 原始需求文档提取规则偏粗，尚未清晰区分 formal requirement、capability、constraint、metadata 和 evidence
 
 一句话总结：
 
 当前需求 skill 已经有“规则体系”，但还没有完全完成“方法重构”。
+
+---
+
+## 2.2 当前新增判断：原始需求文档提取规则是一个独立厚点
+
+当前经过试点执行后，可以确认一个新增判断：
+
+原始需求文档提取规则本身，不应只视为一个局部脚本问题，而应视为需求 skill 重构中的独立厚点。
+
+原因是当前 raw requirement 提取虽然已经能启动流程，但仍存在以下结构性问题：
+
+1. 切条逻辑偏粗
+   - 容易把章节名、元信息、说明句混入需求池
+   - 容易把复杂需求切坏
+2. 分类逻辑偏关键词驱动
+   - 更像粗分类，而不是 formal requirement gate
+3. 默认策略偏激进
+   - 当前更像“能抽出来就先进入 requirement 流水线”
+   - 但实际上应先判断属于 requirement、constraint、capability、metadata 还是 evidence
+4. 对结构化原始输入的利用不够强
+   - 对 txt、excel、模板输入仍然偏自由文本启发式
+   - 还没有建立字段优先的稳定抽取策略
+
+因此，本轮优化计划必须把“raw extraction redesign”单列，而不是只靠后续 validator 兜底。
 
 ---
 
@@ -475,6 +500,75 @@ generation_notes:
 
 ---
 
+## 7.10 原始需求提取规则的重构方向
+
+当前原始需求提取规则可以继续作为试点启动路径，但不应继续作为最终长期方案直接扩展。
+
+建议将 raw extraction 重构为两层。
+
+### 第一层：结构提取层
+
+职责：
+
+- 切条
+- 去噪
+- 元信息识别
+- 章节/列字段识别
+- 原始输入字段归一化
+
+这一层只回答：
+
+- 这一段输入是什么
+- 来自哪里
+- 属于哪个字段或章节
+
+不负责决定它是否已经是正式 requirement。
+
+### 第二层：语义归属层
+
+职责：
+
+- 判断该输入属于哪一类对象
+
+建议至少区分：
+
+- `formal_requirement`
+- `constraint`
+- `capability`
+- `metadata`
+- `evidence`
+- `architecture_seed_only`
+- `test_seed_only`
+- `open_issue`
+
+这一层才决定：
+
+- 是否进入正式 requirement pool
+- 是否只进入 architecture seed
+- 是否只作为 evidence 保留
+- 是否只能停在 open issue
+
+### 这一层为什么重要
+
+如果没有这层，当前流程就会天然倾向：
+
+```text
+原始句子
+-> 粗分类
+-> requirement object
+-> formal requirement
+```
+
+这会导致：
+
+- capability 被误当 requirement
+- 非功能约束被误塞进 functional requirement
+- metadata 被错误推进到下游 test seed
+
+因此，从当前试点结果看，raw extraction redesign 已经成为后续阶段的主工作项。
+
+---
+
 ## 8. 在需求生成中创建架构文档的建议
 
 本轮不建议由需求 skill 直接正式生成完整架构文档。
@@ -716,6 +810,26 @@ generation_notes:
 
 这一步是连接需求与架构/测试的重要桥梁。
 
+### 10.9 重构 Raw Extraction Gate
+
+新增建议：
+
+- `references/raw_extraction_policy.md`
+- `references/formal_requirement_gate.md`
+
+建议新增或改造脚本：
+
+- `src/fc_requirement_workbench/raw_requirements.py`
+- `src/fc_requirement_workbench/raw_classification.py` 或等价模块
+
+作用：
+
+- 将原始输入先拆成结构对象
+- 再做语义归属判断
+- 不再默认“抽出来就进入正式 requirement”
+
+---
+
 ---
 
 ## 11. 实施计划
@@ -754,7 +868,26 @@ generation_notes:
 - 明确 bundle YAML 的顶层结构
 - 明确架构种子和测试种子的边界
 
-## 11.3 Phase 2：Bundle 生成器落地
+## 11.3 Phase 2：Raw Extraction 重构
+
+目标：
+
+- 把“原始输入提取”从粗启发式升级成正式 gate
+
+交付件：
+
+- `raw_extraction_policy.md`
+- `formal_requirement_gate.md`
+- raw extraction 两层模型
+
+完成标准：
+
+- 能明确区分 requirement / constraint / capability / metadata / evidence
+- metadata 不再进入正式 requirement 池
+- capability 不再默认推进成 formal requirement
+- test seed 和 architecture seed 不再依赖后置清洗兜底
+
+## 11.4 Phase 3：Bundle 生成器落地
 
 目标：
 
@@ -770,7 +903,7 @@ generation_notes:
 - 能从真实输入生成稳定 requirement bundle
 - 能输出 source_inventory、requirements、coverage、open_issues
 
-## 11.4 Phase 3：Validator 落地
+## 11.5 Phase 4：Validator 落地
 
 目标：
 
@@ -785,7 +918,7 @@ generation_notes:
 
 - 能自动识别缺 source、缺 verification、状态越级、模糊词、重复项、冲突项
 
-## 11.5 Phase 4：SRS 渲染器与 Seed 输出
+## 11.6 Phase 5：SRS 渲染器与 Seed 输出
 
 目标：
 
@@ -803,7 +936,7 @@ generation_notes:
 - SRS 可由 bundle 稳定渲染
 - 架构 seed 和测试 seed 可导出
 
-## 11.6 Phase 5：样例回放与回归集
+## 11.7 Phase 6：样例回放与回归集
 
 目标：
 
@@ -828,10 +961,11 @@ generation_notes:
 
 1. 先做 `requirement_quality_contract.md`
 2. 再做 `requirement_bundle_contract.md`
-3. 然后实现 `build_requirement_bundle.py`
-4. 接着实现 `validate_requirement_bundle.py`
-5. 再实现 `render_srs_from_bundle.py`
-6. 最后补 `architecture_seed.yaml` 和 `test_seed.yaml`
+3. 然后重构 raw extraction gate
+4. 再实现 `build_requirement_bundle.py`
+5. 接着实现 `validate_requirement_bundle.py`
+6. 再实现 `render_srs_from_bundle.py`
+7. 最后补 `architecture_seed.yaml` 和 `test_seed.yaml`
 
 不建议一开始就：
 
@@ -923,7 +1057,136 @@ generation_notes:
 
 ---
 
-## 14. 最终结论
+## 16. 当前执行状态与统筹后计划
+
+截至当前，已经完成一个实操阶段：
+
+### 已完成
+
+- requirement bundle 导出链路已打通
+- architecture seed 导出链路已打通
+- test seed 导出链路已打通
+- bundle validation 初版已落地
+- raw extraction gate 初版已落地
+- raw extraction / formal requirement gate 规则文档已补齐
+- requirement quality contract 已补齐
+- Ready Gate 已开始与 gate / promotion / nonfunctional 边界收敛
+- `Gp_NCA95yy` 试点工件已生成
+- 源码 evidence 输入链路已接入
+- raw 元信息误入 requirement 池的问题已初步修正
+
+当前已落地产物包括：
+
+- `artifacts/gp_nca95yy_requirement_bundle.yaml`
+- `artifacts/gp_nca95yy_architecture_seed.yaml`
+- `artifacts/gp_nca95yy_test_seed.yaml`
+- `artifacts/gp_nca95yy_bundle_validation.json`
+- `artifacts/raw_input_Gp_TLE92104.txt`
+- `artifacts/Gp_TLE92104_grounding_input.md`
+- `artifacts/gp_tle92104_requirement_bundle.yaml`
+- `artifacts/gp_tle92104_architecture_seed.yaml`
+- `artifacts/gp_tle92104_test_seed.yaml`
+- `artifacts/gp_tle92104_bundle_validation.json`
+- `.claude/skills/fc-requirement-workbench/references/raw_extraction_policy.md`
+- `.claude/skills/fc-requirement-workbench/references/formal_requirement_gate.md`
+- `.claude/skills/fc-requirement-workbench/references/requirement_quality_contract.md`
+- `.claude/skills/fc-requirement-workbench/references/capability_promotion_policy.md`
+
+### 当前阶段结论
+
+这一阶段说明：
+
+- 方法路线是成立的
+- bundle-first / seed-first / validator-first 的方向可以跑通
+- raw extraction gate 已经开始把非 formal requirement 对象挡在正式 requirement 池之外
+- quality contract 已经开始从规则文档下沉到 validator 门禁
+
+### 第二模块回放新增结论
+
+通过 `Gp_TLE92104` 回放，可以确认以下几点：
+
+1. 当前方法已经具备跨模块可运行性
+   - 第二模块已成功生成 requirement bundle / architecture seed / test seed / validation report
+   - 说明当前结构化出口和 validator 不是只绑定 `Gp_NCA95yy`
+
+2. 真实接口名必须优先于语义猜测
+   - 如果只靠通用语义分类，`SetHbOutSig / GetDevModeInSig / SetDevModeOutSig / GetHBVOUT` 这类接口容易被压扁或误映射
+   - 因此，原始输入或源码中出现的显式函数名必须作为 interface object 的优先真相
+
+3. raw extraction 必须具备章节感知能力
+   - `原始功能 / 原始接口 / 原始配置 / 原始非功能` 的段落上下文若丢失，会导致 NFR、接口契约和配置约束被误推进 formal pool
+   - 因此，切条逻辑不能只返回文本，还应保留 section-derived category hint
+
+4. gate 后对象不能再被当作 coverage gap
+   - `constraint / capability / architecture_seed_only / evidence` 是被主动 gate 的对象，不应继续以“漏覆盖 requirement”口径报警
+   - 因此，coverage status 需要显式支持 `excluded_by_gate`
+
+5. 当前第二模块仍暴露两类真实待解问题
+   - `DET requirement` 仍缺 formal requirement 级表达
+   - `PWM dependency` 仍缺 requirement-level 依赖表达
+
+这两类问题是真正的下阶段优化重点，不再是第一阶段那种“元信息误入 requirement 池”的粗问题。
+
+但也正式暴露了下一阶段最重要的问题：
+
+- raw extraction gate 虽已建立，但仍然偏粗
+- formal requirement 与 capability / evidence / metadata 的边界还不够清晰
+
+### 统筹后的下一阶段计划
+
+下一阶段不再优先继续补 renderer 或继续扩字段，而是优先重构 raw extraction gate。
+
+建议按以下顺序推进：
+
+1. 定义 raw extraction policy
+2. 定义 formal requirement gate
+3. 重构 raw input -> semantic object 的归属判断
+4. 让 architecture seed / test seed 直接吃 gate 后对象
+5. 再根据新 gate 结果反推 bundle validator 的 Ready Gate
+
+这意味着后续主线将从：
+
+```text
+先抽出来
+-> 先当 requirement
+-> 再靠 validator 报问题
+```
+
+转成：
+
+```text
+先抽结构
+-> 先判归属
+-> 只有 formal requirement 才进入正式 requirement pool
+-> 其他分别进入 seed / evidence / metadata / open issue
+```
+
+这将是需求 skill 下一轮真正的主重构点。
+
+---
+
+## 17. 当前阶段收口状态
+
+截至当前阶段，需求 skill 已完成第一轮独立收口。
+
+收口依据：
+
+- `Gp_NCA95yy` 与 `Gp_TLE92104` 两个 golden baseline 已全部达到 `0 warning / 0 error`
+- requirement bundle / architecture seed / test seed / validation 四类 artifact 已稳定输出
+- raw extraction gate、ready gate、capability promotion、config coverage 等核心问题已完成当前轮次收敛
+
+当前阶段收口文档：
+
+- [fc_requirement_skill_stage_closure.md](/Users/chenkunjie/Downloads/SBPAI/Proj/Fc_Stack/artifacts/fc_requirement_skill_stage_closure.md)
+
+这意味着：
+
+- 当前需求 skill 可以作为独立层稳定存在
+- 后续如果继续推进，应以 regression baseline 固化和 bundle contract 文档化为主
+- 架构 skill 的后续工作应保持独立，只讨论输入契约，不回退为“需求直接生成架构”
+
+
+## 17. 最终结论
 
 本轮 `fc-requirement-workbench` 的正确重构方向，不是继续堆规则或继续强化 prompt，而是借鉴详细设计 skill 已验证的方法，完成以下收敛：
 

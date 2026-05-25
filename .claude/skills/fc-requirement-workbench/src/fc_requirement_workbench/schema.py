@@ -224,6 +224,8 @@ class RawRequirementEntry:
     constraint_value: str | None = None
     verification_suggestion: str | None = None
     notes: str | None = None
+    disposition: str = "formal_requirement"
+    gate_reason: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -1,0 +1,34 @@
+{
+  "case_id": "gp_tle92104",
+  "module": "Gp_TLE92104",
+  "input_document": "artifacts/Gp_TLE92104_grounding_input.md",
+  "raw_input": "artifacts/raw_input_Gp_TLE92104.txt",
+  "source_root": "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G",
+  "golden": {
+    "requirement-bundle": "artifacts/gp_tle92104_requirement_bundle.yaml",
+    "architecture-seed": "artifacts/gp_tle92104_architecture_seed.yaml",
+    "test-seed": "artifacts/gp_tle92104_test_seed.yaml",
+    "bundle-validation": "artifacts/gp_tle92104_bundle_validation.json"
+  },
+  "expectations": {
+    "validation_summary": {
+      "error": 0,
+      "warning": 0,
+      "info": 0
+    },
+    "architecture_interfaces": [
+      "Gp_TLE92104_Init",
+      "Gp_TLE92104_MainFunction",
+      "Gp_TLE92104_SetHbOutSig",
+      "Gp_TLE92104_GetDevModeInSig",
+      "Gp_TLE92104_SetDevModeOutSig",
+      "Gp_TLE92104_GetDevFaultSig",
+      "Gp_TLE92104_GetHBVOUT"
+    ],
+    "requirement_titles": [
+      "开发错误检测",
+      "PWM依赖集成",
+      "SPI通信依赖"
+    ]
+  }
+}

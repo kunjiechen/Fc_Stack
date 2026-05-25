@@ -125,7 +125,7 @@ def _classify_interface_semantic(interface_name: str, description: str, directio
     text = f"{interface_name} {description}".lower()
 
     # Lifecycle interfaces are independent of direction
-    if any(kw in text for kw in ("mainfunction", "周期调度", "main function")):
+    if any(kw in text for kw in ("mainfunction", "周期调度", "周期性驱动", "轮询", "main function")):
         return "mainfunction"
     if any(kw in text for kw in ("init", "初始化")):
         return "init"
@@ -133,6 +133,10 @@ def _classify_interface_semantic(interface_name: str, description: str, directio
     # Fault/diagnostic detection — check before direction-based classification
     if any(kw in text for kw in ("故障", "诊断", "fault", "diag", "devfaultsig", "getdevfault")):
         return "fault"
+
+    # Reading semantics should win over generic set/output hints when both appear
+    if any(kw in text for kw in ("输入读取", "状态读取", "read", "读取", "get", "input", "insig")):
+        return "input_read"
 
     if direction == "output":
         if any(kw in text for kw in ("输入", "读取", "read", "input", "get", "in")):
@@ -174,6 +178,23 @@ def _resolve_interface_name(
     if suffix:
         return f"Gp_{clean}_{suffix}"
     return f"Gp_{clean}_{interface_name}"
+
+
+def _extract_function_name_hint(module: str, interface_name: str, description: str) -> str:
+    text = f"{interface_name} {description}"
+    match = re.search(r"\b(Gp_[A-Za-z0-9_]+)\s*(?=\()", text)
+    if match:
+        return match.group(1)
+    match = re.search(r"\b([A-Za-z][A-Za-z0-9_]*)\s*(?=\()", text)
+    if not match:
+        return ""
+    base_name = match.group(1)
+    if base_name in {"void", "uint8", "uint16", "uint32", "Std_ReturnType"}:
+        return ""
+    clean = _strip_gp_prefix(module)
+    if base_name.startswith(clean):
+        return f"Gp_{base_name}"
+    return f"Gp_{clean}_{base_name}"
 
 
 class RequirementBuilder:
@@ -270,6 +291,8 @@ class RequirementBuilder:
         # Resolve the correct C function name
         function_name = item.get("function_name", "")
         if not function_name:
+            function_name = _extract_function_name_hint(self.module, interface, item.get("dependency", ""))
+        if not function_name:
             semantic = _classify_interface_semantic(interface, item.get("dependency", ""), direction)
             function_name = _resolve_interface_name(self.module, semantic, self.layer, interface)
 
@@ -289,11 +312,19 @@ class RequirementBuilder:
     def _resolve_interface_description(self, interface: str, function_name: str) -> str:
         """Generate a description for an interface based on its resolved function name."""
         if "Init" in function_name and "init" not in interface.lower():
-            return "软件应提供初始化接口，用于加载项目配置、建立 I2C 访问上下文、配置 GPIO 默认状态，并在配置非法或初始化失败时返回错误。"
+            return "软件应提供初始化接口，用于加载项目配置、建立运行时上下文并初始化所依赖的底层访问资源，在配置非法或初始化失败时返回定义错误。"
         if "MainFunction" in function_name and "mainfunction" not in interface.lower():
-            return "软件应提供 MainFunction 接口，用于周期推进异步请求、处理超时、刷新运行时状态和执行诊断轮询，接口不得执行长时间阻塞操作。"
+            return "软件应提供 MainFunction 接口，用于周期推进运行时状态、输出刷新和诊断处理，接口不得执行长时间阻塞操作。"
+        if "SetHbOutSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，基于目标 H 桥通道设置周期、占空比和方向输出，并在参数非法或底层访问失败时返回定义错误。"
+        if "GetDevModeInSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，读取指定芯片实例的当前设备模式，并在未初始化、非法参数或底层访问失败时返回定义错误。"
+        if "SetDevModeOutSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，设置指定芯片实例的目标工作模式，并在模式值非法或底层访问失败时返回定义错误。"
         if "GetDevFaultSig" in function_name:
-            return f"软件应提供 `{function_name}` 接口，返回指定芯片实例的诊断状态位掩码（uint32），包括 I2C 通信错误、参数合法性错误、未初始化访问和中断状态信息。"
+            return f"软件应提供 `{function_name}` 接口，返回指定芯片实例的诊断状态位掩码（uint32），包括参数合法性错误、未初始化访问和设备故障状态信息。"
+        if "GetHBVOUT" in function_name:
+            return f"软件应提供 `{function_name}` 接口，读取指定芯片实例的 HBVOUT 寄存器值，并在参数非法或底层访问失败时返回定义错误。"
         if "GetInSig" in function_name:
             return f"软件应提供 `{function_name}` 接口，通过 uint16 Id 解析目标 chip/port/pin 并返回 GPIO 输入状态，对非法 Id 或 I2C 读失败返回错误。"
         if "SetOutSig" in function_name:

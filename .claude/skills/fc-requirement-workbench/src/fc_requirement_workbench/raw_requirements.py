@@ -10,6 +10,7 @@ from xml.etree import ElementTree as ET
 import zipfile
 from typing import Any, Iterable
 
+from .raw_classification import classify_raw_item
 from .schema import (
     ConfigurationRequirementObject,
     CoverageReport,
@@ -48,7 +49,14 @@ class RawInputLoader:
             name = source_name or "dialog-input"
             source_type = self._normalize_source_type(source_type, "")
 
-        entries = [RawInputEntry(raw_text=item, likely_category=_guess_category(item), source_ref=name) for item in _split_raw_items(text)]
+        entries = [
+            RawInputEntry(
+                raw_text=item,
+                likely_category=explicit_category or _guess_category(item),
+                source_ref=name,
+            )
+            for item, explicit_category in _split_raw_entries(text)
+        ]
         hints = _extract_module_hints(text)
         return UnifiedRawInput(
             source_type=source_type,
@@ -206,6 +214,8 @@ class RawRequirementSemanticConverter:
     def convert(self, document: RawRequirementDocument) -> list[RequirementObject]:
         requirements: list[RequirementObject] = []
         for item in document.functional_reqs:
+            if item.disposition != "formal_requirement":
+                continue
             requirements.append(
                 FunctionalRequirementObject(
                     id=item.id.replace("RAW-", "REQ-"),
@@ -219,6 +229,8 @@ class RawRequirementSemanticConverter:
                 )
             )
         for item in document.interface_reqs:
+            if item.disposition != "formal_requirement":
+                continue
             direction = "input"
             if item.outputs and not item.inputs:
                 direction = "output"
@@ -232,10 +244,13 @@ class RawRequirementSemanticConverter:
                     evidence="；".join(
                         part for part in [item.inputs, item.outputs, item.return_value, item.exceptions] if part
                     ),
+                    function_name=_extract_explicit_function_name(document.module_name, item.title, item.description),
                     source=[_raw_source(document, item)],
                 )
             )
         for item in document.config_reqs:
+            if item.disposition != "formal_requirement":
+                continue
             requirements.append(
                 ConfigurationRequirementObject(
                     id=item.id.replace("RAW-", "REQ-"),
@@ -248,6 +263,8 @@ class RawRequirementSemanticConverter:
                 )
             )
         for item in document.nfr_reqs:
+            if item.disposition != "formal_requirement":
+                continue
             if item.nfr_category and re.search(r"状态|模式|state|mode", item.nfr_category, re.I):
                 requirements.append(
                     StateRequirementObject(
@@ -284,9 +301,10 @@ class RawRequirementCoverageAnalyzer:
         requirements: Iterable[RequirementObject | EngineeringRequirement],
     ) -> CoverageReport:
         details = self.build_detail(document, requirements)
-        covered = sum(1 for item in details if item["status"] == "covered")
-        uncovered = [str(item["raw_id"]) for item in details if item["status"] != "covered"]
-        total = len(details)
+        relevant = [item for item in details if item["status"] != "excluded_by_gate"]
+        covered = sum(1 for item in relevant if item["status"] == "covered")
+        uncovered = [str(item["raw_id"]) for item in relevant if item["status"] != "covered"]
+        total = len(relevant)
         rate = covered / total if total else 1.0
         return CoverageReport(
             total_user_reqs=total,
@@ -306,6 +324,18 @@ class RawRequirementCoverageAnalyzer:
         requirement_views = [_requirement_view(req) for req in requirements]
         details: list[dict[str, Any]] = []
         for item in _raw_items(document):
+            if item.disposition != "formal_requirement":
+                details.append(
+                    {
+                        "raw_id": item.id,
+                        "category": item.category,
+                        "title": item.title,
+                        "source": item.source_detail,
+                        "status": "excluded_by_gate",
+                        "matched_requirements": [],
+                    }
+                )
+                continue
             matches = _matched_requirement_ids(item, requirement_views)
             details.append(
                 {
@@ -394,7 +424,7 @@ def render_raw_coverage_matrix_markdown(
                     str(item["raw_id"]),
                     str(item["category"]),
                     str(item["title"]),
-                    "Covered" if item["status"] == "covered" else "Uncovered",
+                    "Covered" if item["status"] == "covered" else ("Excluded" if item["status"] == "excluded_by_gate" else "Uncovered"),
                     ", ".join(item["matched_requirements"]) or "-",
                     str(item["source"] or "-"),
                 ]
@@ -405,13 +435,20 @@ def render_raw_coverage_matrix_markdown(
     return "\n".join(lines)
 
 
-def _split_raw_items(text: str) -> list[str]:
-    items: list[str] = []
+def _split_raw_entries(text: str) -> list[tuple[str, str | None]]:
+    items: list[tuple[str, str | None]] = []
+    current_category: str | None = None
     for raw_line in text.splitlines():
         line = raw_line.strip()
         if not line:
             continue
-        if re.match(r"^(模块|module)\s*[:：]", line, re.I):
+        if re.match(r"^(模块名称|模块简称|模块|module)\s*[:：]", line, re.I):
+            continue
+        if re.match(r"^(安全等级|safety\s*level)\s*[:：]", line, re.I):
+            continue
+        category = _heading_category(line)
+        if category:
+            current_category = category
             continue
         line = re.sub(r"^[>\-\*\d\.\)\(（）：:、\s]+", "", line).strip()
         if len(line) < 4:
@@ -420,7 +457,7 @@ def _split_raw_items(text: str) -> list[str]:
         for piece in pieces:
             value = piece.strip(" ;")
             if len(value) >= 4:
-                items.append(value)
+                items.append((value, current_category))
     return items
 
 
@@ -436,6 +473,10 @@ def _guess_category(text: str, structured_fields: dict[str, str] | None = None) 
     if explicit in {"NFR", "NONFUNCTIONAL", "CONSTRAINT", "约束", "非功能", "非功能需求"}:
         return "NFR"
     lowered = text.lower()
+    if re.search(r"\b[A-Za-z_][A-Za-z0-9_]*\s*\(", text):
+        return "INTF"
+    if any(token in lowered for token in ("misra", "rom/ram", "memmap", "安全等级", "评估记录", "约束")):
+        return "NFR"
     if any(token in lowered for token in ("api", "接口", "初始化", "读取", "查询", "设置", "write", "read", "get", "set")):
         return "INTF"
     if any(token in lowered for token in ("配置", "参数", "默认", "地址", "实例", "核", "enable", "disable")):
@@ -449,12 +490,27 @@ def _normalize_category(value: str | None) -> str:
     return value if value in {"FUNC", "INTF", "CFG", "NFR"} else "FUNC"
 
 
+def _heading_category(line: str) -> str | None:
+    if re.match(r"^原始(?:功能|功能性).{0,8}[:：]?$", line):
+        return "FUNC"
+    if re.match(r"^原始接口.{0,8}[:：]?$", line):
+        return "INTF"
+    if re.match(r"^原始配置.{0,8}[:：]?$", line):
+        return "CFG"
+    if re.match(r"^原始(?:非功能|约束).{0,8}[:：]?$", line):
+        return "NFR"
+    return None
+
+
 def _extract_module_hints(text: str) -> dict[str, str]:
     hints: dict[str, str] = {}
     module_match = re.search(r"(?:模块名称|模块|module)\s*[:：]?\s*([A-Za-z][A-Za-z0-9_-]{1,31})", text, re.I)
     if module_match:
         hints["module_name"] = module_match.group(1)
         hints["module_abbr"] = _module_token(module_match.group(1))
+    safety_match = re.search(r"(?:安全等级|safety\s*level)\s*[:：]?\s*(QM|ASIL[- ]?[ABCD])", text, re.I)
+    if safety_match:
+        hints["safety_level"] = safety_match.group(1).upper().replace(" ", "-")
     return hints
 
 
@@ -480,6 +536,11 @@ def _entry_from_text(
 ) -> RawRequirementEntry:
     structured_fields = structured_fields or {}
     title = structured_fields.get("title") or _derive_title(text, category)
+    disposition, gate_reason = classify_raw_item(
+        category=category,
+        title=title,
+        description=_description_value(text, structured_fields),
+    )
     common = dict(
         id=item_id,
         category=category,
@@ -491,6 +552,8 @@ def _entry_from_text(
         status=structured_fields.get("status") or ("明确" if _is_explicit(text) else "待澄清"),
         confidence="Explicit" if _is_explicit(text) or structured_fields else "Inferred",
         notes="由对话/txt 原始输入自动抽取。",
+        disposition=disposition,
+        gate_reason=gate_reason,
     )
     if category == "INTF":
         return RawRequirementEntry(
@@ -519,6 +582,38 @@ def _entry_from_text(
 
 
 def _derive_title(text: str, category: str) -> str:
+    if category == "CFG":
+        cfg_patterns = [
+            ("实例数量", "实例数量配置"),
+            ("芯片实例数量", "实例数量配置"),
+            ("默认gpio方向", "默认方向配置"),
+            ("默认输出电平", "默认输出配置"),
+            ("方向枚举值", "方向映射配置"),
+            ("外部信号id映射", "方向映射配置"),
+            ("i2c通信速率", "通信速率配置"),
+            ("i2c设备地址", "设备地址配置"),
+            ("中断使能", "中断配置"),
+            ("去抖时间", "中断配置"),
+            ("det错误检测开关", "DET配置"),
+            ("mcal适配开关", "MCAL配置"),
+            ("使能延时", "初始化时序配置"),
+            ("初始化重试次数", "初始化时序配置"),
+            ("故障清除后延时", "初始化时序配置"),
+            ("看门狗开关", "看门狗配置"),
+            ("故障清除模式", "故障清除配置"),
+            ("自动清故障开关", "故障清除配置"),
+            ("各cpu核使能状态", "多核实例配置"),
+            ("每核独立芯片数量", "多核实例配置"),
+            ("信号数量配置", "多核实例配置"),
+            ("en引脚", "硬件映射配置"),
+            ("spi通道", "硬件映射配置"),
+            ("spi序列", "硬件映射配置"),
+            ("pwm通道映射", "硬件映射配置"),
+        ]
+        lowered = text.lower()
+        for token, title in cfg_patterns:
+            if token in lowered:
+                return title
     patterns = [
         ("初始化", "初始化"),
         ("读取", "状态读取"),
@@ -542,6 +637,23 @@ def _derive_title(text: str, category: str) -> str:
 def _description_value(text: str, structured_fields: dict[str, str]) -> str:
     description = structured_fields.get("description") or text
     return description.rstrip("。") + "。"
+
+
+def _extract_explicit_function_name(module_name: str, title: str, description: str) -> str:
+    text = f"{title} {description}"
+    match = re.search(r"\b(Gp_[A-Za-z0-9_]+)\s*(?=\()", text)
+    if match:
+        return match.group(1)
+    match = re.search(r"\b([A-Za-z][A-Za-z0-9_]*)\s*(?=\()", text)
+    if not match:
+        return ""
+    base_name = match.group(1)
+    if base_name in {"void", "uint8", "uint16", "uint32", "Std_ReturnType"}:
+        return ""
+    clean_module = re.sub(r"^Gp_", "", module_name)
+    if base_name.startswith(clean_module):
+        return f"Gp_{base_name}"
+    return f"Gp_{clean_module}_{base_name}"
 
 
 def _derive_priority(text: str) -> str:
@@ -702,7 +814,7 @@ def _tokenize(text: str) -> set[str]:
 
 def _merge_signature(item: RequirementObject) -> dict[str, object]:
     data = item.to_dict()
-    name = data.get("name") or data.get("interface_name") or data.get("config_name") or data.get("state_name") or ""
+    name = data.get("function_name") or data.get("name") or data.get("interface_name") or data.get("config_name") or data.get("state_name") or ""
     desc = data.get("description") or data.get("dependency") or data.get("constraint") or ""
     fields = {
         "input": data.get("input") or data.get("inputs") or "",
@@ -710,6 +822,7 @@ def _merge_signature(item: RequirementObject) -> dict[str, object]:
         "default": data.get("default") or "",
         "range": data.get("range") or "",
         "evidence": data.get("evidence") or "",
+        "function_name": data.get("function_name") or "",
     }
     return {
         "type": data.get("type", ""),
