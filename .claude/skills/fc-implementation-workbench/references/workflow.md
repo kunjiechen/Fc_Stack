@@ -10,6 +10,12 @@ Move from prompt-heavy document generation to a repeatable workflow:
 4. markdown rendering
 5. automatic validation
 
+Business boundary:
+
+- primary required inputs are the FC requirement document and FC architecture document
+- the final formal SDS document should be named `<FC>_模块详细设计规范.md`
+- outer workflow guidance decides when to trigger SDS generation; the skill focuses on design generation and validation
+
 ## Workflow
 
 ### 1. Freeze grounding baseline
@@ -20,6 +26,7 @@ Move from prompt-heavy document generation to a repeatable workflow:
 ### 2. Build structured input
 
 - Read source requirement inputs
+- Read source architecture inputs
 - Convert them into the schema family under `references/schemas/`
 - Normalize field usage with `references/schemas/field_dictionary.md`
 - Record each downgrade, freeze, or pending confirmation explicitly

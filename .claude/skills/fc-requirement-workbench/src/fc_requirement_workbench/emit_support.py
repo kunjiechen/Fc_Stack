@@ -13,12 +13,22 @@ from .bundle import (
     render_test_seed_yaml,
 )
 from .bundle_validation import build_validation_report
+from .gate_check import GateChecker, render_gate_check_markdown
+from .open_items import OpenItemsCollector, render_open_items_markdown
+from .operation_checklist import (
+    render_check_list_markdown,
+    render_operation_steps_markdown,
+    render_review_record_markdown,
+)
 from .raw_requirements import RawRequirementCoverageAnalyzer, render_coverage_markdown
 from .schema import CoverageReport
+from .source_index import (
+    DerivationMatrixGenerator,
+    ExtractRecordGenerator,
+    SourceIndexGenerator,
+)
 from .srs import DocxSrsRenderer, HtmlSrsRenderer, MarkdownSrsRenderer
 from .traceability import ChangeImpactAnalyzer, TraceabilityMarkdownRenderer
-
-
 def emit_text(content: str, output: Path | None) -> int:
     if output is None:
         print(content, end="")
@@ -41,7 +51,11 @@ def dispatch_final_emit(
     planned_requirements: list[Any],
     module: str,
     changed: str,
+    **kwargs: Any,
 ) -> int:
+    engineering_reqs = kwargs.get("engineering_reqs", [])
+    findings = kwargs.get("findings", [])
+
     if emit == "srs-markdown":
         return emit_text(MarkdownSrsRenderer().render(srs_document), output)
     if emit == "srs-html":
@@ -84,6 +98,86 @@ def dispatch_final_emit(
                 gaps_detail="",
             )
         return emit_text(render_coverage_markdown(report, module), output)
+
+    # ---- New workflow emits ----
+    if emit == "source-index":
+        generator = SourceIndexGenerator(module=module)
+        entries = generator.generate(
+            input_file=kwargs.get("input_file", ""),
+            has_raw_requirements=kwargs.get("has_raw_requirements", False),
+            has_project_constraints=kwargs.get("has_project_constraints", False),
+        )
+        return emit_text(generator.render_markdown(entries, module), output)
+
+    if emit == "extract-records":
+        feature_groups = kwargs.get("feature_groups", [])
+        generator = SourceIndexGenerator(module=module)
+        entries = generator.generate(
+            input_file=kwargs.get("input_file", ""),
+            has_raw_requirements=kwargs.get("has_raw_requirements", False),
+        )
+        extract_gen = ExtractRecordGenerator()
+        records = extract_gen.generate_from_features(feature_groups, entries, module)
+        return emit_text(extract_gen.render_markdown(records, module), output)
+
+    if emit == "open-items":
+        collector = OpenItemsCollector()
+        items = collector.collect(engineering_reqs, findings, module)
+        return emit_text(render_open_items_markdown(items, module), output)
+
+    if emit == "gate-check":
+        source_count = kwargs.get("source_count", 0)
+        checker = GateChecker(
+            module=module,
+            source_count=source_count,
+            has_raw_requirements=kwargs.get("has_raw_requirements", False),
+            has_datasheet=kwargs.get("has_datasheet", True),
+            has_project_constraints=kwargs.get("has_project_constraints", False),
+        )
+        open_items_list = kwargs.get("open_items", [])
+        reports = checker.check_all(engineering_reqs, findings, open_items_list)
+        return emit_text(render_gate_check_markdown(reports, module), output)
+
+    if emit == "review-record":
+        gate_reports = kwargs.get("gate_reports", [])
+        open_items_list = kwargs.get("open_items", [])
+        return emit_text(
+            render_review_record_markdown(
+                module=module,
+                gate_reports=gate_reports,
+                open_items=open_items_list,
+            ),
+            output,
+        )
+
+    if emit == "check-list":
+        gate_reports = kwargs.get("gate_reports", [])
+        open_items_list = kwargs.get("open_items", [])
+        return emit_text(
+            render_check_list_markdown(
+                module=module,
+                gate_reports=gate_reports,
+                open_items=open_items_list,
+            ),
+            output,
+        )
+
+    if emit == "operation-steps":
+        open_items_list = kwargs.get("open_items", [])
+        return emit_text(
+            render_operation_steps_markdown(
+                module=module,
+                output_dir=str(output.parent) if output else "",
+                input_file=kwargs.get("input_file", ""),
+                has_raw_requirements=kwargs.get("has_raw_requirements", False),
+                has_datasheet=kwargs.get("has_datasheet", True),
+                open_items=open_items_list,
+                loop_count=kwargs.get("loop_count", 0),
+                auto_fixes_applied=kwargs.get("auto_fixes_applied", 0),
+                requirement_count=len(engineering_reqs),
+            ),
+            output,
+        )
 
     payload: dict[str, Any]
     if emit == "traceability":

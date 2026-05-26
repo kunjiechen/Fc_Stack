@@ -21,7 +21,7 @@
 ## Grounding Value
 
 - The implementation uses `CalloutGetCoreId`, `cfgCont[core]`, and `rtCont[core]`.
-- Matching configuration assets exist in `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889`.
+- 对应配置资产位于 `src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889`。
 - Concrete conf evidence:
   - `Gp_DRV8889_Cfg.h` enables `MCAL`, `DET`, `GETCOUNT`, and `SETDAC` feature switches
   - `Gp_DRV8889_Cfg.h` exports both `Gp_DRV8889_cfgCont_vcatst[...]` and `Gp_DRV8889_cfgSigMapping_vcatst[...]`

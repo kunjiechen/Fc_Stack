@@ -4,14 +4,14 @@
 
 This note captures the local company coding and FC standards that materially affect implementation-level detailed design output.
 
-These notes are distilled from:
+这些笔记主要整理自以下规范材料：
 
-- `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/Standard/Conversion/Code/FC_Code_Standard.md`
-- `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/Standard/Conversion/Code/G-C119 FC开发指南（C语言）/G-C119 FC开发指南（C语言）.md`
-- `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/Standard/Conversion/Code/G-C046 软件接口命名规范/G-C046 软件接口命名规范.md`
-- `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/Standard/Conversion/Code/G-C045 软件模块命名规范/G-C045 软件模块命名规范.md`
-- `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/Standard/Conversion/Code/MemoryLayout段定义/MemoryLayout段定义.md`
-- `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/Standard/Conversion/Code/C代码注释关键字/C代码注释关键字.md`
+- `Standard/Conversion/Code/FC_Code_Standard.md`
+- `Standard/Conversion/Code/G-C119 FC开发指南（C语言）/G-C119 FC开发指南（C语言）.md`
+- `Standard/Conversion/Code/G-C046 软件接口命名规范/G-C046 软件接口命名规范.md`
+- `Standard/Conversion/Code/G-C045 软件模块命名规范/G-C045 软件模块命名规范.md`
+- `Standard/Conversion/Code/MemoryLayout段定义/MemoryLayout段定义.md`
+- `Standard/Conversion/Code/C代码注释关键字/C代码注释关键字.md`
 
 ## 1. File-Family And Layering Constraints
 

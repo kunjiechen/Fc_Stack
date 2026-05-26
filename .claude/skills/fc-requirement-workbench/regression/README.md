@@ -1,4 +1,4 @@
-# FC Requirement Workbench Regression Pack
+# FC 需求工作台回归包
 
 本目录用于固化 `fc-requirement-workbench` 的需求层回归基线。
 
@@ -40,7 +40,7 @@ python3.11 .claude/skills/fc-requirement-workbench/scripts/run_regression_pack.p
 
 ## Source Root 配置
 
-回归 case 默认使用 `source_root_abs` 字段中的绝对路径。可通过以下方式覆盖：
+回归 case 优先使用 `source_root` 字段中的相对路径；必要时也兼容 `source_root_abs`。可通过以下方式覆盖：
 
 ```bash
 FC_SOURCE_ROOT=/path/to/project/src python3.11 scripts/run_regression_pack.py
@@ -96,7 +96,7 @@ rm .git/hooks/pre-push
 ## 添加新 Regression Case
 
 1. 在 `regression/cases/` 下创建 `{case_id}.json`
-2. 定义 `input_document`, `raw_input`, `source_root_abs`, `golden`, `expectations`
+2. 定义 `input_document`, `raw_input`, `source_root`, `golden`, `expectations`
 3. 所有路径相对于仓库根目录
 4. 首次运行需用 `--refresh-golden` 生成 golden artifacts
 

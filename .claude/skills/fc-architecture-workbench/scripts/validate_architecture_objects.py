@@ -18,7 +18,9 @@ TOP_LEVEL_REQUIRED = {
 OBJECT_GROUPS = (
     "external_apis",
     "dependency_apis",
+    "binding_items",
     "config_macros",
+    "strategy_items",
     "calibration_items",
     "runtime_states",
     "memmap_sections",
@@ -34,19 +36,54 @@ FORMAL_STATUS = {
 }
 
 RISK_STATUS = {"待评审", "已评审", "待修改"}
+RISK_GATE_LEVEL = {"release_blocker", "implementation_blocker", "incremental_followup"}
+RISK_IMPACT_SCOPE = {
+    "core_behavior",
+    "implementation_behavior",
+    "architecture_followup",
+    "project_compliance",
+    "safety_compliance",
+    "nonfunctional_budget",
+}
 REQUIRED_LEVEL = {"Required", "Conditional", "Optional"}
 MACRO_TYPE = {
     "Feature Enable",
     "Development Error Detect",
     "Behavior Selection",
+    "Strategy Selection",
+    "Dependency Selection",
+    "Signal Mapping",
+    "Hardware Mapping",
     "Count Size",
-    "Timeout Retry Timing",
+    "Timing Threshold",
     "Vendor Version Release",
 }
 OUTPUT_MODE = {"Quick Draft", "Formal Draft", "Released"}
 ARCH_STATUS = {"Draft", "Released"}
 MACRO_NAME = re.compile(r"^[A-Z0-9_]+$")
 RISK_INDEX = re.compile(r"^R\d+$|^R-OTHER$")
+
+
+def _macro_type_matches(item: dict[str, Any]) -> bool:
+    macro_type = item.get("macro_type", "")
+    text = f"{item.get('name', '')} {item.get('purpose', '')}".lower()
+    if macro_type == "Development Error Detect":
+        return "det" in text or "error" in text
+    if macro_type == "Count Size":
+        return "count" in text or "num" in text or "数量" in text
+    if macro_type == "Feature Enable":
+        return "enable" in text or "使能" in text
+    if macro_type == "Strategy Selection":
+        return any(token in text for token in ("strategy", "scheme", "judge", "fill", "策略"))
+    if macro_type == "Dependency Selection":
+        return any(token in text for token in ("dependency", "dep_if", "binding", "依赖"))
+    if macro_type == "Signal Mapping":
+        return any(token in text for token in ("mapping", "signal id", "映射", " id "))
+    if macro_type == "Hardware Mapping":
+        return any(token in text for token in ("port", "pin", "channel", "hardware", "端口"))
+    if macro_type == "Timing Threshold":
+        return any(token in text for token in ("time", "timeout", "delay", "retry", "threshold", "rate", "速率", "延时", "阈值"))
+    return True
 
 
 def _require_fields(
@@ -112,6 +149,17 @@ def validate_architecture_objects(path: Path) -> list[str]:
         if item.get("status") and item["status"] not in FORMAL_STATUS:
             issues.append(f"{path}: dependency_apis[{index}] has invalid status")
 
+    for index, item in enumerate(payload.get("binding_items", [])):
+        if not isinstance(item, dict):
+            issues.append(f"{path}: binding_items[{index}] must be an object")
+            continue
+        _require_fields(
+            issues, path, "binding_items", index, item,
+            ("name", "binding_type", "source_side", "target_side", "binding_mechanism", "description", "status"),
+        )
+        if item.get("status") and item["status"] not in FORMAL_STATUS:
+            issues.append(f"{path}: binding_items[{index}] has invalid status")
+
     for index, item in enumerate(payload.get("config_macros", [])):
         if not isinstance(item, dict):
             issues.append(f"{path}: config_macros[{index}] must be an object")
@@ -125,8 +173,21 @@ def validate_architecture_objects(path: Path) -> list[str]:
             issues.append(f"{path}: config_macros[{index}] name must be ALL_CAPS macro style")
         if item.get("macro_type") and item["macro_type"] not in MACRO_TYPE:
             issues.append(f"{path}: config_macros[{index}] has invalid macro_type")
+        elif item.get("macro_type") and not _macro_type_matches(item):
+            issues.append(f"{path}: config_macros[{index}] macro_type does not match its name/purpose semantics")
         if item.get("status") and item["status"] not in FORMAL_STATUS:
             issues.append(f"{path}: config_macros[{index}] has invalid status")
+
+    for index, item in enumerate(payload.get("strategy_items", [])):
+        if not isinstance(item, dict):
+            issues.append(f"{path}: strategy_items[{index}] must be an object")
+            continue
+        _require_fields(
+            issues, path, "strategy_items", index, item,
+            ("name", "strategy_type", "selection_scope", "backing_reference", "description", "status"),
+        )
+        if item.get("status") and item["status"] not in FORMAL_STATUS:
+            issues.append(f"{path}: strategy_items[{index}] has invalid status")
 
     for index, item in enumerate(payload.get("calibration_items", [])):
         if not isinstance(item, dict):
@@ -189,6 +250,10 @@ def validate_architecture_objects(path: Path) -> list[str]:
             issues.append(f"{path}: risk_items[{index}] index must look like R1 or R-OTHER")
         if risk_index and risk_index != "R-OTHER":
             real_risk_count += 1
+        if item.get("gate_level") and item["gate_level"] not in RISK_GATE_LEVEL:
+            issues.append(f"{path}: risk_items[{index}] has invalid gate_level")
+        if item.get("impact_scope") and item["impact_scope"] not in RISK_IMPACT_SCOPE:
+            issues.append(f"{path}: risk_items[{index}] has invalid impact_scope")
         if item.get("status") and item["status"] not in RISK_STATUS:
             issues.append(f"{path}: risk_items[{index}] has invalid risk status")
 

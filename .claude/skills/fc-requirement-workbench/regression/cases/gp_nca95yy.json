@@ -3,8 +3,8 @@
   "module": "Gp_NCA95yy",
   "input_document": "Novosense-NCA9539-Q1TSXR_DatasheetRev1.0_EN.md",
   "raw_input": "artifacts/raw_input_Gp_NCA95yy.txt",
-  "source_root": "",
-  "source_root_abs": "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G",
+  "source_root": "src/FcStackBase/AURIX2G",
+  "source_root_abs": "",
   "golden": {
     "requirement-bundle": "artifacts/gp_nca95yy_requirement_bundle.yaml",
     "architecture-seed": "artifacts/gp_nca95yy_architecture_seed.yaml",

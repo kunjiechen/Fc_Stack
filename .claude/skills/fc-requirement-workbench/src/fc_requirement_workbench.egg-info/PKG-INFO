@@ -1,6 +1,0 @@
-Metadata-Version: 2.4
-Name: fc-requirement-workbench
-Version: 0.1.0
-Summary: Requirement semantic infrastructure and SRS generation for automotive embedded requirement engineering.
-Requires-Python: >=3.11
-Requires-Dist: python-docx>=1.0

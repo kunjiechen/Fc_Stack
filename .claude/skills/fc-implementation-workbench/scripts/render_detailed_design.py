@@ -665,11 +665,15 @@ def render_markdown(bundle: dict, *, generated_at: str | None = None) -> str:
     core_mode = infer_core_mode(bundle)
     now = generated_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     function_intro = "负责对外部芯片能力进行初始化、输入输出访问、故障诊断和周期状态维护。"
+    srs_name = f"{module}_软件需求规范.md"
+    arch_name = f"{module}_软件架构设计.md"
+    sds_name = f"{module}_模块详细设计规范.md"
     lines = [
-        f"# {module} 详细设计（Rendered Draft）",
+        f"# 《{module} 模块详细设计规范》",
         "",
         "## 文档元信息",
         "",
+        f"- 文档文件名: `{sds_name}`",
         "- 详细设计版本: `V1`",
         "- 详细设计状态: `Draft`",
         f"- 生成时间: `{now}`",
@@ -684,8 +688,8 @@ def render_markdown(bundle: dict, *, generated_at: str | None = None) -> str:
         "",
         "## 2. 设计输入",
         "",
-        f"- 需求输入: `SRS_{module}` 及其接口/功能需求条目。",
-        f"- 架构输入: `Architecture_{module}` 已冻结的 external interface、dependency interface 和配置边界。",
+        f"- 需求输入: `{srs_name}` 及其接口/功能需求条目。",
+        f"- 架构输入: `{arch_name}` 已冻结的 external interface、dependency interface 和配置边界。",
         "- 平台约束: 芯片访问依赖 I2C / DIO / CoreId 等平台能力，具体由项目适配层提供。",
         "- 项目约束: 当前版本遵循已冻结接口集合，不在详细设计阶段擅自扩展未确认能力。",
         "",

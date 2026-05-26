@@ -56,8 +56,21 @@ def check_architecture_markdown(path: Path) -> list[str]:
         if "Reg.h" not in text:
             issues.append(f"{path}: register-based external communication detected but Reg.h carrier is missing")
 
-    if any(token in lowered for token in ("fault", "diagnostic", "诊断", "故障", "interrupt anomaly")):
-        if not any(token in lowered for token in ("getfault", "getdiag", "getfaultstatus", "故障读取", "诊断读取")):
+    diag_interface_signals = (
+        "getfault",
+        "getdiag",
+        "getfaultstatus",
+        "fault interface",
+        "diagnostic interface",
+        "fault status interface",
+        "diagnostic status interface",
+        "故障接口",
+        "诊断接口",
+        "故障状态",
+        "诊断状态",
+    )
+    if any(token in lowered for token in diag_interface_signals):
+        if not any(token in lowered for token in ("getfault", "getdiag", "getfaultstatus", "getdevfaultsig", "faultsig", "故障读取", "诊断读取")):
             issues.append(f"{path}: diagnostic/fault behavior detected but no readable fault/diagnostic status interface is present")
 
     return issues

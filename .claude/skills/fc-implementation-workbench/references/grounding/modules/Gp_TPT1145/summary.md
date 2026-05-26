@@ -27,7 +27,7 @@
 ## Dependency Style
 
 - The module depends on generated `CfgData` and MemMap conventions.
-- Matching configuration assets exist in `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145`.
+- 对应配置资产位于 `src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145`。
 - Concrete conf evidence:
   - `Gp_TPT1145_CfgData.h` exports `Gp_TPT1145_cfgCont_vcatst[GP_TPT1145_MAX_CHIP_NUM]`
   - `Gp_TPT1145_CfgData.h` uses dedicated far-data alignment macros

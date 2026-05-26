@@ -24,7 +24,9 @@ The recommended top-level object is:
   "change_summary": ["Initial architecture generation."],
   "external_apis": [],
   "dependency_apis": [],
+  "binding_items": [],
   "config_macros": [],
+  "strategy_items": [],
   "calibration_items": [],
   "runtime_states": [],
   "memmap_sections": [],
@@ -151,9 +153,32 @@ Allowed `macro_type` values:
 - `Feature Enable`
 - `Development Error Detect`
 - `Behavior Selection`
+- `Strategy Selection`
+- `Dependency Selection`
+- `Signal Mapping`
+- `Hardware Mapping`
 - `Count Size`
-- `Timeout Retry Timing`
+- `Timing Threshold`
 - `Vendor Version Release`
+
+## 5A. Binding Item Object
+
+Use when architecture needs to freeze not only a dependency API but also the binding boundary between FC logic and dependency provider.
+
+Required fields:
+
+- `name`
+- `binding_type`
+- `source_side`
+- `target_side`
+- `binding_mechanism`
+- `description`
+- `status`
+
+Recommended fields:
+
+- `evidence`
+- `notes`
 
 ## 6. Calibration Item Object
 
@@ -172,6 +197,24 @@ Recommended fields:
 - `range`
 - `usage_location`
 - `evidence`
+
+## 6A. Strategy Item Object
+
+Use when strategy semantics are important enough that a macro name alone is not a strong enough architecture carrier.
+
+Required fields:
+
+- `name`
+- `strategy_type`
+- `selection_scope`
+- `backing_reference`
+- `description`
+- `status`
+
+Recommended fields:
+
+- `evidence`
+- `notes`
 
 ## 7. Runtime State Object
 
@@ -278,6 +321,7 @@ Recommended mapping:
 
 - `external_apis` -> external interface chapter
 - `dependency_apis` -> dependency/callout chapter
+- `binding_items` -> dependency binding and adaptation boundary chapter
 - `config_macros` -> configuration chapter
 - `calibration_items` -> calibration chapter
 - `runtime_states` -> runtime-state/global-state chapter

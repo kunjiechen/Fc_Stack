@@ -34,7 +34,7 @@ def _summary_intro(module: str, payload: dict[str, Any]) -> tuple[str, str, str]
         f"并通过 {dependency_count} 个依赖接口完成平台和外设适配。"
     )
     app = (
-        f"适用于需要配置宏、运行态缓存、MemMap 分段和故障可读接口协同设计的嵌入式外设驱动场景。"
+        f"适用于需要配置宏、运行态缓存、MemMap 分段和依赖适配协同设计的嵌入式 FC 场景。"
     )
     idea = (
         f"架构以外部接口、依赖接口、配置宏、运行态和文件载体分层组织，当前共收敛 {config_count} 个配置宏对象。"
@@ -122,6 +122,32 @@ def _render_dependency_sections(items: list[dict[str, Any]], section_prefix: str
     return lines
 
 
+def _render_binding_table(items: list[dict[str, Any]]) -> list[str]:
+    lines = [
+        "| Binding Name | Binding Type | Source Side | Target Side | Mechanism | Description | Status |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for item in items:
+        lines.append(
+            f"| `{item.get('name', '')}` | {item.get('binding_type', '')} | {item.get('source_side', '')} | "
+            f"{item.get('target_side', '')} | {item.get('binding_mechanism', '')} | {item.get('description', '')} | {item.get('status', '')} |"
+        )
+    return lines
+
+
+def _render_strategy_table(items: list[dict[str, Any]]) -> list[str]:
+    lines = [
+        "| Strategy Name | Strategy Type | Selection Scope | Backing Reference | Description | Status |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for item in items:
+        lines.append(
+            f"| `{item.get('name', '')}` | {item.get('strategy_type', '')} | {item.get('selection_scope', '')} | "
+            f"`{item.get('backing_reference', '')}` | {item.get('description', '')} | {item.get('status', '')} |"
+        )
+    return lines
+
+
 def _render_file_items(items: list[dict[str, Any]]) -> list[str]:
     lines = [
         "| File | Required/Optional | Responsibility | Key Content |",
@@ -200,6 +226,9 @@ def render_summary_markdown(payload: dict[str, Any]) -> str:
             f"| `{item.get('name', '')}` | {item.get('purpose', '')} | Macro | `{item.get('default_value', '')}` | "
             f"{_join(item.get('evidence', []))} | `{item.get('usage_location', '')}` | {item.get('status', '')} |"
         )
+    if payload.get("strategy_items", []):
+        lines.extend(["", "### 4.1 策略对象设计", ""])
+        lines.extend(_render_strategy_table(payload.get("strategy_items", [])))
 
     lines.extend(
         [
@@ -261,6 +290,9 @@ def render_summary_markdown(payload: dict[str, Any]) -> str:
 
     lines.extend(["", "---", "", "## 8 依赖接口设计", ""])
     lines.extend(_render_dependency_sections(payload.get("dependency_apis", []), "8"))
+    if payload.get("binding_items", []):
+        lines.extend(["", "### 8.1 依赖绑定设计", ""])
+        lines.extend(_render_binding_table(payload.get("binding_items", [])))
 
     lines.extend(
         [
@@ -334,7 +366,10 @@ def render_full_markdown(payload: dict[str, Any]) -> str:
     requirement_coverage = payload.get("requirement_coverage", [])
     external_apis = payload.get("external_apis", [])
     dependency_apis = payload.get("dependency_apis", [])
+    binding_items = payload.get("binding_items", [])
     config_macros = payload.get("config_macros", [])
+    strategy_items = payload.get("strategy_items", [])
+    calibration_items = payload.get("calibration_items", [])
     runtime_states = payload.get("runtime_states", [])
     memmap_sections = payload.get("memmap_sections", [])
     file_items = payload.get("file_items", [])
@@ -397,6 +432,8 @@ def render_full_markdown(payload: dict[str, Any]) -> str:
             f"| `{item.get('name', '')}` | {item.get('purpose', '')} | {item.get('macro_type', '')} | `{item.get('default_value', '')}` | "
             f"{_join(item.get('evidence', []))} | `{item.get('usage_location', '')}` | {item.get('status', '')} |"
         )
+    if strategy_items:
+        lines.extend(["", "### 0.4 策略对象清单", "", *_render_strategy_table(strategy_items)])
 
     lines.extend(
         [
@@ -478,6 +515,9 @@ def render_full_markdown(payload: dict[str, Any]) -> str:
     lines.extend(_render_external_api_sections(external_apis, "6"))
     lines.extend(["## 7. 外部依赖与Callout定义", ""])
     lines.extend(_render_dependency_sections(dependency_apis, "7.2"))
+    if binding_items:
+        lines.extend(["### 7.3 依赖绑定与适配边界", ""])
+        lines.extend(_render_binding_table(binding_items))
     lines.extend(
         [
             "## 8. 全局参数定义",
@@ -526,13 +566,16 @@ def render_full_markdown(payload: dict[str, Any]) -> str:
             "| --- | --- | --- | --- | --- |",
         ]
     )
-    if payload.get("calibration_items", []):
-        for item in payload["calibration_items"]:
+    if calibration_items:
+        for item in calibration_items:
             lines.append(
                 f"| `{item.get('name', '')}` | `{item.get('type', '')}` | `{item.get('initial_value', '')}` | {item.get('description', '')} | {item.get('status', '')} |"
             )
     else:
         lines.append("| `Empty` | `N/A` | `N/A` | 当前无确认的全局标定参数。 | Empty |")
+    if strategy_items:
+        lines.extend(["", "### 11.1 策略对象定义", ""])
+        lines.extend(_render_strategy_table(strategy_items))
     lines.extend(
         [
             "",

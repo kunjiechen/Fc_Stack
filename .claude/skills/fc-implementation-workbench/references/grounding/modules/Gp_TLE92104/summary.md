@@ -30,7 +30,7 @@
   - signal output and input helpers
   - delay helpers
   - SPI setup/transmit helpers
-- Matching configuration assets exist in `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104`.
+- 对应配置资产位于 `src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104`。
 - Concrete conf evidence:
   - `Gp_TLE92104_Cfg.h` enables `GP_TLE92104_MCAL_EN` and `GP_TLE92104_DET_EN`
   - `Gp_TLE92104_Cfg.h` shows active core split at `CORE1` and `CORE2`

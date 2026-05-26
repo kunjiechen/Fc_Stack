@@ -1,7 +1,7 @@
 name: Gp_TLE92104
 layer: IoExtDev
-code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TLE92104
-conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104
+code_path: src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TLE92104
+conf_path: src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104
 mainfunction: true
 multicore: true
 callout_get_core_id: true

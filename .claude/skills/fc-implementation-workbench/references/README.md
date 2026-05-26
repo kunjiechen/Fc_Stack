@@ -1,128 +1,91 @@
-# References Index
+# 参考资料索引
 
-## Purpose
+## 作用
 
-This folder contains the retained implementation-design references for the local FC implementation skill.
+本目录保存 `fc-implementation-workbench` 使用的实现层长期参考资料。
 
-Responsibility boundary:
+建议按职责和最小集合加载，不要一次性全读。
+
+职责边界：
 
 - `rules/*.md`
-  - stable implementation rules and judgment criteria
+  稳定的实现设计规则与判断标准
 - `grounding/`
-  - curated real-project FC grounding baseline, module facts, and normalized patterns
+  基于真实项目 FC 提炼出的 grounding 基线、模块事实和模式摘要
 - `schemas/`
-  - structured input and intermediate model contracts for requirement, architecture, and detailed design
-  - `field_dictionary.md` defines cross-layer field semantics
+  需求、架构、详细设计的结构化输入与中间对象契约
 - `templates/*.md`
-  - output shape and document layout
+  输出章节结构与文档版式
 - `semantic-model.md`
-  - implementation object model for repeatable generation
+  可复用的实现对象模型
 - `workflow.md`
-  - generation pipeline and validator gate
+  推荐生成流程与阶段顺序
 - `validation_rules.md`
-  - current validator contract
+  当前校验器约束
 - `detailed_design_quality_contract.md`
-  - defines what a good FC detailed design must achieve
+  详细设计质量目标
 - `bundle_to_dd_mapping.md`
-  - maps structured bundle fields into detailed-design chapters
+  结构化 bundle 到详细设计章节的映射
 - `chapter_generation_rules.md`
-  - chapter-by-chapter writing and rendering rules
-- `../scripts/build_generation_bundle.py`
-  - helper that converts SRS, architecture, and DD markdown into a reusable YAML bundle skeleton
-- `../scripts/validate_generation_bundle.py`
-  - validates bundle structure, grounding references, and key cross-layer consistency
-- `../scripts/render_detailed_design.py`
-  - renders a first-pass detailed design markdown from the structured bundle
-- `../scripts/extract_cfg_objects.py`
-  - extracts real `Cfg.c` objects, fields, and per-core or per-chip layout cues from grounding FC sources
-- `../scripts/run_regression_pack.py`
-  - replays the current stable `bundle -> rendered DD -> arch/DD validator` regression chain
-- this `README.md`
-  - index and minimal loading guidance only
-- execution logic stays in `../SKILL.md`
+  分章节写作和渲染规则
+- `../scripts/*.py`
+  生成、校验、抽取和回归辅助脚本
+- 本 `README.md`
+  只负责索引和最小加载建议
 
-Python dependencies for the script set:
+## 核心规则
 
-- `PyYAML`
-- `jsonschema`
-
-Recommended install command:
-
-```bash
-python3 -m pip install -r .claude/skills/fc-implementation-workbench/requirements-dev.txt
-```
-
-## A. Core Rules
-
-Primary files for routine FC implementation work:
+日常 FC 实现设计优先读取：
 
 - `rules/implementation-rules.md`
-  - overall implementation design rules, boundaries, and validation questions
 - `rules/code-structure-rules.md`
-  - file families, single-core or multi-core framework, cfg/callout/runtime structure
 - `rules/state-and-fault-rules.md`
-  - state machine, DET, runtime error, fault, reset, and no-clear rules
 - `rules/flowchart-rules.md`
-  - when to include flowcharts and what granularity they should use
 - `rules/implementation-review-checklist.md`
-  - practical checklist for reviewing implementation-level detailed design
 - `templates/output-template.md`
-  - full detailed design output shape
 - `templates/output-template-summary.md`
-  - concise coding-oriented output shape
 
-## B. Grounding
+## Grounding 资料
 
-Use these when the task is full detailed-design generation or when the style needs to be normalized against real company FCs:
+在做完整详细设计生成、风格对齐或参考 FC 选型时再读取：
 
 - `grounding/index.yaml`
-  - grounding entry index and module-to-pattern mapping
 - `grounding/grounding_scope.md`
-  - frozen grounding scope and source boundaries
 - `grounding/modules/*`
-  - per-module summaries and facts
 - `grounding/patterns/*`
-  - normalized patterns extracted from the reviewed FC set
 
-## C. Working Aids
+## 结构化辅助资料
 
-Use these only when the task needs structured generation consistency:
+只有在需要稳定中间对象时再读取：
 
 - `semantic-model.md`
-  - normalized implementation object model
 - `schemas/*.json`
-  - structured contracts for requirement, architecture, and detailed design intermediate models
 - `schemas/field_dictionary.md`
-  - field-level semantics and authoring rules for cross-layer objects
 - `examples/*.yaml`
-  - example generation bundles and per-layer objects showing how grounded inputs map into the intermediate model
 - `workflow.md`
-  - recommended generation sequence
 - `validation_rules.md`
-  - current validator capability summary
 - `golden_checks.md`
-  - staged acceptance checklist for the evolving pipeline
 
-## D. Provenance
+## 来源说明
 
-The rules in this folder are condensed from the local engineering study and code-design study already performed in this workspace.
+本目录中的规则，来自当前工作区已完成的工程学习、代码设计学习和公司规范学习整理。
 
-Those study files are now retained inside this skill:
+保留的学习笔记包括：
 
 - `learning/aurix2g-engineering-learning.md`
 - `learning/aurix2g-code-design-rules.md`
 - `learning/company-code-standards-learning.md`
 
-Routine skill execution should prefer the retained rule files in this folder, not the larger study notes.
+常规执行优先使用这里已经沉淀好的规则文件，不要直接依赖大篇幅学习笔记。
 
-## Minimal Loading Contract
+## 最小加载约定
 
-For routine implementation design:
+日常实现设计建议按以下顺序加载：
 
-1. user requirement / architecture / target FC draft
+1. 用户当前需求、架构或目标 FC 草稿
 2. `../SKILL.md`
-3. one output template
-4. only the specific rule files needed by the question
-5. load grounding only when style grounding or pipeline generation is needed
+3. 一个输出模板
+4. 当前问题真正需要的规则文件
+5. 只有在需要 grounding 或流水线生成时，再加载 `grounding/`
 
-Do not load every rule and template by default.
+不要默认把所有规则、模板和 grounding 一次性读入。

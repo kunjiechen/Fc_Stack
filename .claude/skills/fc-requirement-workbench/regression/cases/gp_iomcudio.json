@@ -3,8 +3,8 @@
   "module": "Gp_IoMcuDio",
   "input_document": "artifacts/Gp_IoMcuDio_grounding_input.md",
   "raw_input": "artifacts/raw_input_Gp_IoMcuDio.txt",
-  "source_root": "",
-  "source_root_abs": "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G",
+  "source_root": "src/FcStackBase/AURIX2G",
+  "source_root_abs": "",
   "golden": {
     "requirement-bundle": "artifacts/gp_iomcudio_requirement_bundle.yaml",
     "architecture-seed": "artifacts/gp_iomcudio_architecture_seed.yaml",

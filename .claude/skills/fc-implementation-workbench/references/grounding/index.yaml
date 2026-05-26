@@ -6,8 +6,8 @@ modules:
   - name: Gp_TPT1145
     layer: IoExtDev
     role: primary
-    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TPT1145
-    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145
+    code_path: src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TPT1145
+    conf_path: src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145
     tags:
       - ioextdev
       - with_mainfunction
@@ -27,8 +27,8 @@ modules:
   - name: Gp_TLE92104
     layer: IoExtDev
     role: primary
-    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TLE92104
-    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104
+    code_path: src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TLE92104
+    conf_path: src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104
     tags:
       - ioextdev
       - with_mainfunction
@@ -49,8 +49,8 @@ modules:
   - name: Gp_DRV8889
     layer: IoExtDev
     role: primary
-    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_DRV8889
-    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889
+    code_path: src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_DRV8889
+    conf_path: src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889
     tags:
       - ioextdev
       - with_mainfunction
@@ -71,8 +71,8 @@ modules:
   - name: Gp_WkUpSrcP
     layer: BswSys_Gp
     role: secondary
-    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/BswSys_Gp/Gp_WkUpSrcP
-    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_BswSys_Gp/Conf_Gp_WkUpSrcP
+    code_path: src/FcStackBase/AURIX2G/BswSys_Gp/Gp_WkUpSrcP
+    conf_path: src/FcStackBase/AURIX2G/Conf/Conf_BswSys_Gp/Conf_Gp_WkUpSrcP
     tags:
       - lightweight_fc
       - no_mainfunction
@@ -89,8 +89,8 @@ modules:
   - name: Gp_06_Adc3ph
     layer: Cdd
     role: secondary
-    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Cdd/Gp_06_Adc3ph
-    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_Cdd/Conf_Gp_06_Adc3ph
+    code_path: src/FcStackBase/AURIX2G/Cdd/Gp_06_Adc3ph
+    conf_path: src/FcStackBase/AURIX2G/Conf/Conf_Cdd/Conf_Gp_06_Adc3ph
     tags:
       - cdd
       - multicore
@@ -108,8 +108,8 @@ modules:
   - name: IoMcu
     layer: IoMcu
     role: primary_dependency_family
-    code_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoMcu
-    conf_path: /Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoMcu
+    code_path: src/FcStackBase/AURIX2G/IoMcu
+    conf_path: src/FcStackBase/AURIX2G/Conf/Conf_IoMcu
     tags:
       - dependency_provider
       - multicore

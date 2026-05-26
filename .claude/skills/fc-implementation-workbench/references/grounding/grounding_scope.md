@@ -1,50 +1,50 @@
-# Grounding Scope
+# Grounding 范围
 
-## Objective
+## 目标
 
-Build a reusable grounding baseline for FC detailed-design generation without embedding the full reference engineering repository into the skill.
+在不把整套参考工程仓库直接塞进 skill 的前提下，构建一套可复用的 FC 详细设计 grounding 基线。
 
-This baseline is intended to support:
+这套基线主要支持：
 
-- real-project interface shaping
-- dependency interface selection
-- runtime container and multi-core pattern selection
-- configuration and `Conf_*` traceability
-- detailed-design style normalization for IoExtDev-oriented FCs
+- 基于真实项目的接口形态收敛
+- 依赖接口选择
+- 运行时容器与多核模式选择
+- 配置与 `Conf_*` 追溯
+- 面向 IoExtDev 类 FC 的详细设计风格归一化
 
-## Reference Modules
+## 参考模块
 
-The grounding baseline for this skill is frozen to the following engineering assets:
+本 skill 当前冻结使用以下工程资产：
 
 1. `Gp_WkUpSrcP`
-   Code: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/BswSys_Gp/Gp_WkUpSrcP`
-   Conf: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_BswSys_Gp/Conf_Gp_WkUpSrcP`
+   Code: `src/FcStackBase/AURIX2G/BswSys_Gp/Gp_WkUpSrcP`
+   Conf: `src/FcStackBase/AURIX2G/Conf/Conf_BswSys_Gp/Conf_Gp_WkUpSrcP`
 
 2. `Gp_06_Adc3ph`
-   Code: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Cdd/Gp_06_Adc3ph`
-   Conf: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_Cdd/Conf_Gp_06_Adc3ph`
+   Code: `src/FcStackBase/AURIX2G/Cdd/Gp_06_Adc3ph`
+   Conf: `src/FcStackBase/AURIX2G/Conf/Conf_Cdd/Conf_Gp_06_Adc3ph`
 
 3. `Gp_TPT1145`
-   Code: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TPT1145`
-   Conf: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145`
+   Code: `src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TPT1145`
+   Conf: `src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TPT1145`
 
 4. `Gp_TLE92104`
-   Code: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TLE92104`
-   Conf: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104`
+   Code: `src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_TLE92104`
+   Conf: `src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_TLE92104`
 
 5. `Gp_DRV8889`
-   Code: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_DRV8889`
-   Conf: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889`
+   Code: `src/FcStackBase/AURIX2G/IoExtDev/IoExtDev/Gp_DRV8889`
+   Conf: `src/FcStackBase/AURIX2G/Conf/Conf_IoExtDev/Conf_IoExtDev/Conf_Gp_DRV8889`
 
 6. `IoMcu` family
-   Code: `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/IoMcu`
+   Code: `src/FcStackBase/AURIX2G/IoMcu`
    Conf:
-   - `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoMcu/Conf_Gp_IoMcuAdc`
-   - `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoMcu/Conf_Gp_IoMcuDio`
-   - `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoMcu/Conf_Gp_IoMcuIcu`
-   - `/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G/Conf/Conf_IoMcu/Conf_Gp_IoMcuPwm`
+   - `src/FcStackBase/AURIX2G/Conf/Conf_IoMcu/Conf_Gp_IoMcuAdc`
+   - `src/FcStackBase/AURIX2G/Conf/Conf_IoMcu/Conf_Gp_IoMcuDio`
+   - `src/FcStackBase/AURIX2G/Conf/Conf_IoMcu/Conf_Gp_IoMcuIcu`
+   - `src/FcStackBase/AURIX2G/Conf/Conf_IoMcu/Conf_Gp_IoMcuPwm`
 
-## Baseline Roles
+## 基线分工
 
 - `Gp_TPT1145`, `Gp_TLE92104`, `Gp_DRV8889`
   Primary IoExtDev grounding set for external-interface shape, dependency interfaces, chip runtime patterns, and internal-function granularity.
@@ -55,15 +55,15 @@ The grounding baseline for this skill is frozen to the following engineering ass
 - `Gp_WkUpSrcP`, `Gp_06_Adc3ph`
   Secondary cross-domain style set for lightweight FC structure, signal mapping, and non-IoExtDev FC normalization.
 
-## Working Rules
+## 使用规则
 
-- Do not inject whole reference repositories into the skill body.
-- Use curated module facts and pattern summaries as grounding context.
-- Treat `Conf_*` assets as first-class evidence for configuration naming and mapping rules.
-- When a target module is IoExtDev, prefer the IoExtDev trio first, then use `IoMcu` to resolve dependency and platform style questions.
-- Prefer decompressed `Conf_IoExtDev/Conf_IoExtDev/*` directories as the current evidence source instead of archived zip paths.
+- 不要把整套参考仓库直接注入 skill 主体。
+- grounding 以精选模块事实和模式摘要为主。
+- `Conf_*` 资产是配置命名和映射规则的一等证据。
+- 目标模块属于 IoExtDev 时，优先看 IoExtDev 三件套，再用 `IoMcu` 解决平台依赖风格问题。
+- 当前证据源优先使用解压后的 `Conf_IoExtDev/Conf_IoExtDev/*` 目录，而不是历史压缩包路径。
 
-## Evidence Depth Requirement
+## 证据深度要求
 
 - Each primary IoExtDev grounding module should expose:
   - code path
@@ -75,6 +75,6 @@ The grounding baseline for this skill is frozen to the following engineering ass
   - key feature switches
   - at least one concrete `Conf_*` evidence note
 
-## Immediate Follow-up
+## 后续维护建议
 
-- Continue expanding `facts.yaml` for the IoExtDev trio with more extracted `Cfg`, `CfgData`, and `Callout` symbols as needed by future targets.
+- 后续如有新目标模块，可继续为 IoExtDev 三件套补充更多 `Cfg`、`CfgData` 和 `Callout` 符号证据。

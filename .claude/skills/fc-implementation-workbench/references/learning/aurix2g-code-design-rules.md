@@ -2,7 +2,7 @@
 
 ## 1. 目的
 
-本文档承接 [aurix2g-engineering-learning.md](/Users/chenkunjie/Downloads/SBPAI/Proj/Fc_Stack/.claude/skills/fc-implementation-workbench/references/learning/aurix2g-engineering-learning.md)，目标不是解释工程架构，而是直接回答一个问题：
+本文档承接 [aurix2g-engineering-learning.md](aurix2g-engineering-learning.md)，目标不是解释工程架构，而是直接回答一个问题：
 
 基于当前学习结果，后续能否设计出符合该工程规范的代码框架、状态机、配置、DET、内部函数、运行时变量和故障处理。
 
