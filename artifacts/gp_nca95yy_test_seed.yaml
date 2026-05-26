@@ -9,7 +9,7 @@ verification_items:
     expected_output: ""
     exception_path: ""
     acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-    status: "ready"
+    status: "open_issue"
   -
     requirement_id: "SRS-GPNCA95YY-FUNC-0002"
     title: "GPIO 输入读取"
@@ -19,7 +19,7 @@ verification_items:
     expected_output: ""
     exception_path: ""
     acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-    status: "ready"
+    status: "open_issue"
   -
     requirement_id: "SRS-GPNCA95YY-FUNC-0003"
     title: "GPIO 输出写入"
@@ -29,7 +29,7 @@ verification_items:
     expected_output: ""
     exception_path: ""
     acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-    status: "ready"
+    status: "open_issue"
   -
     requirement_id: "SRS-GPNCA95YY-FUNC-0004"
     title: "GPIO 极性反转"
@@ -39,7 +39,7 @@ verification_items:
     expected_output: ""
     exception_path: ""
     acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-    status: "ready"
+    status: "open_issue"
   -
     requirement_id: "SRS-GPNCA95YY-FUNC-0005"
     title: "中断与诊断"
@@ -49,7 +49,7 @@ verification_items:
     expected_output: ""
     exception_path: ""
     acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-    status: "ready"
+    status: "open_issue"
   -
     requirement_id: "SRS-GPNCA95YY-FUNC-0006"
     title: "边界与异常处理"
@@ -59,7 +59,7 @@ verification_items:
     expected_output: ""
     exception_path: ""
     acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-    status: "ready"
+    status: "open_issue"
   -
     requirement_id: "SRS-GPNCA95YY-FUNC-0007"
     title: "I2C 寄存器访问"
@@ -69,7 +69,7 @@ verification_items:
     expected_output: ""
     exception_path: ""
     acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-    status: "ready"
+    status: "open_issue"
   -
     requirement_id: "SRS-GPNCA95YY-FUNC-0008"
     title: "复位与默认状态"
@@ -79,7 +79,7 @@ verification_items:
     expected_output: ""
     exception_path: ""
     acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-    status: "ready"
+    status: "open_issue"
   -
     requirement_id: "SRS-GPNCA95YY-FUNC-0009"
     title: "时序约束"
@@ -89,7 +89,7 @@ verification_items:
     expected_output: ""
     exception_path: ""
     acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-    status: "ready"
+    status: "open_issue"
   -
     requirement_id: "SRS-GPNCA95YY-FUNC-0010"
     title: "状态读取"
@@ -231,6 +231,16 @@ verification_items:
     acceptance_basis: "范围：2；默认值：待确认"
     status: "ready"
   -
+    requirement_id: "SRS-GPNCA95YY-FUNC-0013"
+    title: "所有外部接口需进行参数有效性检查"
+    verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。"
+    trigger: ""
+    input: ""
+    expected_output: ""
+    exception_path: ""
+    acceptance_basis: "Review"
+    status: "ready"
+  -
     requirement_id: "SRS-GPNCA95YY-DIAG-9001"
     title: "开发错误检测"
     verification: "通过接口测试、边界测试和故障注入验证：触发未初始化访问、空指针、非法参数和非法调用顺序时，应产生定义的 DET 上报或错误返回，且内部状态保持一致。"
@@ -258,12 +268,12 @@ excluded_nonfunctional_items:
     category: "INTF"
     title: "所有接口必须支持DET错误检测"
     description: "所有接口必须支持DET错误检测。"
-    gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+    gate_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
     source_detail: "raw_input_Gp_NCA95yy.txt"
     linked_formal_requirements:
       []
     promotion_candidate: false
-    promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+    promotion_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
   -
     raw_id: "RAW-GPNCA95YY-NFR-0001"
     category: "NFR"
@@ -272,7 +282,7 @@ excluded_nonfunctional_items:
     gate_reason: "Safety level statements are governing constraints rather than direct functional requirements."
     source_detail: "raw_input_Gp_NCA95yy.txt"
     linked_formal_requirements:
-      []
+      - "SRS-GPNCA95YY-SAFE-0001"
     promotion_candidate: false
     promotion_reason: "Safety level statements are governing constraints rather than direct functional requirements."
   -
@@ -283,20 +293,9 @@ excluded_nonfunctional_items:
     gate_reason: "Resource budget statements should stay as nonfunctional constraints."
     source_detail: "raw_input_Gp_NCA95yy.txt"
     linked_formal_requirements:
-      []
+      - "SRS-GPNCA95YY-RES-0001"
     promotion_candidate: false
     promotion_reason: "Resource budget statements should stay as nonfunctional constraints."
-  -
-    raw_id: "RAW-GPNCA95YY-NFR-0004"
-    category: "NFR"
-    title: "所有外部接口需进行参数有效性检查"
-    description: "所有外部接口需进行参数有效性检查。"
-    gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-    source_detail: "raw_input_Gp_NCA95yy.txt"
-    linked_formal_requirements:
-      []
-    promotion_candidate: false
-    promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
   -
     raw_id: "RAW-GPNCA95YY-NFR-0005"
     category: "NFR"

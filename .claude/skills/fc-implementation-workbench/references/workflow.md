@@ -63,6 +63,7 @@ Current validator:
 
 - `scripts/validate_fc_docs.py`
 - `scripts/validate_generation_bundle.py`
+- `scripts/run_regression_pack.py`
 
 Current checks:
 
@@ -81,4 +82,4 @@ Current checks:
 ## Immediate Next Work
 
 - harden structured model generation helpers with more module samples
-- add regression cases for `Gp_TLE92104`, `Gp_DRV8889`, and `Gp_NCA95yy`
+- extend regression cases beyond the current `Gp_NCA95yy` baseline to `Gp_TLE92104` and `Gp_DRV8889`

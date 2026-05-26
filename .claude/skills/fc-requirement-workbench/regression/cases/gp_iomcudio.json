@@ -1,0 +1,32 @@
+{
+  "case_id": "gp_iomcudio",
+  "module": "Gp_IoMcuDio",
+  "input_document": "artifacts/Gp_IoMcuDio_grounding_input.md",
+  "raw_input": "artifacts/raw_input_Gp_IoMcuDio.txt",
+  "source_root": "",
+  "source_root_abs": "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G",
+  "golden": {
+    "requirement-bundle": "artifacts/gp_iomcudio_requirement_bundle.yaml",
+    "architecture-seed": "artifacts/gp_iomcudio_architecture_seed.yaml",
+    "test-seed": "artifacts/gp_iomcudio_test_seed.yaml",
+    "bundle-validation": "artifacts/gp_iomcudio_bundle_validation.json"
+  },
+  "expectations": {
+    "validation_summary": {
+      "error": 0,
+      "warning": 2,
+      "info": 0
+    },
+    "architecture_interfaces": [
+      "Gp_IoMcuDio_Init",
+      "Gp_IoMcuDio_SetDioSigDir",
+      "Gp_IoMcuDio_GetDioSigLvlIn",
+      "Gp_IoMcuDio_SetDioSigLvlOut"
+    ],
+    "requirement_titles": [
+      "开发错误检测",
+      "GPIO 方向配置",
+      "初始化接口"
+    ]
+  }
+}

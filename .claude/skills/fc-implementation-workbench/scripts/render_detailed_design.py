@@ -7,6 +7,10 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 
+from script_dependency_support import require_modules
+
+require_modules({"PyYAML": "yaml"}, context="render_detailed_design.py")
+
 import yaml
 
 
@@ -656,10 +660,10 @@ def render_arch_dd_coverage(bundle: dict) -> str:
     ])
 
 
-def render_markdown(bundle: dict) -> str:
+def render_markdown(bundle: dict, *, generated_at: str | None = None) -> str:
     module = bundle["module"]
     core_mode = infer_core_mode(bundle)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = generated_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     function_intro = "负责对外部芯片能力进行初始化、输入输出访问、故障诊断和周期状态维护。"
     lines = [
         f"# {module} 详细设计（Rendered Draft）",
@@ -773,11 +777,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Render FC detailed design markdown from a bundle.")
     parser.add_argument("--bundle", required=True, help="Path to generation bundle YAML")
     parser.add_argument("--output", required=True, help="Path to write rendered markdown")
+    parser.add_argument("--generated-at", help="Optional fixed generation timestamp for deterministic rendering")
     args = parser.parse_args()
 
     bundle = load_yaml(Path(args.bundle))
     output = Path(args.output)
-    output.write_text(render_markdown(bundle), encoding="utf-8")
+    output.write_text(render_markdown(bundle, generated_at=args.generated_at), encoding="utf-8")
     print(f"OK: rendered detailed design to {output}")
     return 0
 

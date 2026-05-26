@@ -1,0 +1,1744 @@
+module_identity:
+  module_name: "Gp_IoMcuDio"
+  module_abbr: "GPIOMCUDIO"
+  layer: "IoExtDrv"
+  project: "FcStack"
+  safety_level: "QM"
+  input_document: "artifacts/Gp_IoMcuDio_grounding_input.md"
+  source_root: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G"
+source_inventory:
+  -
+    source_type: "markdown"
+    source_name: "artifacts/Gp_IoMcuDio_grounding_input.md"
+    role: "datasheet_or_reference_input"
+    confidence: "high"
+    notes: "Primary parsed markdown input for the planned SRS pipeline."
+  -
+    source_type: "raw_requirement_input"
+    source_name: "txt:raw_input_Gp_IoMcuDio.txt"
+    role: "project_requirement_input"
+    confidence: "medium"
+    notes: "User-provided raw requirement input merged into the planned requirements."
+  -
+    source_type: "codebase"
+    source_name: "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G"
+    role: "implemented_evidence"
+    confidence: "medium"
+    notes: "Project source root used as implemented evidence; discovered 67 relevant source/config files."
+grounding_summary:
+  grounding_mode: "codebase_and_current_artifacts"
+  reference_modules:
+    - "Gp_06_Adc3ph"
+    - "Gp_Ap"
+    - "Gp_BTS7x_DIO"
+    - "Gp_BstM"
+    - "Gp_CEL"
+    - "Gp_ClkMonitor"
+  adopted_patterns:
+    - "iomcu_dependency_integration"
+    - "ioextdev_callout_and_register_pattern"
+    - "ioextdev_fault_and_state_pattern"
+  rejected_patterns:
+    []
+  notes: "Current grounding is inferred from the accessible project codebase and the accepted artifact set. It should be tightened with dedicated FC grounding summaries in the next phase."
+requirements:
+  -
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0001"
+    semantic_id: "REQ-GPIOMCUDIO-FUNCTIONAL-0001"
+    type: "functional"
+    bundle_type: "functional"
+    title: "GPIO 方向配置"
+    shall: "软件应实现 GPIO 方向配置 相关行为，并定义输入、输出、边界条件和异常处理。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
+    verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改；至少覆盖：边界/异常覆盖 `需确认：项目使用范围、接口粒度、错误返回语义和验证方法`。"
+    function_name: ""
+    source:
+      -
+        document: "RequirementPlan"
+        chunk_id: "PLAN-GENERIC"
+        heading_path:
+          - "Requirement Planning"
+        content_type: "planning"
+        line_start: null
+        line_end: null
+        evidence: "Planned from feature and candidate intermediate artifacts."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "PLAN-GENERIC"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0002"
+    semantic_id: "REQ-GPIOMCUDIO-FUNCTIONAL-0002"
+    type: "functional"
+    bundle_type: "functional"
+    title: "GPIO 输入读取"
+    shall: "软件应实现 GPIO 输入读取 相关行为，并定义输入、输出、边界条件和异常处理。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
+    verification: "通过功能测试和边界测试验证：模拟输入寄存器值和极性配置后，接口应返回与目标 pin/port 一致的输入状态；非法参数、方向不匹配或底层访问失败时，应返回定义错误并保持缓存状态一致；至少覆盖：边界/异常覆盖 `需确认：项目使用范围、接口粒度、错误返回语义和验证方法`。"
+    function_name: ""
+    source:
+      -
+        document: "RequirementPlan"
+        chunk_id: "PLAN-GENERIC"
+        heading_path:
+          - "Requirement Planning"
+        content_type: "planning"
+        line_start: null
+        line_end: null
+        evidence: "Planned from feature and candidate intermediate artifacts."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "PLAN-GENERIC"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0003"
+    semantic_id: "REQ-GPIOMCUDIO-FUNCTIONAL-0003"
+    type: "functional"
+    bundle_type: "functional"
+    title: "GPIO 输出写入"
+    shall: "软件应实现 GPIO 输出写入 相关行为，并定义输入、输出、边界条件和异常处理。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
+    verification: "通过功能测试和集成测试验证：对目标 pin/port 执行输出写入后，应仅改变目标 bit 的可观测输出结果；读改写过程中其他 bit 不得被破坏；非法方向、非法参数或 I2C 写失败时，应返回定义错误并保持原输出状态；至少覆盖：边界/异常覆盖 `需确认：项目使用范围、接口粒度、错误返回语义和验证方法`。"
+    function_name: ""
+    source:
+      -
+        document: "RequirementPlan"
+        chunk_id: "PLAN-GENERIC"
+        heading_path:
+          - "Requirement Planning"
+        content_type: "planning"
+        line_start: null
+        line_end: null
+        evidence: "Planned from feature and candidate intermediate artifacts."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "PLAN-GENERIC"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0004"
+    semantic_id: "REQ-GPIOMCUDIO-FUNCTIONAL-0004"
+    type: "functional"
+    bundle_type: "functional"
+    title: "GPIO 极性反转"
+    shall: "软件应实现 GPIO 极性反转 相关行为，并定义输入、输出、边界条件和异常处理。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
+    verification: "通过配置测试和边界测试验证：加载默认极性后应得到期望读写语义；切换反转极性时应只影响定义范围内的输入解释结果；未授权运行时修改或非法组合时应被拒绝并保留原配置；至少覆盖：边界/异常覆盖 `需确认：项目使用范围、接口粒度、错误返回语义和验证方法`。"
+    function_name: ""
+    source:
+      -
+        document: "RequirementPlan"
+        chunk_id: "PLAN-GENERIC"
+        heading_path:
+          - "Requirement Planning"
+        content_type: "planning"
+        line_start: null
+        line_end: null
+        evidence: "Planned from feature and candidate intermediate artifacts."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "PLAN-GENERIC"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0005"
+    semantic_id: "REQ-GPIOMCUDIO-FUNC-0002"
+    type: "functional"
+    bundle_type: "functional"
+    title: "初始化"
+    shall: "软件应支持支持上电初始化，对已配置 DIO 通道设置初始默认值。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: ""
+    verification: "通过初始化接口测试验证：在加载默认配置时应完成上下文建立和默认状态设置；注入非法配置、I2C 初始化失败和重复初始化场景时，应返回定义错误，且已建立状态不得被部分破坏。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-FUNC-0002"
+        heading_path:
+          - "原始开发需求"
+          - "FUNC"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "支持上电初始化，对已配置 DIO 通道设置初始默认值。"
+    status: "draft"
+    decision: "needs_confirmation"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-FUNC-0002"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-FUNC-0002"
+          title: "初始化"
+          category: "FUNC"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0006"
+    semantic_id: "REQ-GPIOMCUDIO-FUNC-0003"
+    type: "functional"
+    bundle_type: "functional"
+    title: "支持运行时方向控制（set direction）"
+    shall: "软件应支持支持运行时方向控制（set direction），明确当前 FC 版本不直接支持，需走 Callout。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: ""
+    verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-FUNC-0003"
+        heading_path:
+          - "原始开发需求"
+          - "FUNC"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "支持运行时方向控制（set direction），明确当前 FC 版本不直接支持，需走 Callout。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-FUNC-0003"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-FUNC-0003"
+          title: "支持运行时方向控制（set direction）"
+          category: "FUNC"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0007"
+    semantic_id: "REQ-GPIOMCUDIO-FUNC-0004"
+    type: "functional"
+    bundle_type: "functional"
+    title: "状态读取"
+    shall: "软件应支持支持输入电平读取（get input level），数据来源为 Callout 函数或 MCAL DIO。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: ""
+    verification: "通过状态转换测试验证：在定义触发条件下应进入目标状态并更新状态观测结果；无效触发、错误恢复和重新初始化场景下，应保持或回退到定义状态。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-FUNC-0004"
+        heading_path:
+          - "原始开发需求"
+          - "FUNC"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "支持输入电平读取（get input level），数据来源为 Callout 函数或 MCAL DIO。"
+    status: "draft"
+    decision: "needs_confirmation"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-FUNC-0004"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-FUNC-0004"
+          title: "状态读取"
+          category: "FUNC"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-IF-0001"
+    semantic_id: "REQ-GPIOMCUDIO-INTF-0001"
+    type: "interface"
+    bundle_type: "interface"
+    title: "初始化接口"
+    shall: "软件应提供初始化接口，用于加载项目配置、建立运行时上下文并初始化所依赖的底层访问资源，在配置非法或初始化失败时返回定义错误。"
+    pre_condition: ""
+    trigger: ""
+    input: "初始化接口"
+    output: ""
+    exception: ""
+    constraint: "Init(void) - 初始化当前核所有已配置 DIO 通道，无返回值。"
+    verification: "通过初始化接口测试验证：在加载默认配置时应完成上下文建立和默认状态设置；注入非法配置、I2C 初始化失败和重复初始化场景时，应返回定义错误，且已建立状态不得被部分破坏；至少覆盖：输入覆盖 `初始化接口`。"
+    function_name: "Gp_IoMcuDio_Init"
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-INTF-0001"
+        heading_path:
+          - "原始开发需求"
+          - "INTF"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "Init(void) - 初始化当前核所有已配置 DIO 通道，无返回值。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-INTF-0001"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-FUNC-0002"
+          title: "初始化"
+          category: "FUNC"
+          status: "covered"
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0001"
+          title: "初始化接口"
+          category: "INTF"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-IF-0002"
+    semantic_id: "REQ-GPIOMCUDIO-INTF-0002"
+    type: "interface"
+    bundle_type: "interface"
+    title: "参数设置接口"
+    shall: "软件应提供 `参数设置接口`，并定义输入参数、输出结果、返回值和错误处理。"
+    pre_condition: ""
+    trigger: ""
+    input: "参数设置接口"
+    output: ""
+    exception: ""
+    constraint: "SetDioSigDir(uint16 Id, Gp_IoMcuDio_DirType Dir) - 设置信号方向，返回 E_OK/E_NOT_OK。"
+    verification: "通过接口测试和集成测试验证：调用接口后应检查返回值、输出参数和外部可观测结果；对非法参数、未初始化和底层访问失败场景，应返回定义错误且不破坏既有状态；至少覆盖：输入覆盖 `参数设置接口`。"
+    function_name: "Gp_IoMcuDio_SetDioSigDir"
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-INTF-0002"
+        heading_path:
+          - "原始开发需求"
+          - "INTF"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "SetDioSigDir(uint16 Id, Gp_IoMcuDio_DirType Dir) - 设置信号方向，返回 E_OK/E_NOT_OK。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-INTF-0002"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0002"
+          title: "参数设置接口"
+          category: "INTF"
+          status: "covered"
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0003"
+          title: "状态读取接口"
+          category: "INTF"
+          status: "covered"
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0004"
+          title: "参数设置接口"
+          category: "INTF"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-IF-0003"
+    semantic_id: "REQ-GPIOMCUDIO-INTF-0003"
+    type: "interface"
+    bundle_type: "interface"
+    title: "状态读取接口"
+    shall: "软件应提供 `状态读取接口`，并定义输入参数、输出结果、返回值和错误处理。"
+    pre_condition: ""
+    trigger: ""
+    input: "状态读取接口"
+    output: ""
+    exception: ""
+    constraint: "GetDioSigLvlIn(uint16 Id, boolean* LvlIn) - 读取输入电平，返回 E_OK/E_NOT_OK。"
+    verification: "通过状态转换测试验证：在定义触发条件下应进入目标状态并更新状态观测结果；无效触发、错误恢复和重新初始化场景下，应保持或回退到定义状态；至少覆盖：输入覆盖 `状态读取接口`。"
+    function_name: "Gp_IoMcuDio_GetDioSigLvlIn"
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-INTF-0003"
+        heading_path:
+          - "原始开发需求"
+          - "INTF"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "GetDioSigLvlIn(uint16 Id, boolean* LvlIn) - 读取输入电平，返回 E_OK/E_NOT_OK。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-INTF-0003"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0002"
+          title: "参数设置接口"
+          category: "INTF"
+          status: "covered"
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0003"
+          title: "状态读取接口"
+          category: "INTF"
+          status: "covered"
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0004"
+          title: "参数设置接口"
+          category: "INTF"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-IF-0004"
+    semantic_id: "REQ-GPIOMCUDIO-INTF-0004"
+    type: "interface"
+    bundle_type: "interface"
+    title: "参数设置接口"
+    shall: "软件应提供 `参数设置接口`，并定义输入参数、输出结果、返回值和错误处理。"
+    pre_condition: ""
+    trigger: ""
+    input: "参数设置接口"
+    output: ""
+    exception: ""
+    constraint: "SetDioSigLvlOut(uint16 Id, boolean LvlOut) - 设置输出电平，返回 E_OK/E_NOT_OK。"
+    verification: "通过接口测试和集成测试验证：调用接口后应检查返回值、输出参数和外部可观测结果；对非法参数、未初始化和底层访问失败场景，应返回定义错误且不破坏既有状态；至少覆盖：输入覆盖 `参数设置接口`。"
+    function_name: "Gp_IoMcuDio_SetDioSigLvlOut"
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-INTF-0004"
+        heading_path:
+          - "原始开发需求"
+          - "INTF"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "SetDioSigLvlOut(uint16 Id, boolean LvlOut) - 设置输出电平，返回 E_OK/E_NOT_OK。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-INTF-0004"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0002"
+          title: "参数设置接口"
+          category: "INTF"
+          status: "covered"
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0003"
+          title: "状态读取接口"
+          category: "INTF"
+          status: "covered"
+        -
+          raw_id: "RAW-GPIOMCUDIO-INTF-0004"
+          title: "参数设置接口"
+          category: "INTF"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-CFG-0001"
+    semantic_id: "REQ-GPIOMCUDIO-CFG-0002"
+    type: "configuration"
+    bundle_type: "configuration"
+    title: "DET 开发错误检测开关配置"
+    shall: "软件应支持 `DET 开发错误检测开关`，并定义默认值、取值范围和非法值处理规则。"
+    pre_condition: "DET 开发错误检测开关。"
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "范围：待确认；默认值：待确认"
+    verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-CFG-0002"
+        heading_path:
+          - "原始开发需求"
+          - "CFG"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "DET 开发错误检测开关。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-CFG-0002"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-CFG-0002"
+          title: "DET 开发错误检测开关"
+          category: "CFG"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-CFG-0002"
+    semantic_id: "REQ-GPIOMCUDIO-CFG-0003"
+    type: "configuration"
+    bundle_type: "configuration"
+    title: "信号 ID 映射表（信号 ID → 物理端口/P配置"
+    shall: "软件应支持 `信号 ID 映射表（信号 ID → 物理端口/P`，并定义默认值、取值范围和非法值处理规则。"
+    pre_condition: "信号 ID 映射表（信号 ID → 物理端口/Pin）。"
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "范围：待确认；默认值：待确认"
+    verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-CFG-0003"
+        heading_path:
+          - "原始开发需求"
+          - "CFG"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "信号 ID 映射表（信号 ID → 物理端口/Pin）。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-CFG-0003"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-CFG-0003"
+          title: "信号 ID 映射表（信号 ID → 物理端口/P"
+          category: "CFG"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-CFG-0003"
+    semantic_id: "REQ-GPIOMCUDIO-CFG-0004"
+    type: "configuration"
+    bundle_type: "configuration"
+    title: "配置管理配置"
+    shall: "软件应支持 `配置管理`，并定义默认值、取值范围和非法值处理规则。"
+    pre_condition: "默认方向配置（输入/输出）。"
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "范围：待确认；默认值：待确认"
+    verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-CFG-0004"
+        heading_path:
+          - "原始开发需求"
+          - "CFG"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "默认方向配置（输入/输出）。"
+    status: "draft"
+    decision: "needs_confirmation"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-CFG-0004"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-CFG-0004"
+          title: "配置管理"
+          category: "CFG"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-CFG-0004"
+    semantic_id: "REQ-GPIOMCUDIO-CFG-0005"
+    type: "configuration"
+    bundle_type: "configuration"
+    title: "默认输出配置"
+    shall: "软件应支持 `默认输出配置`，并定义默认值、取值范围和非法值处理规则。"
+    pre_condition: "默认输出电平配置（STD_LOW/STD_HIGH）。"
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "范围：待确认；默认值：待确认"
+    verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-CFG-0005"
+        heading_path:
+          - "原始开发需求"
+          - "CFG"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "默认输出电平配置（STD_LOW/STD_HIGH）。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-CFG-0005"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-CFG-0005"
+          title: "默认输出配置"
+          category: "CFG"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0008"
+    semantic_id: "REQ-GPIOMCUDIO-NFR-0003"
+    type: "functional"
+    bundle_type: "functional"
+    title: "函数不可重入"
+    shall: "软件应支持函数不可重入。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "Review"
+    verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPIOMCUDIO-001"
+        chunk_id: "RAW-GPIOMCUDIO-NFR-0003"
+        heading_path:
+          - "原始开发需求"
+          - "NFR"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "函数不可重入。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPIOMCUDIO-NFR-0003"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPIOMCUDIO-NFR-0003"
+          title: "函数不可重入"
+          category: "NFR"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-9001"
+    semantic_id: "ENRICHED-GPIOMCUDIO-PWM-DEPENDENCY"
+    type: "functional"
+    bundle_type: "functional"
+    title: "PWM依赖集成"
+    shall: "软件应通过项目定义的 PWM 服务完成目标 H 桥输出的周期和占空比控制，并明确 SetDuty 与 GetDuty 或等效能力的依赖边界、错误返回和调用时序。"
+    pre_condition: ""
+    trigger: "当上层请求更新 H 桥周期、占空比或方向输出时。"
+    input: "目标通道标识、周期值、占空比值、方向值。"
+    output: "PWM 服务调用结果、目标输出刷新结果。"
+    exception: "PWM 服务未初始化、参数非法或底层调用失败时，应返回定义错误并保持无关输出状态不被破坏。"
+    constraint: "应明确 SetDuty 与 GetDuty 或等效 PWM 能力的服务归属、单位换算和同步/异步调用策略。"
+    verification: "通过接口测试和集成测试验证：对有效周期/占空比输入应产生预期 PWM 输出；对非法参数、未初始化和 PWM 服务失败场景，应返回定义错误并保持输出状态一致。"
+    function_name: ""
+    source:
+      -
+        document: "Auto Enrichment"
+        chunk_id: "ENRICHED-PWM-DEPENDENCY"
+        evidence: "Derived from raw PWM/period/duty requirements and interface signatures."
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "ENRICHED-PWM-DEPENDENCY"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-SAFE-0001"
+    semantic_id: "DEFAULT-GPIOMCUDIO-SAFE-0001"
+    type: "safety"
+    bundle_type: "safety"
+    title: "安全等级默认要求"
+    shall: "若项目未提供功能安全等级输入，软件需求默认按 QM 等级管理；若后续项目输入给出 ASIL/QM 要求，应按项目输入更新本需求。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目安全等级、ASIL 分配、诊断覆盖目标。"
+    verification: "通过安全需求评审验证。"
+    function_name: ""
+    source:
+      -
+        document: "SRS Template"
+        chunk_id: "DEFAULT-SAFETY-QM"
+        evidence: "No project safety input; default QM requirement generated."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "DEFAULT-SAFETY-QM"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-CODE-0001"
+    semantic_id: "DEFAULT-GPIOMCUDIO-CODE-0001"
+    type: "coding"
+    bundle_type: "coding"
+    title: "编码规范符合性要求"
+    shall: "软件实现应遵循项目编码规范、命名规范、静态检查规则和评审要求；若项目提供具体编码规范，应按项目规范替换或细化本需求。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目编码规范版本、MISRA/静态检查规则、复杂度阈值。"
+    verification: "通过代码评审、静态分析和编码规范检查验证。"
+    function_name: ""
+    source:
+      -
+        document: "SRS Template"
+        chunk_id: "DEFAULT-CODING-STANDARD"
+        evidence: "Default coding standard requirement generated from template."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "DEFAULT-CODING-STANDARD"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPIOMCUDIO-RES-0001"
+    semantic_id: "DEFAULT-GPIOMCUDIO-RES-0001"
+    type: "resource"
+    bundle_type: "resource"
+    title: "资源消耗默认要求"
+    shall: "软件资源消耗应满足项目资源预算；若项目未提供预算，需在设计和集成阶段统计 ROM、RAM、栈、CPU、I/O 和总线访问占用并形成评审结论。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：ROM/RAM/栈/CPU/I/O/I2C 总线预算和测量方法。"
+    verification: "通过资源统计、集成测试或评审验证。"
+    function_name: ""
+    source:
+      -
+        document: "SRS Template"
+        chunk_id: "DEFAULT-RESOURCE-BUDGET"
+        evidence: "No project resource budget input; default resource requirement generated."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "DEFAULT-RESOURCE-BUDGET"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+raw_gate_summary:
+  counts:
+    formal_requirement: 13
+    constraint: 2
+    capability: 1
+    evidence: 0
+    metadata: 0
+    architecture_seed_only: 1
+    test_seed_only: 0
+    open_issue: 0
+  formal_requirement_items:
+    -
+      raw_id: "RAW-GPIOMCUDIO-FUNC-0002"
+      category: "FUNC"
+      title: "初始化"
+      description: "支持上电初始化，对已配置 DIO 通道设置初始默认值。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-FUNC-0005"
+        - "SRS-GPIOMCUDIO-IF-0001"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-FUNC-0003"
+      category: "FUNC"
+      title: "支持运行时方向控制（set direction）"
+      description: "支持运行时方向控制（set direction），明确当前 FC 版本不直接支持，需走 Callout。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-FUNC-0006"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-FUNC-0004"
+      category: "FUNC"
+      title: "状态读取"
+      description: "支持输入电平读取（get input level），数据来源为 Callout 函数或 MCAL DIO。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-FUNC-0007"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-INTF-0001"
+      category: "INTF"
+      title: "初始化接口"
+      description: "Init(void) - 初始化当前核所有已配置 DIO 通道，无返回值。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-IF-0001"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-INTF-0002"
+      category: "INTF"
+      title: "参数设置接口"
+      description: "SetDioSigDir(uint16 Id, Gp_IoMcuDio_DirType Dir) - 设置信号方向，返回 E_OK/E_NOT_OK。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-IF-0002"
+        - "SRS-GPIOMCUDIO-IF-0003"
+        - "SRS-GPIOMCUDIO-IF-0004"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-INTF-0003"
+      category: "INTF"
+      title: "状态读取接口"
+      description: "GetDioSigLvlIn(uint16 Id, boolean* LvlIn) - 读取输入电平，返回 E_OK/E_NOT_OK。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-IF-0002"
+        - "SRS-GPIOMCUDIO-IF-0003"
+        - "SRS-GPIOMCUDIO-IF-0004"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-INTF-0004"
+      category: "INTF"
+      title: "参数设置接口"
+      description: "SetDioSigLvlOut(uint16 Id, boolean LvlOut) - 设置输出电平，返回 E_OK/E_NOT_OK。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-IF-0002"
+        - "SRS-GPIOMCUDIO-IF-0003"
+        - "SRS-GPIOMCUDIO-IF-0004"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-CFG-0002"
+      category: "CFG"
+      title: "DET 开发错误检测开关"
+      description: "DET 开发错误检测开关。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-CFG-0001"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-CFG-0003"
+      category: "CFG"
+      title: "信号 ID 映射表（信号 ID → 物理端口/P"
+      description: "信号 ID 映射表（信号 ID → 物理端口/Pin）。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-CFG-0002"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-CFG-0004"
+      category: "CFG"
+      title: "配置管理"
+      description: "默认方向配置（输入/输出）。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-CFG-0003"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-CFG-0005"
+      category: "CFG"
+      title: "默认输出配置"
+      description: "默认输出电平配置（STD_LOW/STD_HIGH）。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-CFG-0004"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-NFR-0002"
+      category: "NFR"
+      title: "初始化"
+      description: "DET 错误检测：未初始化访问、非法信号 ID、空指针返回 E_NOT_OK。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        []
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPIOMCUDIO-NFR-0003"
+      category: "NFR"
+      title: "函数不可重入"
+      description: "函数不可重入。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-FUNC-0008"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+  constraint_items:
+    -
+      raw_id: "RAW-GPIOMCUDIO-NFR-0001"
+      category: "NFR"
+      title: "安全等级 QM"
+      description: "安全等级 QM。"
+      gate_reason: "Safety level statements are governing constraints rather than direct functional requirements."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-SAFE-0001"
+      promotion_candidate: false
+      promotion_reason: "Safety level statements are governing constraints rather than direct functional requirements."
+    -
+      raw_id: "RAW-GPIOMCUDIO-NFR-0004"
+      category: "NFR"
+      title: "同步接口"
+      description: "同步接口，无 MainFunction 周期调度需求。"
+      gate_reason: "Sync/async scheduling policy statements should stay as governing constraints."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        []
+      promotion_candidate: false
+      promotion_reason: "Sync/async scheduling policy statements should stay as governing constraints."
+  capability_items:
+    -
+      raw_id: "RAW-GPIOMCUDIO-FUNC-0001"
+      category: "FUNC"
+      title: "配置管理"
+      description: "驱动需要支持通过 uint16 信号 ID 访问 DIO 通道，每个信号的物理端口由配置表映射。"
+      gate_reason: "The statement currently looks like a chip/project capability summary rather than an implementation-ready formal requirement."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        []
+      promotion_candidate: false
+      promotion_reason: "The statement currently looks like a chip/project capability summary rather than an implementation-ready formal requirement."
+  evidence_items:
+    []
+  metadata_items:
+    []
+  architecture_seed_items:
+    -
+      raw_id: "RAW-GPIOMCUDIO-CFG-0001"
+      category: "CFG"
+      title: "多核支持"
+      description: "多核使能配置（每核独立开关）。"
+      gate_reason: "Multi-core ownership statements should directly guide architecture freezing."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        []
+      promotion_candidate: false
+      promotion_reason: "Multi-core ownership statements should directly guide architecture freezing."
+  test_seed_items:
+    []
+  open_issue_items:
+    []
+coverage_matrix:
+  -
+    raw_id: "RAW-GPIOMCUDIO-FUNC-0001"
+    category: "FUNC"
+    title: "配置管理"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "excluded_by_gate"
+    matched_requirements:
+      []
+  -
+    raw_id: "RAW-GPIOMCUDIO-FUNC-0002"
+    category: "FUNC"
+    title: "初始化"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-FUNC-0005"
+      - "SRS-GPIOMCUDIO-IF-0001"
+  -
+    raw_id: "RAW-GPIOMCUDIO-FUNC-0003"
+    category: "FUNC"
+    title: "支持运行时方向控制（set direction）"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-FUNC-0006"
+  -
+    raw_id: "RAW-GPIOMCUDIO-FUNC-0004"
+    category: "FUNC"
+    title: "状态读取"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-FUNC-0007"
+  -
+    raw_id: "RAW-GPIOMCUDIO-INTF-0001"
+    category: "INTF"
+    title: "初始化接口"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-IF-0001"
+  -
+    raw_id: "RAW-GPIOMCUDIO-INTF-0002"
+    category: "INTF"
+    title: "参数设置接口"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-IF-0002"
+      - "SRS-GPIOMCUDIO-IF-0003"
+      - "SRS-GPIOMCUDIO-IF-0004"
+  -
+    raw_id: "RAW-GPIOMCUDIO-INTF-0003"
+    category: "INTF"
+    title: "状态读取接口"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-IF-0002"
+      - "SRS-GPIOMCUDIO-IF-0003"
+      - "SRS-GPIOMCUDIO-IF-0004"
+  -
+    raw_id: "RAW-GPIOMCUDIO-INTF-0004"
+    category: "INTF"
+    title: "参数设置接口"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-IF-0002"
+      - "SRS-GPIOMCUDIO-IF-0003"
+      - "SRS-GPIOMCUDIO-IF-0004"
+  -
+    raw_id: "RAW-GPIOMCUDIO-CFG-0001"
+    category: "CFG"
+    title: "多核支持"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "excluded_by_gate"
+    matched_requirements:
+      []
+  -
+    raw_id: "RAW-GPIOMCUDIO-CFG-0002"
+    category: "CFG"
+    title: "DET 开发错误检测开关"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-CFG-0001"
+  -
+    raw_id: "RAW-GPIOMCUDIO-CFG-0003"
+    category: "CFG"
+    title: "信号 ID 映射表（信号 ID → 物理端口/P"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-CFG-0002"
+  -
+    raw_id: "RAW-GPIOMCUDIO-CFG-0004"
+    category: "CFG"
+    title: "配置管理"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-CFG-0003"
+  -
+    raw_id: "RAW-GPIOMCUDIO-CFG-0005"
+    category: "CFG"
+    title: "默认输出配置"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-CFG-0004"
+  -
+    raw_id: "RAW-GPIOMCUDIO-NFR-0001"
+    category: "NFR"
+    title: "安全等级 QM"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "excluded_by_gate"
+    matched_requirements:
+      []
+  -
+    raw_id: "RAW-GPIOMCUDIO-NFR-0002"
+    category: "NFR"
+    title: "初始化"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "uncovered"
+    matched_requirements:
+      []
+  -
+    raw_id: "RAW-GPIOMCUDIO-NFR-0003"
+    category: "NFR"
+    title: "函数不可重入"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "covered"
+    matched_requirements:
+      - "SRS-GPIOMCUDIO-FUNC-0008"
+  -
+    raw_id: "RAW-GPIOMCUDIO-NFR-0004"
+    category: "NFR"
+    title: "同步接口"
+    source: "raw_input_Gp_IoMcuDio.txt"
+    status: "excluded_by_gate"
+    matched_requirements:
+      []
+open_issues:
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0001"
+    title: "GPIO 方向配置"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0002"
+    title: "GPIO 输入读取"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0003"
+    title: "GPIO 输出写入"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0004"
+    title: "GPIO 极性反转"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0005"
+    title: "初始化"
+    status: "draft"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-FUNC-0007"
+    title: "状态读取"
+    status: "draft"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-CFG-0003"
+    title: "配置管理配置"
+    status: "draft"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-SAFE-0001"
+    title: "安全等级默认要求"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-CODE-0001"
+    title: "编码规范符合性要求"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPIOMCUDIO-RES-0001"
+    title: "资源消耗默认要求"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "coverage_gap"
+    raw_id: "RAW-GPIOMCUDIO-NFR-0002"
+    title: "初始化"
+    status: "uncovered"
+    matched_requirements:
+      []
+architecture_seed:
+  module_name: "Gp_IoMcuDio"
+  layer: "IoExtDrv"
+  external_interface_candidates:
+    -
+      requirement_id: "SRS-GPIOMCUDIO-IF-0001"
+      function_name: "Gp_IoMcuDio_Init"
+      purpose: "软件应提供初始化接口，用于加载项目配置、建立运行时上下文并初始化所依赖的底层访问资源，在配置非法或初始化失败时返回定义错误。"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-IF-0002"
+      function_name: "Gp_IoMcuDio_SetDioSigDir"
+      purpose: "软件应提供 `参数设置接口`，并定义输入参数、输出结果、返回值和错误处理。"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-IF-0003"
+      function_name: "Gp_IoMcuDio_GetDioSigLvlIn"
+      purpose: "软件应提供 `状态读取接口`，并定义输入参数、输出结果、返回值和错误处理。"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-IF-0004"
+      function_name: "Gp_IoMcuDio_SetDioSigLvlOut"
+      purpose: "软件应提供 `参数设置接口`，并定义输入参数、输出结果、返回值和错误处理。"
+      status: "ready"
+  config_item_candidates:
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0001"
+      name: "DET 开发错误检测开关配置"
+      constraint: "范围：待确认；默认值：待确认"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0002"
+      name: "信号 ID 映射表（信号 ID → 物理端口/P配置"
+      constraint: "范围：待确认；默认值：待确认"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0003"
+      name: "配置管理配置"
+      constraint: "范围：待确认；默认值：待确认"
+      status: "draft"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0004"
+      name: "默认输出配置"
+      constraint: "范围：待确认；默认值：待确认"
+      status: "ready"
+  timing_constraints:
+    []
+  state_concerns:
+    []
+  diagnostic_concerns:
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0001"
+      title: "DET 开发错误检测开关配置"
+      description: "软件应支持 `DET 开发错误检测开关`，并定义默认值、取值范围和非法值处理规则。"
+      status: "ready"
+  pending_confirm_items:
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0001"
+      title: "GPIO 方向配置"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0002"
+      title: "GPIO 输入读取"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0003"
+      title: "GPIO 输出写入"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0004"
+      title: "GPIO 极性反转"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0005"
+      title: "初始化"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0007"
+      title: "状态读取"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0003"
+      title: "配置管理配置"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPIOMCUDIO-SAFE-0001"
+      title: "安全等级默认要求"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CODE-0001"
+      title: "编码规范符合性要求"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPIOMCUDIO-RES-0001"
+      title: "资源消耗默认要求"
+      reason: "Requirement currently has no requirement-level validation findings."
+  constraint_items:
+    -
+      raw_id: "RAW-GPIOMCUDIO-NFR-0001"
+      category: "NFR"
+      title: "安全等级 QM"
+      description: "安全等级 QM。"
+      gate_reason: "Safety level statements are governing constraints rather than direct functional requirements."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-SAFE-0001"
+      promotion_candidate: false
+      promotion_reason: "Safety level statements are governing constraints rather than direct functional requirements."
+    -
+      raw_id: "RAW-GPIOMCUDIO-NFR-0004"
+      category: "NFR"
+      title: "同步接口"
+      description: "同步接口，无 MainFunction 周期调度需求。"
+      gate_reason: "Sync/async scheduling policy statements should stay as governing constraints."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        []
+      promotion_candidate: false
+      promotion_reason: "Sync/async scheduling policy statements should stay as governing constraints."
+  architecture_only_items:
+    -
+      raw_id: "RAW-GPIOMCUDIO-CFG-0001"
+      category: "CFG"
+      title: "多核支持"
+      description: "多核使能配置（每核独立开关）。"
+      gate_reason: "Multi-core ownership statements should directly guide architecture freezing."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        []
+      promotion_candidate: false
+      promotion_reason: "Multi-core ownership statements should directly guide architecture freezing."
+  capability_notes:
+    -
+      raw_id: "RAW-GPIOMCUDIO-FUNC-0001"
+      category: "FUNC"
+      title: "配置管理"
+      description: "驱动需要支持通过 uint16 信号 ID 访问 DIO 通道，每个信号的物理端口由配置表映射。"
+      gate_reason: "The statement currently looks like a chip/project capability summary rather than an implementation-ready formal requirement."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        []
+      promotion_candidate: false
+      promotion_reason: "The statement currently looks like a chip/project capability summary rather than an implementation-ready formal requirement."
+test_seed:
+  module_name: "Gp_IoMcuDio"
+  verification_items:
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0001"
+      title: "GPIO 方向配置"
+      verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改；至少覆盖：边界/异常覆盖 `需确认：项目使用范围、接口粒度、错误返回语义和验证方法`。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
+      status: "open_issue"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0002"
+      title: "GPIO 输入读取"
+      verification: "通过功能测试和边界测试验证：模拟输入寄存器值和极性配置后，接口应返回与目标 pin/port 一致的输入状态；非法参数、方向不匹配或底层访问失败时，应返回定义错误并保持缓存状态一致；至少覆盖：边界/异常覆盖 `需确认：项目使用范围、接口粒度、错误返回语义和验证方法`。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
+      status: "open_issue"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0003"
+      title: "GPIO 输出写入"
+      verification: "通过功能测试和集成测试验证：对目标 pin/port 执行输出写入后，应仅改变目标 bit 的可观测输出结果；读改写过程中其他 bit 不得被破坏；非法方向、非法参数或 I2C 写失败时，应返回定义错误并保持原输出状态；至少覆盖：边界/异常覆盖 `需确认：项目使用范围、接口粒度、错误返回语义和验证方法`。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
+      status: "open_issue"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0004"
+      title: "GPIO 极性反转"
+      verification: "通过配置测试和边界测试验证：加载默认极性后应得到期望读写语义；切换反转极性时应只影响定义范围内的输入解释结果；未授权运行时修改或非法组合时应被拒绝并保留原配置；至少覆盖：边界/异常覆盖 `需确认：项目使用范围、接口粒度、错误返回语义和验证方法`。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
+      status: "open_issue"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0005"
+      title: "初始化"
+      verification: "通过初始化接口测试验证：在加载默认配置时应完成上下文建立和默认状态设置；注入非法配置、I2C 初始化失败和重复初始化场景时，应返回定义错误，且已建立状态不得被部分破坏。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "软件应支持支持上电初始化，对已配置 DIO 通道设置初始默认值。"
+      status: "draft"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0006"
+      title: "支持运行时方向控制（set direction）"
+      verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "软件应支持支持运行时方向控制（set direction），明确当前 FC 版本不直接支持，需走 Callout。"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0007"
+      title: "状态读取"
+      verification: "通过状态转换测试验证：在定义触发条件下应进入目标状态并更新状态观测结果；无效触发、错误恢复和重新初始化场景下，应保持或回退到定义状态。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "软件应支持支持输入电平读取（get input level），数据来源为 Callout 函数或 MCAL DIO。"
+      status: "draft"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-IF-0001"
+      title: "初始化接口"
+      verification: "通过初始化接口测试验证：在加载默认配置时应完成上下文建立和默认状态设置；注入非法配置、I2C 初始化失败和重复初始化场景时，应返回定义错误，且已建立状态不得被部分破坏；至少覆盖：输入覆盖 `初始化接口`。"
+      trigger: ""
+      input: "初始化接口"
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "Init(void) - 初始化当前核所有已配置 DIO 通道，无返回值。"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-IF-0002"
+      title: "参数设置接口"
+      verification: "通过接口测试和集成测试验证：调用接口后应检查返回值、输出参数和外部可观测结果；对非法参数、未初始化和底层访问失败场景，应返回定义错误且不破坏既有状态；至少覆盖：输入覆盖 `参数设置接口`。"
+      trigger: ""
+      input: "参数设置接口"
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "SetDioSigDir(uint16 Id, Gp_IoMcuDio_DirType Dir) - 设置信号方向，返回 E_OK/E_NOT_OK。"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-IF-0003"
+      title: "状态读取接口"
+      verification: "通过状态转换测试验证：在定义触发条件下应进入目标状态并更新状态观测结果；无效触发、错误恢复和重新初始化场景下，应保持或回退到定义状态；至少覆盖：输入覆盖 `状态读取接口`。"
+      trigger: ""
+      input: "状态读取接口"
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "GetDioSigLvlIn(uint16 Id, boolean* LvlIn) - 读取输入电平，返回 E_OK/E_NOT_OK。"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-IF-0004"
+      title: "参数设置接口"
+      verification: "通过接口测试和集成测试验证：调用接口后应检查返回值、输出参数和外部可观测结果；对非法参数、未初始化和底层访问失败场景，应返回定义错误且不破坏既有状态；至少覆盖：输入覆盖 `参数设置接口`。"
+      trigger: ""
+      input: "参数设置接口"
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "SetDioSigLvlOut(uint16 Id, boolean LvlOut) - 设置输出电平，返回 E_OK/E_NOT_OK。"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0001"
+      title: "DET 开发错误检测开关配置"
+      verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "范围：待确认；默认值：待确认"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0002"
+      title: "信号 ID 映射表（信号 ID → 物理端口/P配置"
+      verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "范围：待确认；默认值：待确认"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0003"
+      title: "配置管理配置"
+      verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "范围：待确认；默认值：待确认"
+      status: "draft"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-CFG-0004"
+      title: "默认输出配置"
+      verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "范围：待确认；默认值：待确认"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-0008"
+      title: "函数不可重入"
+      verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "Review"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPIOMCUDIO-FUNC-9001"
+      title: "PWM依赖集成"
+      verification: "通过接口测试和集成测试验证：对有效周期/占空比输入应产生预期 PWM 输出；对非法参数、未初始化和 PWM 服务失败场景，应返回定义错误并保持输出状态一致。"
+      trigger: "当上层请求更新 H 桥周期、占空比或方向输出时。"
+      input: "目标通道标识、周期值、占空比值、方向值。"
+      expected_output: "PWM 服务调用结果、目标输出刷新结果。"
+      exception_path: "PWM 服务未初始化、参数非法或底层调用失败时，应返回定义错误并保持无关输出状态不被破坏。"
+      acceptance_basis: "应明确 SetDuty 与 GetDuty 或等效 PWM 能力的服务归属、单位换算和同步/异步调用策略。"
+      status: "ready"
+  test_only_items:
+    []
+  excluded_nonfunctional_items:
+    -
+      raw_id: "RAW-GPIOMCUDIO-NFR-0001"
+      category: "NFR"
+      title: "安全等级 QM"
+      description: "安全等级 QM。"
+      gate_reason: "Safety level statements are governing constraints rather than direct functional requirements."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        - "SRS-GPIOMCUDIO-SAFE-0001"
+      promotion_candidate: false
+      promotion_reason: "Safety level statements are governing constraints rather than direct functional requirements."
+    -
+      raw_id: "RAW-GPIOMCUDIO-NFR-0004"
+      category: "NFR"
+      title: "同步接口"
+      description: "同步接口，无 MainFunction 周期调度需求。"
+      gate_reason: "Sync/async scheduling policy statements should stay as governing constraints."
+      source_detail: "raw_input_Gp_IoMcuDio.txt"
+      linked_formal_requirements:
+        []
+      promotion_candidate: false
+      promotion_reason: "Sync/async scheduling policy statements should stay as governing constraints."
+generation_notes:
+  source_root_used: true
+  raw_requirement_input_used: true
+  coverage_gap_count: 1
+  raw_gate_counts:
+    formal_requirement: 13
+    constraint: 2
+    capability: 1
+    evidence: 0
+    metadata: 0
+    architecture_seed_only: 1
+    test_seed_only: 0
+    open_issue: 0
+  notes:
+    - "This bundle is the structured source-of-truth candidate for the requirement skill."
+    - "Current grounding uses accessible project source code as implemented evidence, not as unconditional normative truth."

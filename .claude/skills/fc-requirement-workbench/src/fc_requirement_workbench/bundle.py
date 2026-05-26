@@ -15,6 +15,7 @@ from typing import Any
 from .builder import EngineeringRequirement
 from .raw_requirements import RawRequirementDocument
 from .rules import ValidationFinding
+from .status import compute_requirement_status
 from .traceability import TraceabilityPackage
 
 
@@ -31,20 +32,318 @@ class SourceInventoryEntry:
 
 
 @dataclass(frozen=True)
-class RequirementBundle:
-    module_identity: dict[str, Any]
-    source_inventory: list[dict[str, Any]]
-    grounding_summary: dict[str, Any]
-    requirements: list[dict[str, Any]]
-    raw_gate_summary: dict[str, Any]
-    coverage_matrix: list[dict[str, Any]]
-    open_issues: list[dict[str, Any]]
-    architecture_seed: dict[str, Any]
-    test_seed: dict[str, Any]
-    generation_notes: dict[str, Any]
+class ModuleIdentity:
+    module_name: str
+    module_abbr: str
+    layer: str
+    project: str
+    safety_level: str
+    input_document: str
+    source_root: str
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class GroundingSummary:
+    grounding_mode: str
+    reference_modules: list[str] = field(default_factory=list)
+    adopted_patterns: list[str] = field(default_factory=list)
+    rejected_patterns: list[str] = field(default_factory=list)
+    notes: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class GenerationNotes:
+    source_root_used: bool
+    raw_requirement_input_used: bool
+    coverage_gap_count: int
+    raw_gate_counts: dict[str, int] = field(default_factory=dict)
+    notes: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class RequirementBundle:
+    module_identity: ModuleIdentity
+    source_inventory: list[SourceInventoryEntry]
+    grounding_summary: GroundingSummary
+    requirements: list["BundleRequirement"]
+    raw_gate_summary: "RawGateSummary"
+    coverage_matrix: list["CoverageMatrixItem"]
+    open_issues: list["OpenIssueItem"]
+    architecture_seed: "ArchitectureSeed"
+    test_seed: "TestSeed"
+    generation_notes: GenerationNotes
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "module_identity": self.module_identity.to_dict(),
+            "source_inventory": [item.to_dict() for item in self.source_inventory],
+            "grounding_summary": self.grounding_summary.to_dict(),
+            "requirements": [item.to_dict() for item in self.requirements],
+            "raw_gate_summary": self.raw_gate_summary.to_dict(),
+            "coverage_matrix": [item.to_dict() for item in self.coverage_matrix],
+            "open_issues": [item.to_dict() for item in self.open_issues],
+            "architecture_seed": self.architecture_seed.to_dict(),
+            "test_seed": self.test_seed.to_dict(),
+            "generation_notes": self.generation_notes.to_dict(),
+        }
+
+
+@dataclass(frozen=True)
+class RequirementTraceInfo:
+    source_ids: list[str] = field(default_factory=list)
+    tests: list[str] = field(default_factory=list)
+    verification_levels: list[str] = field(default_factory=list)
+    coverage_status: str = "uncovered"
+    linked_raw_items: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class BundleRequirement:
+    requirement_id: str
+    semantic_id: str
+    type: str
+    bundle_type: str
+    title: str
+    shall: str
+    pre_condition: str = ""
+    trigger: str = ""
+    input: str = ""
+    output: str = ""
+    exception: str = ""
+    constraint: str = ""
+    verification: str = ""
+    function_name: str = ""
+    source: list[dict[str, Any]] = field(default_factory=list)
+    status: str = "draft"
+    decision: str = "needs_confirmation"
+    decision_reason: str = ""
+    trace: RequirementTraceInfo = field(default_factory=RequirementTraceInfo)
+    validation: list[dict[str, Any]] = field(default_factory=list)
+    global_validation_context: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["trace"] = self.trace.to_dict()
+        return payload
+
+
+@dataclass(frozen=True)
+class GateItem:
+    raw_id: str
+    category: str
+    title: str
+    description: str
+    gate_reason: str
+    source_detail: str
+    linked_formal_requirements: list[str] = field(default_factory=list)
+    promotion_candidate: bool = False
+    promotion_reason: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class CoverageMatrixItem:
+    raw_id: str
+    category: str
+    title: str
+    source: str
+    status: str
+    matched_requirements: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class OpenIssueItem:
+    type: str
+    requirement_id: str = ""
+    title: str = ""
+    status: str = ""
+    reason: str = ""
+    severity: str = ""
+    rule: str = ""
+    recommendation: str = ""
+    raw_id: str = ""
+    matched_requirements: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {"type": self.type}
+        if self.requirement_id:
+            payload["requirement_id"] = self.requirement_id
+        if self.title:
+            payload["title"] = self.title
+        if self.status:
+            payload["status"] = self.status
+        if self.reason:
+            payload["reason"] = self.reason
+        if self.severity:
+            payload["severity"] = self.severity
+        if self.rule:
+            payload["rule"] = self.rule
+        if self.recommendation:
+            payload["recommendation"] = self.recommendation
+        if self.raw_id:
+            payload["raw_id"] = self.raw_id
+        if self.matched_requirements:
+            payload["matched_requirements"] = self.matched_requirements
+        return payload
+
+
+@dataclass(frozen=True)
+class RawGateSummary:
+    counts: dict[str, int] = field(default_factory=dict)
+    formal_requirement_items: list[GateItem] = field(default_factory=list)
+    constraint_items: list[GateItem] = field(default_factory=list)
+    capability_items: list[GateItem] = field(default_factory=list)
+    evidence_items: list[GateItem] = field(default_factory=list)
+    metadata_items: list[GateItem] = field(default_factory=list)
+    architecture_seed_items: list[GateItem] = field(default_factory=list)
+    test_seed_items: list[GateItem] = field(default_factory=list)
+    open_issue_items: list[GateItem] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "counts": self.counts,
+            "formal_requirement_items": [item.to_dict() for item in self.formal_requirement_items],
+            "constraint_items": [item.to_dict() for item in self.constraint_items],
+            "capability_items": [item.to_dict() for item in self.capability_items],
+            "evidence_items": [item.to_dict() for item in self.evidence_items],
+            "metadata_items": [item.to_dict() for item in self.metadata_items],
+            "architecture_seed_items": [item.to_dict() for item in self.architecture_seed_items],
+            "test_seed_items": [item.to_dict() for item in self.test_seed_items],
+            "open_issue_items": [item.to_dict() for item in self.open_issue_items],
+        }
+
+
+@dataclass(frozen=True)
+class InterfaceCandidate:
+    requirement_id: str
+    function_name: str
+    purpose: str
+    status: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ConfigCandidate:
+    requirement_id: str
+    name: str
+    constraint: str
+    status: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class TimingConstraintItem:
+    requirement_id: str
+    title: str
+    constraint: str
+    status: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ConcernItem:
+    requirement_id: str
+    title: str
+    description: str
+    status: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class PendingConfirmItem:
+    requirement_id: str
+    title: str
+    reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ArchitectureSeed:
+    module_name: str
+    layer: str
+    external_interface_candidates: list[InterfaceCandidate] = field(default_factory=list)
+    config_item_candidates: list[ConfigCandidate] = field(default_factory=list)
+    timing_constraints: list[TimingConstraintItem] = field(default_factory=list)
+    state_concerns: list[ConcernItem] = field(default_factory=list)
+    diagnostic_concerns: list[ConcernItem] = field(default_factory=list)
+    pending_confirm_items: list[PendingConfirmItem] = field(default_factory=list)
+    constraint_items: list[GateItem] = field(default_factory=list)
+    architecture_only_items: list[GateItem] = field(default_factory=list)
+    capability_notes: list[GateItem] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "module_name": self.module_name,
+            "layer": self.layer,
+            "external_interface_candidates": [item.to_dict() for item in self.external_interface_candidates],
+            "config_item_candidates": [item.to_dict() for item in self.config_item_candidates],
+            "timing_constraints": [item.to_dict() for item in self.timing_constraints],
+            "state_concerns": [item.to_dict() for item in self.state_concerns],
+            "diagnostic_concerns": [item.to_dict() for item in self.diagnostic_concerns],
+            "pending_confirm_items": [item.to_dict() for item in self.pending_confirm_items],
+            "constraint_items": [item.to_dict() for item in self.constraint_items],
+            "architecture_only_items": [item.to_dict() for item in self.architecture_only_items],
+            "capability_notes": [item.to_dict() for item in self.capability_notes],
+        }
+
+
+@dataclass(frozen=True)
+class VerificationItem:
+    requirement_id: str
+    title: str
+    verification: str
+    trigger: str
+    input: str
+    expected_output: str
+    exception_path: str
+    acceptance_basis: str
+    status: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class TestSeed:
+    module_name: str
+    verification_items: list[VerificationItem] = field(default_factory=list)
+    test_only_items: list[GateItem] = field(default_factory=list)
+    excluded_nonfunctional_items: list[GateItem] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "module_name": self.module_name,
+            "verification_items": [item.to_dict() for item in self.verification_items],
+            "test_only_items": [item.to_dict() for item in self.test_only_items],
+            "excluded_nonfunctional_items": [item.to_dict() for item in self.excluded_nonfunctional_items],
+        }
 
 
 class RequirementBundleBuilder:
@@ -72,13 +371,14 @@ class RequirementBundleBuilder:
             raw_document=raw_document,
             source_root=source_root_path,
         )
-        coverage_matrix = raw_coverage_detail or []
+        coverage_matrix = _coverage_matrix_items(raw_coverage_detail or [])
         grounding_summary = _grounding_summary(module, source_root_path)
         requirements = _bundle_requirements(engineering_requirements, findings, traceability, coverage_matrix)
-        raw_gate_summary = _raw_gate_summary(raw_document, coverage_matrix, requirements)
-        open_issues = _open_issues(requirements, findings, coverage_matrix, raw_gate_summary)
-        architecture_seed = _architecture_seed(requirements, module_identity, raw_gate_summary)
-        test_seed = _test_seed(requirements, module_identity, raw_gate_summary)
+        requirement_dicts = [item.to_dict() for item in requirements]
+        raw_gate_summary = _raw_gate_summary(raw_document, coverage_matrix, requirement_dicts)
+        open_issues = _open_issues(requirement_dicts, findings, coverage_matrix, raw_gate_summary)
+        architecture_seed = _architecture_seed(requirement_dicts, module_identity, raw_gate_summary)
+        test_seed = _test_seed(requirement_dicts, module_identity, raw_gate_summary)
         generation_notes = _generation_notes(
             source_root=source_root_path,
             raw_document=raw_document,
@@ -125,17 +425,17 @@ def _module_identity(
     input_document: str,
     raw_document: RawRequirementDocument | None,
     source_root: Path | None,
-) -> dict[str, Any]:
+) -> ModuleIdentity:
     layer = raw_document.layer if raw_document else _infer_layer_from_path(source_root)
-    return {
-        "module_name": raw_document.module_name if raw_document else module,
-        "module_abbr": raw_document.module_abbr if raw_document else _module_token(module),
-        "layer": layer or "IoExtDev",
-        "project": raw_document.project if raw_document else "FcStack",
-        "safety_level": raw_document.safety_level if raw_document else "QM",
-        "input_document": input_document,
-        "source_root": str(source_root) if source_root else "",
-    }
+    return ModuleIdentity(
+        module_name=raw_document.module_name if raw_document else module,
+        module_abbr=raw_document.module_abbr if raw_document else _module_token(module),
+        layer=layer or "IoExtDev",
+        project=raw_document.project if raw_document else "FcStack",
+        safety_level=raw_document.safety_level if raw_document else "QM",
+        input_document=input_document,
+        source_root=str(source_root) if source_root else "",
+    )
 
 
 def _source_inventory(
@@ -143,7 +443,7 @@ def _source_inventory(
     input_document: str,
     raw_document: RawRequirementDocument | None,
     source_root: Path | None,
-) -> list[dict[str, Any]]:
+) -> list[SourceInventoryEntry]:
     entries = [
         SourceInventoryEntry(
             source_type="markdown",
@@ -151,7 +451,7 @@ def _source_inventory(
             role="datasheet_or_reference_input",
             confidence="high",
             notes="Primary parsed markdown input for the planned SRS pipeline.",
-        ).to_dict()
+        )
     ]
     if raw_document is not None:
         entries.append(
@@ -161,7 +461,7 @@ def _source_inventory(
                 role="project_requirement_input",
                 confidence="medium",
                 notes="User-provided raw requirement input merged into the planned requirements.",
-            ).to_dict()
+            )
         )
     if source_root is not None:
         module_hits = _module_source_hits(source_root)
@@ -172,12 +472,12 @@ def _source_inventory(
                 role="implemented_evidence",
                 confidence="medium",
                 notes=f"Project source root used as implemented evidence; discovered {module_hits} relevant source/config files.",
-            ).to_dict()
+            )
         )
     return entries
 
 
-def _grounding_summary(module: str, source_root: Path | None) -> dict[str, Any]:
+def _grounding_summary(module: str, source_root: Path | None) -> GroundingSummary:
     references: list[str] = []
     patterns: list[str] = []
     if source_root is not None:
@@ -190,24 +490,24 @@ def _grounding_summary(module: str, source_root: Path | None) -> dict[str, Any]:
             patterns.append("ioextdev_callout_and_register_pattern")
         if any("drv8889" in name for name in lowered):
             patterns.append("ioextdev_fault_and_state_pattern")
-    return {
-        "grounding_mode": "codebase_and_current_artifacts",
-        "reference_modules": references,
-        "adopted_patterns": patterns,
-        "rejected_patterns": [],
-        "notes": (
+    return GroundingSummary(
+        grounding_mode="codebase_and_current_artifacts",
+        reference_modules=references,
+        adopted_patterns=patterns,
+        rejected_patterns=[],
+        notes=(
             "Current grounding is inferred from the accessible project codebase and the accepted artifact set. "
             "It should be tightened with dedicated FC grounding summaries in the next phase."
         ),
-    }
+    )
 
 
 def _bundle_requirements(
     requirements: list[EngineeringRequirement],
     findings: list[ValidationFinding],
     traceability: TraceabilityPackage,
-    coverage_matrix: list[dict[str, Any]] | None = None,
-) -> list[dict[str, Any]]:
+    coverage_matrix: list[CoverageMatrixItem] | None = None,
+) -> list[BundleRequirement]:
     findings_by_req: dict[str, list[ValidationFinding]] = {}
     global_findings: list[ValidationFinding] = []
     for finding in findings:
@@ -225,40 +525,40 @@ def _bundle_requirements(
     coverage_by_req = {item.requirement_id: item for item in traceability.coverage}
     raw_links_by_requirement = _raw_links_by_requirement(coverage_matrix or [])
 
-    items: list[dict[str, Any]] = []
+    items: list[BundleRequirement] = []
     for req in requirements:
         req_findings = findings_by_req.get(req.semantic_id, [])
         status = _requirement_status(req, req_findings)
         items.append(
-            {
-                "requirement_id": req.requirement_id,
-                "semantic_id": req.semantic_id,
-                "type": req.requirement_type,
-                "bundle_type": _bundle_type(req),
-                "title": req.title,
-                "shall": req.description,
-                "pre_condition": req.pre_condition,
-                "trigger": req.trigger,
-                "input": req.input,
-                "output": req.output,
-                "exception": req.exception,
-                "constraint": req.constraint,
-                "verification": req.verification,
-                "function_name": req.function_name,
-                "source": req.source,
-                "status": status,
-                "decision": _decision_label(status, req_findings),
-                "decision_reason": _decision_reason(req_findings),
-                "trace": {
-                    "source_ids": trace_by_req.get(req.requirement_id).source if req.requirement_id in trace_by_req else [],
-                    "tests": trace_by_req.get(req.requirement_id).test if req.requirement_id in trace_by_req else [],
-                    "verification_levels": trace_by_req.get(req.requirement_id).verification if req.requirement_id in trace_by_req else [],
-                    "coverage_status": coverage_by_req.get(req.requirement_id).status if req.requirement_id in coverage_by_req else "uncovered",
-                    "linked_raw_items": raw_links_by_requirement.get(req.requirement_id, []),
-                },
-                "validation": [finding.to_dict() for finding in req_findings],
-                "global_validation_context": [finding.to_dict() for finding in global_findings],
-            }
+            BundleRequirement(
+                requirement_id=req.requirement_id,
+                semantic_id=req.semantic_id,
+                type=req.requirement_type,
+                bundle_type=_bundle_type(req),
+                title=req.title,
+                shall=req.description,
+                pre_condition=req.pre_condition,
+                trigger=req.trigger,
+                input=req.input,
+                output=req.output,
+                exception=req.exception,
+                constraint=req.constraint,
+                verification=req.verification,
+                function_name=req.function_name,
+                source=req.source,
+                status=status,
+                decision=_decision_label(status, req_findings),
+                decision_reason=_decision_reason(req_findings),
+                trace=RequirementTraceInfo(
+                    source_ids=trace_by_req.get(req.requirement_id).source if req.requirement_id in trace_by_req else [],
+                    tests=trace_by_req.get(req.requirement_id).test if req.requirement_id in trace_by_req else [],
+                    verification_levels=trace_by_req.get(req.requirement_id).verification if req.requirement_id in trace_by_req else [],
+                    coverage_status=coverage_by_req.get(req.requirement_id).status if req.requirement_id in coverage_by_req else "uncovered",
+                    linked_raw_items=raw_links_by_requirement.get(req.requirement_id, []),
+                ),
+                validation=[finding.to_dict() for finding in req_findings],
+                global_validation_context=[finding.to_dict() for finding in global_findings],
+            )
         )
     return items
 
@@ -295,164 +595,165 @@ def _is_stale_global_finding(
 def _open_issues(
     requirements: list[dict[str, Any]],
     findings: list[ValidationFinding],
-    coverage_matrix: list[dict[str, Any]],
-    raw_gate_summary: dict[str, Any],
-) -> list[dict[str, Any]]:
-    issues: list[dict[str, Any]] = []
+    coverage_matrix: list[CoverageMatrixItem],
+    raw_gate_summary: RawGateSummary,
+) -> list[OpenIssueItem]:
+    issues: list[OpenIssueItem] = []
     for req in requirements:
         if req["status"] in {"draft", "open_issue"}:
             issues.append(
-                {
-                    "type": "requirement_status",
-                    "requirement_id": req["requirement_id"],
-                    "title": req["title"],
-                    "status": req["status"],
-                    "reason": req["decision_reason"],
-                }
+                OpenIssueItem(
+                    type="requirement_status",
+                    requirement_id=req["requirement_id"],
+                    title=req["title"],
+                    status=req["status"],
+                    reason=req["decision_reason"],
+                )
             )
     for finding in findings:
         if not finding.requirement_ids and finding.status == "failed":
             issues.append(
-                {
-                    "type": "global_validation",
-                    "rule": finding.rule,
-                    "severity": finding.severity,
-                    "reason": finding.message,
-                    "recommendation": finding.recommendation,
-                }
+                OpenIssueItem(
+                    type="global_validation",
+                    rule=finding.rule,
+                    severity=finding.severity,
+                    reason=finding.message,
+                    recommendation=finding.recommendation,
+                )
             )
     for row in coverage_matrix:
-        if row.get("status") != "covered":
+        status = row.status
+        if status not in {"covered", "excluded_by_gate"}:
             issues.append(
-                {
-                    "type": "coverage_gap",
-                    "raw_id": row.get("raw_id", ""),
-                    "title": row.get("title", ""),
-                    "status": row.get("status", "uncovered"),
-                    "matched_requirements": row.get("matched_requirements", []),
-                }
+                OpenIssueItem(
+                    type="coverage_gap",
+                    raw_id=row.raw_id,
+                    title=row.title,
+                    status=status or "uncovered",
+                    matched_requirements=row.matched_requirements,
+                )
             )
-    for item in raw_gate_summary.get("open_issue_items", []):
+    for item in raw_gate_summary.open_issue_items:
         issues.append(
-            {
-                "type": "raw_open_issue",
-                "raw_id": item.get("raw_id", ""),
-                "title": item.get("title", ""),
-                "reason": item.get("gate_reason", ""),
-            }
+            OpenIssueItem(
+                type="raw_open_issue",
+                raw_id=item.raw_id,
+                title=item.title,
+                reason=item.gate_reason,
+            )
         )
     return issues
 
 
 def _architecture_seed(
     requirements: list[dict[str, Any]],
-    module_identity: dict[str, Any],
-    raw_gate_summary: dict[str, Any],
-) -> dict[str, Any]:
+    module_identity: ModuleIdentity,
+    raw_gate_summary: RawGateSummary,
+) -> ArchitectureSeed:
     interfaces = _dedupe_interface_candidates(requirements)
-    return {
-        "module_name": module_identity["module_name"],
-        "layer": module_identity["layer"],
-        "external_interface_candidates": interfaces,
-        "config_item_candidates": [
-            {
-                "requirement_id": req["requirement_id"],
-                "name": req["title"],
-                "constraint": req["constraint"],
-                "status": req["status"],
-            }
+    return ArchitectureSeed(
+        module_name=module_identity.module_name,
+        layer=module_identity.layer,
+        external_interface_candidates=interfaces,
+        config_item_candidates=[
+            ConfigCandidate(
+                requirement_id=req["requirement_id"],
+                name=req["title"],
+                constraint=req["constraint"],
+                status=req["status"],
+            )
             for req in requirements
             if req["type"] == "configuration"
         ],
-        "timing_constraints": [
-            {
-                "requirement_id": req["requirement_id"],
-                "title": req["title"],
-                "constraint": req["shall"],
-                "status": req["status"],
-            }
+        timing_constraints=[
+            TimingConstraintItem(
+                requirement_id=req["requirement_id"],
+                title=req["title"],
+                constraint=req["shall"],
+                status=req["status"],
+            )
             for req in requirements
             if req["type"] == "timing"
         ],
-        "state_concerns": [
-            {
-                "requirement_id": req["requirement_id"],
-                "title": req["title"],
-                "description": req["shall"],
-                "status": req["status"],
-            }
+        state_concerns=[
+            ConcernItem(
+                requirement_id=req["requirement_id"],
+                title=req["title"],
+                description=req["shall"],
+                status=req["status"],
+            )
             for req in requirements
             if req["type"] == "state"
         ],
-        "diagnostic_concerns": [
-            {
-                "requirement_id": req["requirement_id"],
-                "title": req["title"],
-                "description": req["shall"],
-                "status": req["status"],
-            }
+        diagnostic_concerns=[
+            ConcernItem(
+                requirement_id=req["requirement_id"],
+                title=req["title"],
+                description=req["shall"],
+                status=req["status"],
+            )
             for req in requirements
             if _is_diagnostic_requirement(req)
         ],
-        "pending_confirm_items": [
-            {
-                "requirement_id": req["requirement_id"],
-                "title": req["title"],
-                "reason": req["decision_reason"],
-            }
+        pending_confirm_items=[
+            PendingConfirmItem(
+                requirement_id=req["requirement_id"],
+                title=req["title"],
+                reason=req["decision_reason"],
+            )
             for req in requirements
             if req["status"] != "ready"
         ],
-        "constraint_items": raw_gate_summary.get("constraint_items", []),
-        "architecture_only_items": raw_gate_summary.get("architecture_seed_items", []),
-        "capability_notes": raw_gate_summary.get("capability_items", []),
-    }
+        constraint_items=raw_gate_summary.constraint_items,
+        architecture_only_items=raw_gate_summary.architecture_seed_items,
+        capability_notes=raw_gate_summary.capability_items,
+    )
 
 
 def _test_seed(
     requirements: list[dict[str, Any]],
-    module_identity: dict[str, Any],
-    raw_gate_summary: dict[str, Any],
-) -> dict[str, Any]:
-    return {
-        "module_name": module_identity["module_name"],
-        "verification_items": [
-            {
-                "requirement_id": req["requirement_id"],
-                "title": req["title"],
-                "verification": req["verification"],
-                "trigger": req["trigger"],
-                "input": req["input"],
-                "expected_output": req["output"],
-                "exception_path": req["exception"],
-                "acceptance_basis": req["constraint"] or req["shall"],
-                "status": req["status"],
-            }
+    module_identity: ModuleIdentity,
+    raw_gate_summary: RawGateSummary,
+) -> TestSeed:
+    return TestSeed(
+        module_name=module_identity.module_name,
+        verification_items=[
+            VerificationItem(
+                requirement_id=req["requirement_id"],
+                title=req["title"],
+                verification=req["verification"],
+                trigger=req["trigger"],
+                input=req["input"],
+                expected_output=req["output"],
+                exception_path=req["exception"],
+                acceptance_basis=req["constraint"] or req["shall"],
+                status=req["status"],
+            )
             for req in requirements
             if _is_test_candidate(req)
         ],
-        "test_only_items": raw_gate_summary.get("test_seed_items", []),
-        "excluded_nonfunctional_items": raw_gate_summary.get("constraint_items", []),
-    }
+        test_only_items=raw_gate_summary.test_seed_items,
+        excluded_nonfunctional_items=raw_gate_summary.constraint_items,
+    )
 
 
 def _generation_notes(
     *,
     source_root: Path | None,
     raw_document: RawRequirementDocument | None,
-    coverage_matrix: list[dict[str, Any]],
-    raw_gate_summary: dict[str, Any],
-) -> dict[str, Any]:
-    return {
-        "source_root_used": bool(source_root),
-        "raw_requirement_input_used": bool(raw_document),
-        "coverage_gap_count": sum(1 for row in coverage_matrix if row.get("status") not in {"covered", "excluded_by_gate"}),
-        "raw_gate_counts": raw_gate_summary.get("counts", {}),
-        "notes": [
+    coverage_matrix: list[CoverageMatrixItem],
+    raw_gate_summary: RawGateSummary,
+) -> GenerationNotes:
+    return GenerationNotes(
+        source_root_used=bool(source_root),
+        raw_requirement_input_used=bool(raw_document),
+        coverage_gap_count=sum(1 for row in coverage_matrix if row.status not in {"covered", "excluded_by_gate"}),
+        raw_gate_counts=raw_gate_summary.counts,
+        notes=[
             "This bundle is the structured source-of-truth candidate for the requirement skill.",
             "Current grounding uses accessible project source code as implemented evidence, not as unconditional normative truth.",
         ],
-    }
+    )
 
 
 def _infer_layer_from_path(source_root: Path | None) -> str:
@@ -490,37 +791,7 @@ def _requirement_status(
     requirement: EngineeringRequirement,
     findings: list[ValidationFinding],
 ) -> str:
-    if any(finding.severity == "error" for finding in findings):
-        return "open_issue"
-    if _should_hold_as_draft(requirement):
-        return "draft"
-    if findings or not requirement.source:
-        return "draft"
-    return "ready"
-
-
-def _should_hold_as_draft(requirement: EngineeringRequirement) -> bool:
-    if requirement.requirement_id.endswith("9001"):
-        return False
-    title = requirement.title.strip()
-    generic_titles = {
-        "初始化",
-        "模式控制",
-        "配置管理",
-        "状态读取",
-        "初始化配置",
-        "模式控制配置",
-        "配置管理配置",
-    }
-    if title not in generic_titles:
-        return False
-    if requirement.requirement_type not in {"functional", "configuration"}:
-        return False
-    if requirement.requirement_type == "configuration":
-        return True
-    if requirement.trigger or requirement.input or requirement.output or requirement.exception:
-        return False
-    return True
+    return compute_requirement_status(requirement, findings)
 
 
 def _decision_label(status: str, findings: list[ValidationFinding]) -> str:
@@ -564,18 +835,18 @@ def _bundle_type(requirement: EngineeringRequirement) -> str:
     return requirement.requirement_type
 
 
-def _dedupe_interface_candidates(requirements: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    selected: dict[str, dict[str, Any]] = {}
+def _dedupe_interface_candidates(requirements: list[dict[str, Any]]) -> list[InterfaceCandidate]:
+    selected: dict[str, InterfaceCandidate] = {}
     for req in requirements:
         if req["type"] != "interface":
             continue
         name = req["function_name"] or req["title"]
-        candidate = {
-            "requirement_id": req["requirement_id"],
-            "function_name": name,
-            "purpose": req["shall"],
-            "status": req["status"],
-        }
+        candidate = InterfaceCandidate(
+            requirement_id=req["requirement_id"],
+            function_name=name,
+            purpose=req["shall"],
+            status=req["status"],
+        )
         current = selected.get(name)
         if current is None:
             selected[name] = candidate
@@ -587,11 +858,11 @@ def _dedupe_interface_candidates(requirements: list[dict[str, Any]]) -> list[dic
     return list(selected.values())
 
 
-def _interface_candidate_score(candidate: dict[str, Any]) -> int:
+def _interface_candidate_score(candidate: InterfaceCandidate) -> int:
     score = 0
-    purpose = candidate.get("purpose", "")
-    name = candidate.get("function_name", "")
-    if candidate.get("status") == "ready":
+    purpose = candidate.purpose
+    name = candidate.function_name
+    if candidate.status == "ready":
         score += 10
     if any(token in name for token in ("Init", "MainFunction", "GetDevFaultSig", "GetInSig", "SetOutSig")):
         score += 3
@@ -611,23 +882,13 @@ def _is_test_candidate(requirement: dict[str, Any]) -> bool:
 
 def _raw_gate_summary(
     raw_document: RawRequirementDocument | None,
-    coverage_matrix: list[dict[str, Any]],
+    coverage_matrix: list[CoverageMatrixItem],
     requirements: list[dict[str, Any]],
-) -> dict[str, Any]:
+) -> RawGateSummary:
     if raw_document is None:
-        return {
-            "counts": {},
-            "formal_requirement_items": [],
-            "constraint_items": [],
-            "capability_items": [],
-            "evidence_items": [],
-            "metadata_items": [],
-            "architecture_seed_items": [],
-            "test_seed_items": [],
-            "open_issue_items": [],
-        }
+        return RawGateSummary()
 
-    groups: dict[str, list[dict[str, Any]]] = {
+    groups: dict[str, list[GateItem]] = {
         "formal_requirement": [],
         "constraint": [],
         "capability": [],
@@ -638,7 +899,7 @@ def _raw_gate_summary(
         "open_issue": [],
     }
     coverage_map = {
-        row.get("raw_id", ""): row.get("matched_requirements", [])
+        row.raw_id: row.matched_requirements
         for row in coverage_matrix
     }
     for item in _raw_document_items(raw_document):
@@ -647,29 +908,29 @@ def _raw_gate_summary(
             linked_requirements = _suggest_requirement_links(item.title, item.description, requirements)
         promoted = _promotion_candidate(item, linked_requirements, requirements)
         groups.setdefault(item.disposition, []).append(
-            {
-                "raw_id": item.id,
-                "category": item.category,
-                "title": item.title,
-                "description": item.description,
-                "gate_reason": item.gate_reason,
-                "source_detail": item.source_detail,
-                "linked_formal_requirements": linked_requirements,
-                "promotion_candidate": promoted,
-                "promotion_reason": _promotion_reason(item, linked_requirements, item.gate_reason, requirements, promoted),
-            }
+            GateItem(
+                raw_id=item.id,
+                category=item.category,
+                title=item.title,
+                description=item.description,
+                gate_reason=item.gate_reason,
+                source_detail=item.source_detail,
+                linked_formal_requirements=linked_requirements,
+                promotion_candidate=promoted,
+                promotion_reason=_promotion_reason(item, linked_requirements, item.gate_reason, requirements, promoted),
+            )
         )
-    return {
-        "counts": {key: len(value) for key, value in groups.items()},
-        "formal_requirement_items": groups["formal_requirement"],
-        "constraint_items": groups["constraint"],
-        "capability_items": groups["capability"],
-        "evidence_items": groups["evidence"],
-        "metadata_items": groups["metadata"],
-        "architecture_seed_items": groups["architecture_seed_only"],
-        "test_seed_items": groups["test_seed_only"],
-        "open_issue_items": groups["open_issue"],
-    }
+    return RawGateSummary(
+        counts={key: len(value) for key, value in groups.items()},
+        formal_requirement_items=groups["formal_requirement"],
+        constraint_items=groups["constraint"],
+        capability_items=groups["capability"],
+        evidence_items=groups["evidence"],
+        metadata_items=groups["metadata"],
+        architecture_seed_items=groups["architecture_seed_only"],
+        test_seed_items=groups["test_seed_only"],
+        open_issue_items=groups["open_issue"],
+    )
 
 
 def _raw_document_items(raw_document: RawRequirementDocument) -> list[Any]:
@@ -681,18 +942,32 @@ def _raw_document_items(raw_document: RawRequirementDocument) -> list[Any]:
     )
 
 
-def _raw_links_by_requirement(coverage_matrix: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+def _raw_links_by_requirement(coverage_matrix: list[CoverageMatrixItem]) -> dict[str, list[dict[str, Any]]]:
     result: dict[str, list[dict[str, Any]]] = {}
     for row in coverage_matrix:
         raw_ref = {
-            "raw_id": row.get("raw_id", ""),
-            "title": row.get("title", ""),
-            "category": row.get("category", ""),
-            "status": row.get("status", ""),
+            "raw_id": row.raw_id,
+            "title": row.title,
+            "category": row.category,
+            "status": row.status,
         }
-        for requirement_id in row.get("matched_requirements", []):
+        for requirement_id in row.matched_requirements:
             result.setdefault(requirement_id, []).append(raw_ref)
     return result
+
+
+def _coverage_matrix_items(rows: list[dict[str, Any]]) -> list[CoverageMatrixItem]:
+    return [
+        CoverageMatrixItem(
+            raw_id=row.get("raw_id", ""),
+            category=row.get("category", ""),
+            title=row.get("title", ""),
+            source=row.get("source", ""),
+            status=row.get("status", ""),
+            matched_requirements=list(row.get("matched_requirements", [])),
+        )
+        for row in rows
+    ]
 
 
 def _promotion_candidate(item: Any, linked_requirements: list[str], requirements: list[dict[str, Any]]) -> bool:

@@ -631,6 +631,53 @@ requirements:
       []
   -
     requirement_id: "SRS-GPTLE92104-CFG-0002"
+    semantic_id: "REQ-GPTLE92104-CFG-0002"
+    type: "configuration"
+    bundle_type: "configuration"
+    title: "DET配置"
+    shall: "软件应支持 `DET配置`，并定义默认值、取值范围和非法值处理规则。"
+    pre_condition: "DET错误检测开关可配置（GP_TLE92104_DET_EN）。"
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "范围：92104；默认值：待确认"
+    verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：92104；默认值：待确认`。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPTLE92104-001"
+        chunk_id: "RAW-GPTLE92104-CFG-0002"
+        heading_path:
+          - "原始开发需求"
+          - "CFG"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "DET错误检测开关可配置（GP_TLE92104_DET_EN）。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPTLE92104-CFG-0002"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPTLE92104-CFG-0002"
+          title: "DET配置"
+          category: "CFG"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPTLE92104-CFG-0003"
     semantic_id: "REQ-GPTLE92104-CFG-0004"
     type: "configuration"
     bundle_type: "configuration"
@@ -677,7 +724,7 @@ requirements:
     global_validation_context:
       []
   -
-    requirement_id: "SRS-GPTLE92104-CFG-0003"
+    requirement_id: "SRS-GPTLE92104-CFG-0004"
     semantic_id: "REQ-GPTLE92104-CFG-0005"
     type: "configuration"
     bundle_type: "configuration"
@@ -724,7 +771,7 @@ requirements:
     global_validation_context:
       []
   -
-    requirement_id: "SRS-GPTLE92104-CFG-0004"
+    requirement_id: "SRS-GPTLE92104-CFG-0005"
     semantic_id: "REQ-GPTLE92104-CFG-0006"
     type: "configuration"
     bundle_type: "configuration"
@@ -771,7 +818,7 @@ requirements:
     global_validation_context:
       []
   -
-    requirement_id: "SRS-GPTLE92104-CFG-0005"
+    requirement_id: "SRS-GPTLE92104-CFG-0006"
     semantic_id: "REQ-GPTLE92104-CFG-0007"
     type: "configuration"
     bundle_type: "configuration"
@@ -818,38 +865,48 @@ requirements:
     global_validation_context:
       []
   -
-    requirement_id: "SRS-GPTLE92104-DIAG-9001"
-    semantic_id: "ENRICHED-GPTLE92104-DIAG-DET"
-    type: "diagnostic"
-    bundle_type: "diagnostic"
-    title: "开发错误检测"
-    shall: "软件应提供开发错误检测能力，对未初始化访问、空指针、非法参数和非法调用顺序进行检测，并按项目约定进行 DET 上报或错误返回。"
+    requirement_id: "SRS-GPTLE92104-FUNC-0004"
+    semantic_id: "REQ-GPTLE92104-NFR-0002"
+    type: "functional"
+    bundle_type: "functional"
+    title: "所有外部接口需进行参数有效性检查"
+    shall: "软件应支持所有外部接口需进行参数有效性检查。"
     pre_condition: ""
     trigger: ""
     input: ""
     output: ""
-    exception: "未初始化访问、空指针、非法参数、非法状态调用时，应拒绝继续执行当前请求并保持无关状态不被破坏。"
-    constraint: "DET 为必备需求；若项目未集成 DET 模块，也应保留等效的开发错误检测和错误返回语义。"
-    verification: "通过接口测试、边界测试和故障注入验证：触发未初始化访问、空指针、非法参数和非法调用顺序时，应产生定义的 DET 上报或错误返回，且内部状态保持一致。"
+    exception: ""
+    constraint: "Review"
+    verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。"
     function_name: ""
     source:
       -
-        document: "Auto Enrichment"
-        chunk_id: "ENRICHED-DIAG-DET"
-        evidence: "Derived from raw DET/configuration and interface contract inputs."
+        document: "RAWREQ-GPTLE92104-001"
+        chunk_id: "RAW-GPTLE92104-NFR-0002"
+        heading_path:
+          - "原始开发需求"
+          - "NFR"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "所有外部接口需进行参数有效性检查。"
     status: "ready"
     decision: "accepted_for_downstream"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
-        - "ENRICHED-DIAG-DET"
+        - "RAW-GPTLE92104-NFR-0002"
       tests:
         []
       verification_levels:
         - "Review"
       coverage_status: "partial_covered"
       linked_raw_items:
-        []
+        -
+          raw_id: "RAW-GPTLE92104-NFR-0002"
+          title: "所有外部接口需进行参数有效性检查"
+          category: "NFR"
+          status: "covered"
     validation:
       []
     global_validation_context:
@@ -928,10 +985,121 @@ requirements:
       []
     global_validation_context:
       []
+  -
+    requirement_id: "SRS-GPTLE92104-SAFE-0001"
+    semantic_id: "DEFAULT-GPTLE92104-SAFE-0001"
+    type: "safety"
+    bundle_type: "safety"
+    title: "安全等级默认要求"
+    shall: "若项目未提供功能安全等级输入，软件需求默认按 QM 等级管理；若后续项目输入给出 ASIL/QM 要求，应按项目输入更新本需求。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目安全等级、ASIL 分配、诊断覆盖目标。"
+    verification: "通过安全需求评审验证。"
+    function_name: ""
+    source:
+      -
+        document: "SRS Template"
+        chunk_id: "DEFAULT-SAFETY-QM"
+        evidence: "No project safety input; default QM requirement generated."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "DEFAULT-SAFETY-QM"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPTLE92104-CODE-0001"
+    semantic_id: "DEFAULT-GPTLE92104-CODE-0001"
+    type: "coding"
+    bundle_type: "coding"
+    title: "编码规范符合性要求"
+    shall: "软件实现应遵循项目编码规范、命名规范、静态检查规则和评审要求；若项目提供具体编码规范，应按项目规范替换或细化本需求。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目编码规范版本、MISRA/静态检查规则、复杂度阈值。"
+    verification: "通过代码评审、静态分析和编码规范检查验证。"
+    function_name: ""
+    source:
+      -
+        document: "SRS Template"
+        chunk_id: "DEFAULT-CODING-STANDARD"
+        evidence: "Default coding standard requirement generated from template."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "DEFAULT-CODING-STANDARD"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPTLE92104-RES-0001"
+    semantic_id: "DEFAULT-GPTLE92104-RES-0001"
+    type: "resource"
+    bundle_type: "resource"
+    title: "资源消耗默认要求"
+    shall: "软件资源消耗应满足项目资源预算；若项目未提供预算，需在设计和集成阶段统计 ROM、RAM、栈、CPU、I/O 和总线访问占用并形成评审结论。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：ROM/RAM/栈/CPU/I/O/I2C 总线预算和测量方法。"
+    verification: "通过资源统计、集成测试或评审验证。"
+    function_name: ""
+    source:
+      -
+        document: "SRS Template"
+        chunk_id: "DEFAULT-RESOURCE-BUDGET"
+        evidence: "No project resource budget input; default resource requirement generated."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "DEFAULT-RESOURCE-BUDGET"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
 raw_gate_summary:
   counts:
-    formal_requirement: 15
-    constraint: 7
+    formal_requirement: 17
+    constraint: 5
     capability: 3
     evidence: 0
     metadata: 0
@@ -1075,6 +1243,17 @@ raw_gate_summary:
       promotion_candidate: false
       promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
     -
+      raw_id: "RAW-GPTLE92104-CFG-0002"
+      category: "CFG"
+      title: "DET配置"
+      description: "DET错误检测开关可配置（GP_TLE92104_DET_EN）。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_TLE92104.txt"
+      linked_formal_requirements:
+        - "SRS-GPTLE92104-CFG-0002"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
       raw_id: "RAW-GPTLE92104-CFG-0004"
       category: "CFG"
       title: "硬件映射配置"
@@ -1082,7 +1261,7 @@ raw_gate_summary:
       gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
-        - "SRS-GPTLE92104-CFG-0002"
+        - "SRS-GPTLE92104-CFG-0003"
       promotion_candidate: false
       promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
     -
@@ -1093,7 +1272,7 @@ raw_gate_summary:
       gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
-        - "SRS-GPTLE92104-CFG-0003"
+        - "SRS-GPTLE92104-CFG-0004"
       promotion_candidate: false
       promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
     -
@@ -1104,7 +1283,7 @@ raw_gate_summary:
       gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
-        - "SRS-GPTLE92104-CFG-0004"
+        - "SRS-GPTLE92104-CFG-0005"
       promotion_candidate: false
       promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
     -
@@ -1115,7 +1294,18 @@ raw_gate_summary:
       gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
-        - "SRS-GPTLE92104-CFG-0005"
+        - "SRS-GPTLE92104-CFG-0006"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPTLE92104-NFR-0002"
+      category: "NFR"
+      title: "所有外部接口需进行参数有效性检查"
+      description: "所有外部接口需进行参数有效性检查。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_TLE92104.txt"
+      linked_formal_requirements:
+        - "SRS-GPTLE92104-FUNC-0004"
       promotion_candidate: false
       promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
   constraint_items:
@@ -1124,34 +1314,12 @@ raw_gate_summary:
       category: "INTF"
       title: "所有对外接口必须返回E_OK/E_NOT_OK并"
       description: "所有对外接口必须返回E_OK/E_NOT_OK并支持DET错误检测。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      gate_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
         []
       promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-    -
-      raw_id: "RAW-GPTLE92104-CFG-0002"
-      category: "CFG"
-      title: "DET配置"
-      description: "DET错误检测开关可配置（GP_TLE92104_DET_EN）。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-      source_detail: "raw_input_Gp_TLE92104.txt"
-      linked_formal_requirements:
-        []
-      promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-    -
-      raw_id: "RAW-GPTLE92104-NFR-0002"
-      category: "NFR"
-      title: "所有外部接口需进行参数有效性检查"
-      description: "所有外部接口需进行参数有效性检查。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-      source_detail: "raw_input_Gp_TLE92104.txt"
-      linked_formal_requirements:
-        []
-      promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      promotion_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
     -
       raw_id: "RAW-GPTLE92104-NFR-0003"
       category: "NFR"
@@ -1168,12 +1336,12 @@ raw_gate_summary:
       category: "NFR"
       title: "同步接口和异步接口的调用语义需要保持一致并可验证"
       description: "同步接口和异步接口的调用语义需要保持一致并可验证。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      gate_reason: "Sync/async scheduling policy statements should stay as governing constraints."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
         []
       promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      promotion_reason: "Sync/async scheduling policy statements should stay as governing constraints."
     -
       raw_id: "RAW-GPTLE92104-NFR-0005"
       category: "NFR"
@@ -1182,7 +1350,7 @@ raw_gate_summary:
       gate_reason: "Resource budget statements should stay as nonfunctional constraints."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
-        []
+        - "SRS-GPTLE92104-RES-0001"
       promotion_candidate: false
       promotion_reason: "Resource budget statements should stay as nonfunctional constraints."
     -
@@ -1401,9 +1569,9 @@ coverage_matrix:
     category: "CFG"
     title: "DET配置"
     source: "raw_input_Gp_TLE92104.txt"
-    status: "excluded_by_gate"
+    status: "covered"
     matched_requirements:
-      []
+      - "SRS-GPTLE92104-CFG-0002"
   -
     raw_id: "RAW-GPTLE92104-CFG-0003"
     category: "CFG"
@@ -1419,7 +1587,7 @@ coverage_matrix:
     source: "raw_input_Gp_TLE92104.txt"
     status: "covered"
     matched_requirements:
-      - "SRS-GPTLE92104-CFG-0002"
+      - "SRS-GPTLE92104-CFG-0003"
   -
     raw_id: "RAW-GPTLE92104-CFG-0005"
     category: "CFG"
@@ -1427,7 +1595,7 @@ coverage_matrix:
     source: "raw_input_Gp_TLE92104.txt"
     status: "covered"
     matched_requirements:
-      - "SRS-GPTLE92104-CFG-0003"
+      - "SRS-GPTLE92104-CFG-0004"
   -
     raw_id: "RAW-GPTLE92104-CFG-0006"
     category: "CFG"
@@ -1435,7 +1603,7 @@ coverage_matrix:
     source: "raw_input_Gp_TLE92104.txt"
     status: "covered"
     matched_requirements:
-      - "SRS-GPTLE92104-CFG-0004"
+      - "SRS-GPTLE92104-CFG-0005"
   -
     raw_id: "RAW-GPTLE92104-CFG-0007"
     category: "CFG"
@@ -1443,7 +1611,7 @@ coverage_matrix:
     source: "raw_input_Gp_TLE92104.txt"
     status: "covered"
     matched_requirements:
-      - "SRS-GPTLE92104-CFG-0005"
+      - "SRS-GPTLE92104-CFG-0006"
   -
     raw_id: "RAW-GPTLE92104-NFR-0001"
     category: "NFR"
@@ -1457,9 +1625,9 @@ coverage_matrix:
     category: "NFR"
     title: "所有外部接口需进行参数有效性检查"
     source: "raw_input_Gp_TLE92104.txt"
-    status: "excluded_by_gate"
+    status: "covered"
     matched_requirements:
-      []
+      - "SRS-GPTLE92104-FUNC-0004"
   -
     raw_id: "RAW-GPTLE92104-NFR-0003"
     category: "NFR"
@@ -1512,11 +1680,23 @@ open_issues:
     status: "draft"
     reason: "Requirement currently has no requirement-level validation findings."
   -
-    type: "global_validation"
-    rule: "completeness"
-    severity: "warning"
-    reason: "Mandatory DET requirement is missing."
-    recommendation: "Add a diagnostic requirement covering uninitialized access, invalid parameters, and DET or equivalent development error reporting."
+    type: "requirement_status"
+    requirement_id: "SRS-GPTLE92104-SAFE-0001"
+    title: "安全等级默认要求"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPTLE92104-CODE-0001"
+    title: "编码规范符合性要求"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPTLE92104-RES-0001"
+    title: "资源消耗默认要求"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
   -
     type: "global_validation"
     rule: "dependency"
@@ -1529,90 +1709,6 @@ open_issues:
     severity: "warning"
     reason: "SPI communication exists without SPI dependency requirement."
     recommendation: "Add requirement-level SPI communication dependency statement."
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-FUNC-0002"
-    title: "驱动需要支持通过SPI访问外部H桥驱动芯片并维护"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-FUNC-0005"
-    title: "状态读取"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-FUNC-0006"
-    title: "模式控制"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-INTF-0008"
-    title: "所有对外接口必须返回E_OK/E_NOT_OK并"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-CFG-0002"
-    title: "DET配置"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-CFG-0003"
-    title: "多核实例配置"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-NFR-0001"
-    title: "多核支持"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-NFR-0002"
-    title: "所有外部接口需进行参数有效性检查"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-NFR-0003"
-    title: "需要保留MemMap分段和代码/常量区组织约束"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-NFR-0004"
-    title: "同步接口和异步接口的调用语义需要保持一致并可验证"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-NFR-0005"
-    title: "ROM/RAM资源消耗需评估记录"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPTLE92104-NFR-0006"
-    title: "满足MISRA-C编码规范"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
 architecture_seed:
   module_name: "Gp_TLE92104"
   layer: "IoExtDrv"
@@ -1660,21 +1756,26 @@ architecture_seed:
       status: "ready"
     -
       requirement_id: "SRS-GPTLE92104-CFG-0002"
+      name: "DET配置"
+      constraint: "范围：92104；默认值：待确认"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPTLE92104-CFG-0003"
       name: "硬件映射配置"
       constraint: "范围：待确认；默认值：待确认"
       status: "ready"
     -
-      requirement_id: "SRS-GPTLE92104-CFG-0003"
+      requirement_id: "SRS-GPTLE92104-CFG-0004"
       name: "初始化时序配置"
       constraint: "范围：待确认；默认值：待确认"
       status: "ready"
     -
-      requirement_id: "SRS-GPTLE92104-CFG-0004"
+      requirement_id: "SRS-GPTLE92104-CFG-0005"
       name: "看门狗配置"
       constraint: "范围：待确认；默认值：待确认"
       status: "ready"
     -
-      requirement_id: "SRS-GPTLE92104-CFG-0005"
+      requirement_id: "SRS-GPTLE92104-CFG-0006"
       name: "方向映射配置"
       constraint: "范围：待确认；默认值：待确认"
       status: "ready"
@@ -1704,9 +1805,9 @@ architecture_seed:
       description: "软件应提供 `Gp_TLE92104_GetDevFaultSig` 接口，返回指定芯片实例的诊断状态位掩码（uint32），包括参数合法性错误、未初始化访问和设备故障状态信息。"
       status: "ready"
     -
-      requirement_id: "SRS-GPTLE92104-DIAG-9001"
-      title: "开发错误检测"
-      description: "软件应提供开发错误检测能力，对未初始化访问、空指针、非法参数和非法调用顺序进行检测，并按项目约定进行 DET 上报或错误返回。"
+      requirement_id: "SRS-GPTLE92104-CFG-0002"
+      title: "DET配置"
+      description: "软件应支持 `DET配置`，并定义默认值、取值范围和非法值处理规则。"
       status: "ready"
   pending_confirm_items:
     -
@@ -1721,40 +1822,30 @@ architecture_seed:
       requirement_id: "SRS-GPTLE92104-FUNC-0003"
       title: "配置管理"
       reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPTLE92104-SAFE-0001"
+      title: "安全等级默认要求"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPTLE92104-CODE-0001"
+      title: "编码规范符合性要求"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPTLE92104-RES-0001"
+      title: "资源消耗默认要求"
+      reason: "Requirement currently has no requirement-level validation findings."
   constraint_items:
     -
       raw_id: "RAW-GPTLE92104-INTF-0008"
       category: "INTF"
       title: "所有对外接口必须返回E_OK/E_NOT_OK并"
       description: "所有对外接口必须返回E_OK/E_NOT_OK并支持DET错误检测。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      gate_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
         []
       promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-    -
-      raw_id: "RAW-GPTLE92104-CFG-0002"
-      category: "CFG"
-      title: "DET配置"
-      description: "DET错误检测开关可配置（GP_TLE92104_DET_EN）。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-      source_detail: "raw_input_Gp_TLE92104.txt"
-      linked_formal_requirements:
-        []
-      promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-    -
-      raw_id: "RAW-GPTLE92104-NFR-0002"
-      category: "NFR"
-      title: "所有外部接口需进行参数有效性检查"
-      description: "所有外部接口需进行参数有效性检查。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-      source_detail: "raw_input_Gp_TLE92104.txt"
-      linked_formal_requirements:
-        []
-      promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      promotion_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
     -
       raw_id: "RAW-GPTLE92104-NFR-0003"
       category: "NFR"
@@ -1771,12 +1862,12 @@ architecture_seed:
       category: "NFR"
       title: "同步接口和异步接口的调用语义需要保持一致并可验证"
       description: "同步接口和异步接口的调用语义需要保持一致并可验证。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      gate_reason: "Sync/async scheduling policy statements should stay as governing constraints."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
         []
       promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      promotion_reason: "Sync/async scheduling policy statements should stay as governing constraints."
     -
       raw_id: "RAW-GPTLE92104-NFR-0005"
       category: "NFR"
@@ -1785,7 +1876,7 @@ architecture_seed:
       gate_reason: "Resource budget statements should stay as nonfunctional constraints."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
-        []
+        - "SRS-GPTLE92104-RES-0001"
       promotion_candidate: false
       promotion_reason: "Resource budget statements should stay as nonfunctional constraints."
     -
@@ -1971,6 +2062,16 @@ test_seed:
       status: "ready"
     -
       requirement_id: "SRS-GPTLE92104-CFG-0002"
+      title: "DET配置"
+      verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：92104；默认值：待确认`。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "范围：92104；默认值：待确认"
+      status: "ready"
+    -
+      requirement_id: "SRS-GPTLE92104-CFG-0003"
       title: "硬件映射配置"
       verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
       trigger: ""
@@ -1980,7 +2081,7 @@ test_seed:
       acceptance_basis: "范围：待确认；默认值：待确认"
       status: "ready"
     -
-      requirement_id: "SRS-GPTLE92104-CFG-0003"
+      requirement_id: "SRS-GPTLE92104-CFG-0004"
       title: "初始化时序配置"
       verification: "通过初始化接口测试验证：在加载默认配置时应完成上下文建立和默认状态设置；注入非法配置、I2C 初始化失败和重复初始化场景时，应返回定义错误，且已建立状态不得被部分破坏；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
       trigger: ""
@@ -1990,7 +2091,7 @@ test_seed:
       acceptance_basis: "范围：待确认；默认值：待确认"
       status: "ready"
     -
-      requirement_id: "SRS-GPTLE92104-CFG-0004"
+      requirement_id: "SRS-GPTLE92104-CFG-0005"
       title: "看门狗配置"
       verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
       trigger: ""
@@ -2000,7 +2101,7 @@ test_seed:
       acceptance_basis: "范围：待确认；默认值：待确认"
       status: "ready"
     -
-      requirement_id: "SRS-GPTLE92104-CFG-0005"
+      requirement_id: "SRS-GPTLE92104-CFG-0006"
       title: "方向映射配置"
       verification: "通过配置评审和边界测试验证：默认值加载后应形成定义配置结果；有效范围内的配置应被接受并生效；超范围、缺失或冲突配置时，应拒绝生效并给出定义结果；至少覆盖：边界/异常覆盖 `范围：待确认；默认值：待确认`。"
       trigger: ""
@@ -2010,14 +2111,14 @@ test_seed:
       acceptance_basis: "范围：待确认；默认值：待确认"
       status: "ready"
     -
-      requirement_id: "SRS-GPTLE92104-DIAG-9001"
-      title: "开发错误检测"
-      verification: "通过接口测试、边界测试和故障注入验证：触发未初始化访问、空指针、非法参数和非法调用顺序时，应产生定义的 DET 上报或错误返回，且内部状态保持一致。"
+      requirement_id: "SRS-GPTLE92104-FUNC-0004"
+      title: "所有外部接口需进行参数有效性检查"
+      verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。"
       trigger: ""
       input: ""
       expected_output: ""
-      exception_path: "未初始化访问、空指针、非法参数、非法状态调用时，应拒绝继续执行当前请求并保持无关状态不被破坏。"
-      acceptance_basis: "DET 为必备需求；若项目未集成 DET 模块，也应保留等效的开发错误检测和错误返回语义。"
+      exception_path: ""
+      acceptance_basis: "Review"
       status: "ready"
     -
       requirement_id: "SRS-GPTLE92104-FUNC-9001"
@@ -2047,34 +2148,12 @@ test_seed:
       category: "INTF"
       title: "所有对外接口必须返回E_OK/E_NOT_OK并"
       description: "所有对外接口必须返回E_OK/E_NOT_OK并支持DET错误检测。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      gate_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
         []
       promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-    -
-      raw_id: "RAW-GPTLE92104-CFG-0002"
-      category: "CFG"
-      title: "DET配置"
-      description: "DET错误检测开关可配置（GP_TLE92104_DET_EN）。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-      source_detail: "raw_input_Gp_TLE92104.txt"
-      linked_formal_requirements:
-        []
-      promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-    -
-      raw_id: "RAW-GPTLE92104-NFR-0002"
-      category: "NFR"
-      title: "所有外部接口需进行参数有效性检查"
-      description: "所有外部接口需进行参数有效性检查。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-      source_detail: "raw_input_Gp_TLE92104.txt"
-      linked_formal_requirements:
-        []
-      promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      promotion_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
     -
       raw_id: "RAW-GPTLE92104-NFR-0003"
       category: "NFR"
@@ -2091,12 +2170,12 @@ test_seed:
       category: "NFR"
       title: "同步接口和异步接口的调用语义需要保持一致并可验证"
       description: "同步接口和异步接口的调用语义需要保持一致并可验证。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      gate_reason: "Sync/async scheduling policy statements should stay as governing constraints."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
         []
       promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      promotion_reason: "Sync/async scheduling policy statements should stay as governing constraints."
     -
       raw_id: "RAW-GPTLE92104-NFR-0005"
       category: "NFR"
@@ -2105,7 +2184,7 @@ test_seed:
       gate_reason: "Resource budget statements should stay as nonfunctional constraints."
       source_detail: "raw_input_Gp_TLE92104.txt"
       linked_formal_requirements:
-        []
+        - "SRS-GPTLE92104-RES-0001"
       promotion_candidate: false
       promotion_reason: "Resource budget statements should stay as nonfunctional constraints."
     -
@@ -2124,8 +2203,8 @@ generation_notes:
   raw_requirement_input_used: true
   coverage_gap_count: 0
   raw_gate_counts:
-    formal_requirement: 15
-    constraint: 7
+    formal_requirement: 17
+    constraint: 5
     capability: 3
     evidence: 0
     metadata: 0

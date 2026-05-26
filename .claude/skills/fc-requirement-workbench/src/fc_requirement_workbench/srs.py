@@ -9,6 +9,7 @@ from typing import Any
 
 from .builder import EngineeringRequirement
 from .rules import ValidationFinding
+from .status import compute_requirement_status, render_status_label
 
 
 SECTION_ORDER = [
@@ -51,11 +52,10 @@ class SrsStructureGenerator:
         findings: list[ValidationFinding] | None = None,
         overview: dict[str, Any] | None = None,
     ) -> SrsDocument:
-        final_requirements = _with_default_nonfunctional_requirements(requirements, module)
         return SrsDocument(
             title=f"{module} 软件需求规范",
             module=module,
-            requirements=sorted(final_requirements, key=lambda req: req.requirement_id),
+            requirements=sorted(requirements, key=lambda req: req.requirement_id),
             findings=findings or [],
             overview=overview or {},
         )
@@ -757,45 +757,7 @@ def _verification_stage(verification: str) -> str:
 
 
 def _requirement_status(req: EngineeringRequirement) -> str:
-    is_candidate = any(
-        source.get("document") == "RequirementCandidate"
-        or str(source.get("chunk_id", "")).startswith("CAND-")
-        for source in req.source
-    )
-    is_planned = any(source.get("document") == "RequirementPlan" for source in req.source)
-    status_text = " ".join(
-        [
-            req.description,
-            req.constraint,
-            req.pre_condition,
-            req.trigger,
-            req.input,
-            req.output,
-            req.exception,
-            req.verification,
-            _source_summary(req),
-        ]
-    ).lower()
-    if (
-        "needs review" in status_text
-        or "project input required" in status_text
-        or "open issue" in status_text
-        or "缺失输入" in status_text
-        or "需确认" in status_text
-        or "需项目输入确认" in status_text
-    ):
-        return "Open Issue"
-    if is_candidate:
-        return "Draft"
-    if is_planned:
-        return "Draft"
-    if "draft candidate" in status_text or "required inputs:" in status_text or "draft template default" in status_text:
-        return "Draft"
-    if req.validation:
-        return "Draft"
-    if not req.source or not req.description:
-        return "Draft"
-    return "Ready"
+    return render_status_label(compute_requirement_status(req))
 
 
 def _escape_table_text(value: str) -> str:
@@ -867,7 +829,7 @@ def _supporting_file_rows() -> list[tuple[str, str, str, str, str]]:
     ]
 
 
-def _with_default_nonfunctional_requirements(
+def ensure_default_engineering_requirements(
     requirements: list[EngineeringRequirement],
     module: str,
 ) -> list[EngineeringRequirement]:

@@ -68,6 +68,8 @@ architecture:
       sync: Synchronous
       reentrancy: Reentrant
       status: formal
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
       evidence:
         - Gp_TLE92104_CalloutSpiSyncTransmit
         - Gp_DRV8889_CalloutSpiTransSync
@@ -76,16 +78,22 @@ architecture:
       sync: Synchronous
       reentrancy: Reentrant
       status: formal
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
     - name: Gp_NCA95yy_CalloutReadDio
       prototype: Std_ReturnType Gp_NCA95yy_CalloutReadDio(uint16 Id_u16, uint8* State_pu8)
       sync: Synchronous
       reentrancy: Reentrant
       status: formal
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
     - name: Gp_NCA95yy_CalloutGetCoreId
       prototype: uint32 Gp_NCA95yy_CalloutGetCoreId(void)
       sync: Synchronous
       reentrancy: Reentrant
       status: formal
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
       evidence:
         - Gp_TLE92104_CalloutGetCoreId
         - Gp_DRV8889_CalloutGetCoreId
@@ -137,18 +145,26 @@ detailed_design:
     - name: Gp_NCA95yy_CalloutI2cWrite
       relationship_links:
         - Gp_NCA95yy_Prv_InitChip
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
       evidence:
         - Gp_DRV8889_CalloutSpiTransSync
     - name: Gp_NCA95yy_CalloutI2cRead
       relationship_links:
         - Gp_NCA95yy_Prv_HandleInt
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
     - name: Gp_NCA95yy_CalloutReadDio
       relationship_links:
         - Gp_NCA95yy_MainFunction
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
     - name: Gp_NCA95yy_CalloutGetCoreId
       relationship_links:
         - Gp_NCA95yy_Init
         - Gp_NCA95yy_MainFunction
+      trace_ids:
+        - SRS-GPNCA95YY-FUNC-0001
       evidence:
         - Gp_TLE92104_CalloutGetCoreId
         - Gp_DRV8889_CalloutGetCoreId

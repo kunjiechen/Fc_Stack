@@ -4,7 +4,7 @@
 
 - 详细设计版本: `V1`
 - 详细设计状态: `Draft`
-- 生成时间: `2026-05-24 13:21:41`
+- 生成时间: `2026-05-25 22:32:26`
 - 生成/修订说明: 基于结构化设计对象自动生成第一版正文初稿。
 
 ## 1. FC概述
@@ -54,17 +54,20 @@ flowchart LR
       IPrvWriteChipRegs --> DCalloutI2cRead
       EMainFunction[外部接口\nMainFunction]
     U --> EMainFunction
+      IPrvSampleInt[内部接口\nPrv_SampleInt]
+      EMainFunction --> IPrvSampleInt
+      DCalloutGetCoreId[依赖接口\nCalloutGetCoreId]
+      IPrvSampleInt --> DCalloutGetCoreId
+    P2[Core管理模块]
+    DCalloutGetCoreId --> P2
+      DCalloutReadDio[依赖接口\nCalloutReadDio]
+      IPrvSampleInt --> DCalloutReadDio
+    P3[DIO驱动模块]
+    DCalloutReadDio --> P3
       IPrvHandleInt[内部接口\nPrv_HandleInt]
       EMainFunction --> IPrvHandleInt
-      DCalloutReadDio[依赖接口\nCalloutReadDio]
+      IPrvHandleInt --> DCalloutGetCoreId
       IPrvHandleInt --> DCalloutReadDio
-    P2[DIO驱动模块]
-    DCalloutReadDio --> P2
-      IPrvHandleInt --> DCalloutI2cRead
-      IPrvUpdateFaultState[内部接口\nPrv_UpdateFaultState]
-      EMainFunction --> IPrvUpdateFaultState
-      IPrvUpdateFaultState --> DCalloutReadDio
-      IPrvUpdateFaultState --> DCalloutI2cRead
       EGetGpInSig[外部接口\nGetGpInSig]
     U --> EGetGpInSig
       IPrvCheckAccess[内部接口\nPrv_CheckAccess]
@@ -173,29 +176,34 @@ flowchart TD
 ### 7.2 `Gp_NCA95yy_MainFunction`
 | Interface Prototype | 功能说明 | 同步属性 | 重入性 | 返回值 | 基本约束 | 关联接口 | 需求追踪 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| void Gp_NCA95yy_MainFunction | MainFunction 为 architecture 已冻结 external interface，本节展开其实现动作、依赖调用和内部接口协作关系。 | Synchronous | Non-reentrant | 遵循 architecture 定义。 | 必须保持与 formal architecture interface、关联内部接口和依赖接口一致。 | `Gp_NCA95yy_Prv_HandleInt`, `Gp_NCA95yy_Prv_UpdateFaultState`, `CalloutReadDio`, `CalloutI2cRead` | `SRS-GPNCA95YY-IF-0002` |
+| void Gp_NCA95yy_MainFunction | MainFunction 为 architecture 已冻结 external interface，本节展开其实现动作、依赖调用和内部接口协作关系。 | Synchronous | Non-reentrant | 遵循 architecture 定义。 | 必须保持与 formal architecture interface、关联内部接口和依赖接口一致。 | `Gp_NCA95yy_Prv_SampleInt`, `Gp_NCA95yy_Prv_HandleInt`, `Gp_NCA95yy_Prv_UpdateFaultState`, `CalloutGetCoreId`, `CalloutReadDio`, `CalloutI2cRead` | `SRS-GPNCA95YY-IF-0002` |
 
 #### 7.2.1 子功能拆分
 | 步骤 | 子功能 | 输入 | 输出 | 关键检查/约束 | 依赖对象 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 入口约束检查 | 接口输入与运行条件 | 访问合法性结论 | DET / 初始化 / 指针 / 范围检查 | `Prv_CheckAccess` 或等效实现 |
-| 2 | Prv_HandleInt | 接口上下文 | 内部动作结果 | 按内部接口职责执行 | `Prv_HandleInt` |
-| 3 | Prv_UpdateFaultState | 接口上下文 | 内部动作结果 | 按内部接口职责执行 | `Prv_UpdateFaultState` |
-| 4 | CalloutReadDio | 内部接口或接口上下文 | 依赖访问结果 | formal dependency callout | `CalloutReadDio` |
-| 5 | CalloutI2cRead | 内部接口或接口上下文 | 依赖访问结果 | formal dependency callout | `CalloutI2cRead` |
+| 2 | Prv_SampleInt | 接口上下文 | 内部动作结果 | 按内部接口职责执行 | `Prv_SampleInt` |
+| 3 | Prv_HandleInt | 接口上下文 | 内部动作结果 | 按内部接口职责执行 | `Prv_HandleInt` |
+| 4 | Prv_UpdateFaultState | 接口上下文 | 内部动作结果 | 按内部接口职责执行 | `Prv_UpdateFaultState` |
+| 5 | CalloutGetCoreId | 内部接口或接口上下文 | 依赖访问结果 | formal dependency callout | `CalloutGetCoreId` |
+| 6 | CalloutReadDio | 内部接口或接口上下文 | 依赖访问结果 | formal dependency callout | `CalloutReadDio` |
+| 7 | CalloutI2cRead | 内部接口或接口上下文 | 依赖访问结果 | formal dependency callout | `CalloutI2cRead` |
 
 #### 7.2.2 执行步骤
 
 1. 进入接口并完成边界检查，确保调用场景满足 formal 约束。
-2. 调用 `Prv_HandleInt` 执行该接口的主要内部职责。
-3. 调用 `Prv_UpdateFaultState` 执行该接口的主要内部职责。
-4. 通过 `CalloutReadDio` 完成对底层资源的访问。
-5. 通过 `CalloutI2cRead` 完成对底层资源的访问。
-6. 汇总结果并按 `Gp_NCA95yy_MainFunction` 的返回策略结束接口。
+2. 调用 `Prv_SampleInt` 执行该接口的主要内部职责。
+3. 调用 `Prv_HandleInt` 执行该接口的主要内部职责。
+4. 调用 `Prv_UpdateFaultState` 执行该接口的主要内部职责。
+5. 通过 `CalloutGetCoreId` 完成对底层资源的访问。
+6. 通过 `CalloutReadDio` 完成对底层资源的访问。
+7. 通过 `CalloutI2cRead` 完成对底层资源的访问。
+8. 汇总结果并按 `Gp_NCA95yy_MainFunction` 的返回策略结束接口。
 
 #### 7.2.3 参与内部接口
 | 内部接口 | 作用 | 调用时机 |
 | --- | --- | --- |
+| `Gp_NCA95yy_Prv_SampleInt` | 读取当前 core 上已配置芯片实例的 INT 引脚状态，并筛选需要进入后续处理中断路径的实例。 | 由 relationship_links 推导 |
 | `Gp_NCA95yy_Prv_HandleInt` | 读 Input Port、比较缓存、识别变化并更新缓存。 | 由 relationship_links 推导 |
 | `Gp_NCA95yy_Prv_UpdateFaultState` | 统一记录或清除故障位，并维护必要的恢复计数。 | 由 relationship_links 推导 |
 
@@ -203,14 +211,11 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[接口入口] --> B[执行前检查]
-    B --> C[调用 Prv_HandleInt]
+    B --> C[调用 Prv_SampleInt]
     C --> D[调用 Prv_UpdateFaultState]
     D --> E[访问依赖接口或汇总结果]
     E --> F[返回]
 ```
-
-#### 7.2.5 待修正文档关系
-- `Prv_SampleInt` 目前未在内部接口/依赖接口定义中落地，需补定义或删关系。
 
 ### 7.3 `Gp_NCA95yy_GetGpInSig`
 | Interface Prototype | 功能说明 | 同步属性 | 重入性 | 返回值 | 基本约束 | 关联接口 | 需求追踪 |
@@ -322,6 +327,7 @@ flowchart TD
 | `Gp_NCA95yy_Prv_InitChip` | `static` | 初始化单个芯片，调用寄存器写入并同步运行态缓存。 | `Init` | `CalloutI2cWrite` |
 | `Gp_NCA95yy_Prv_WriteChipRegs` | `static` | 按既定顺序写 Output / Config / Polarity 寄存器。 | `Init` | `CalloutI2cWrite` |
 | `Gp_NCA95yy_Prv_ReadRegister` | `static` | 通用 I2C 读寄存器封装。 | `GetGpInSig`, `MainFunction`, `SetGpOutSig` | `CalloutI2cRead` |
+| `Gp_NCA95yy_Prv_SampleInt` | `static` | 读取当前 core 上已配置芯片实例的 INT 引脚状态，并筛选需要进入后续处理中断路径的实例。 | `MainFunction` | `CalloutReadDio`, `CalloutGetCoreId` |
 | `Gp_NCA95yy_Prv_WriteRegister` | `static` | 通用 I2C 写寄存器封装。 | `Init`, `SetGpOutSig` | `CalloutI2cWrite` |
 | `Gp_NCA95yy_Prv_RmwWriteOutput` | `static` | 执行 Output Port 的读改写序列并返回新值。 | `SetGpOutSig` | `CalloutI2cRead`, `CalloutI2cWrite` |
 | `Gp_NCA95yy_Prv_HandleInt` | `static` | 读 Input Port、比较缓存、识别变化并更新缓存。 | `MainFunction` | `CalloutI2cRead` |
@@ -367,42 +373,52 @@ flowchart TD
 - `Gp_NCA95yy_Prv_ReadRegister` 用于承载可复用的实现动作，避免将底层访问和状态处理散落在 external interface 主流程中。
 - 该内部接口当前由 `GetGpInSig`, `MainFunction`, `SetGpOutSig` 触发，并与 `CalloutI2cRead` 协作。
 
-### 8.5 `Gp_NCA95yy_Prv_WriteRegister`
+### 8.5 `Gp_NCA95yy_Prv_SampleInt`
+| Interface Name | 类别 | 作用域 | 功能说明 | 调用方 | 依赖方 |
+| --- | --- | --- | --- | --- | --- |
+| Gp_NCA95yy_Prv_SampleInt | 内部控制 / 校验 / 访问辅助 | `static` | 读取当前 core 上已配置芯片实例的 INT 引脚状态，并筛选需要进入后续处理中断路径的实例。 | `MainFunction` | `CalloutReadDio`, `CalloutGetCoreId` |
+
+#### 8.5.1 设计说明
+
+- `Gp_NCA95yy_Prv_SampleInt` 用于承载可复用的实现动作，避免将底层访问和状态处理散落在 external interface 主流程中。
+- 该内部接口当前由 `MainFunction` 触发，并与 `CalloutReadDio`, `CalloutGetCoreId` 协作。
+
+### 8.6 `Gp_NCA95yy_Prv_WriteRegister`
 | Interface Name | 类别 | 作用域 | 功能说明 | 调用方 | 依赖方 |
 | --- | --- | --- | --- | --- | --- |
 | Gp_NCA95yy_Prv_WriteRegister | 内部控制 / 校验 / 访问辅助 | `static` | 通用 I2C 写寄存器封装。 | `Init`, `SetGpOutSig` | `CalloutI2cWrite` |
 
-#### 8.5.1 设计说明
+#### 8.6.1 设计说明
 
 - `Gp_NCA95yy_Prv_WriteRegister` 用于承载可复用的实现动作，避免将底层访问和状态处理散落在 external interface 主流程中。
 - 该内部接口当前由 `Init`, `SetGpOutSig` 触发，并与 `CalloutI2cWrite` 协作。
 
-### 8.6 `Gp_NCA95yy_Prv_RmwWriteOutput`
+### 8.7 `Gp_NCA95yy_Prv_RmwWriteOutput`
 | Interface Name | 类别 | 作用域 | 功能说明 | 调用方 | 依赖方 |
 | --- | --- | --- | --- | --- | --- |
 | Gp_NCA95yy_Prv_RmwWriteOutput | 内部控制 / 校验 / 访问辅助 | `static` | 执行 Output Port 的读改写序列并返回新值。 | `SetGpOutSig` | `CalloutI2cRead`, `CalloutI2cWrite` |
 
-#### 8.6.1 设计说明
+#### 8.7.1 设计说明
 
 - `Gp_NCA95yy_Prv_RmwWriteOutput` 用于承载可复用的实现动作，避免将底层访问和状态处理散落在 external interface 主流程中。
 - 该内部接口当前由 `SetGpOutSig` 触发，并与 `CalloutI2cRead`, `CalloutI2cWrite` 协作。
 
-### 8.7 `Gp_NCA95yy_Prv_HandleInt`
+### 8.8 `Gp_NCA95yy_Prv_HandleInt`
 | Interface Name | 类别 | 作用域 | 功能说明 | 调用方 | 依赖方 |
 | --- | --- | --- | --- | --- | --- |
 | Gp_NCA95yy_Prv_HandleInt | 内部控制 / 校验 / 访问辅助 | `static` | 读 Input Port、比较缓存、识别变化并更新缓存。 | `MainFunction` | `CalloutI2cRead` |
 
-#### 8.7.1 设计说明
+#### 8.8.1 设计说明
 
 - `Gp_NCA95yy_Prv_HandleInt` 用于承载可复用的实现动作，避免将底层访问和状态处理散落在 external interface 主流程中。
 - 该内部接口当前由 `MainFunction` 触发，并与 `CalloutI2cRead` 协作。
 
-### 8.8 `Gp_NCA95yy_Prv_UpdateFaultState`
+### 8.9 `Gp_NCA95yy_Prv_UpdateFaultState`
 | Interface Name | 类别 | 作用域 | 功能说明 | 调用方 | 依赖方 |
 | --- | --- | --- | --- | --- | --- |
 | Gp_NCA95yy_Prv_UpdateFaultState | 内部控制 / 校验 / 访问辅助 | `static` | 统一记录或清除故障位，并维护必要的恢复计数。 | `Init`, `MainFunction`, `GetGpInSig`, `SetGpOutSig` | — |
 
-#### 8.8.1 设计说明
+#### 8.9.1 设计说明
 
 - `Gp_NCA95yy_Prv_UpdateFaultState` 用于承载可复用的实现动作，避免将底层访问和状态处理散落在 external interface 主流程中。
 - 该内部接口当前由 `Init`, `MainFunction`, `GetGpInSig`, `SetGpOutSig` 触发，并与 必要依赖接口 协作。
@@ -428,17 +444,15 @@ flowchart TD
 ### 9.3 `Gp_NCA95yy_CalloutReadDio`
 | Interface Prototype | 功能说明 | 实现边界 | 同步属性 | 重入性 | 基本约束 | 关联接口 | 覆盖状态 | 需求追踪 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Std_ReturnType Gp_NCA95yy_CalloutReadDio | CalloutReadDio 为 detailed design 依赖接口 / callout 边界。 | 项目适配层 / 平台层 | Synchronous | Reentrant | 必须与 architecture formal dependency contract 保持一致。 | `MainFunction` | 已在 DD 主体中定义 | `SRS-GPNCA95YY-FUNC-0006`, `SRS-GPNCA95YY-FUNC-0008` |
+| Std_ReturnType Gp_NCA95yy_CalloutReadDio | CalloutReadDio 为 detailed design 依赖接口 / callout 边界。 | 项目适配层 / 平台层 | Synchronous | Reentrant | 必须与 architecture formal dependency contract 保持一致。 | `Gp_NCA95yy_Prv_SampleInt`, `MainFunction` | 已在 DD 主体中定义 | `SRS-GPNCA95YY-FUNC-0006`, `SRS-GPNCA95YY-FUNC-0008` |
 
 - 实现方应位于项目适配层或平台层，不能在业务接口内部直接替代。
 - 调用失败时应通过返回值、故障更新或待确认策略反馈给 FC 主体。
 
-- `Prv_SampleInt` 当前只在关系中被引用，尚未定义为内部接口或 external interface。
-
 ### 9.4 `Gp_NCA95yy_CalloutGetCoreId`
 | Interface Prototype | 功能说明 | 实现边界 | 同步属性 | 重入性 | 基本约束 | 关联接口 | 覆盖状态 | 需求追踪 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| uint32 Gp_NCA95yy_CalloutGetCoreId | CalloutGetCoreId 为 detailed design 依赖接口 / callout 边界。 | 项目适配层 / 平台层 | Synchronous | Reentrant | 必须与 architecture formal dependency contract 保持一致。 | — | architecture 已冻结，但当前 DD 尚未补全 | 待补需求追踪 |
+| uint32 Gp_NCA95yy_CalloutGetCoreId | CalloutGetCoreId 为 detailed design 依赖接口 / callout 边界。 | 项目适配层 / 平台层 | Synchronous | Reentrant | 必须与 architecture formal dependency contract 保持一致。 | `MainFunction`, `Gp_NCA95yy_Prv_SampleInt` | 已在 DD 主体中定义 | `SRS-GPNCA95YY-FUNC-0001`, `SRS-GPNCA95YY-FUNC-0008` |
 
 - 实现方应位于项目适配层或平台层，不能在业务接口内部直接替代。
 - 调用失败时应通过返回值、故障更新或待确认策略反馈给 FC 主体。
@@ -543,11 +557,12 @@ flowchart TD
 | Gp_NCA95yy_CalloutI2cWrite | Dependency Interface | 9. 依赖接口与Callout设计 | Gp_NCA95yy_CalloutI2cWrite | Covered | `SRS-GPNCA95YY-FUNC-0001`, `SRS-GPNCA95YY-FUNC-0004` |
 | Gp_NCA95yy_CalloutI2cRead | Dependency Interface | 9. 依赖接口与Callout设计 | Gp_NCA95yy_CalloutI2cRead | Covered | `SRS-GPNCA95YY-FUNC-0003`, `SRS-GPNCA95YY-FUNC-0006` |
 | Gp_NCA95yy_CalloutReadDio | Dependency Interface | 9. 依赖接口与Callout设计 | Gp_NCA95yy_CalloutReadDio | Covered | `SRS-GPNCA95YY-FUNC-0006`, `SRS-GPNCA95YY-FUNC-0008` |
-| Gp_NCA95yy_CalloutGetCoreId | Dependency Interface | 9. 依赖接口与Callout设计 | — | Partial | 待补需求追踪 |
+| Gp_NCA95yy_CalloutGetCoreId | Dependency Interface | 9. 依赖接口与Callout设计 | Gp_NCA95yy_CalloutGetCoreId | Covered | `SRS-GPNCA95YY-FUNC-0001`, `SRS-GPNCA95YY-FUNC-0008` |
 | Gp_NCA95yy_Prv_CheckAccess | Internal Interface | 8. 内部接口设计 | Gp_NCA95yy_Prv_CheckAccess | Covered | 由 DD 内部展开 |
 | Gp_NCA95yy_Prv_InitChip | Internal Interface | 8. 内部接口设计 | Gp_NCA95yy_Prv_InitChip | Covered | 由 DD 内部展开 |
 | Gp_NCA95yy_Prv_WriteChipRegs | Internal Interface | 8. 内部接口设计 | Gp_NCA95yy_Prv_WriteChipRegs | Covered | 由 DD 内部展开 |
 | Gp_NCA95yy_Prv_ReadRegister | Internal Interface | 8. 内部接口设计 | Gp_NCA95yy_Prv_ReadRegister | Covered | 由 DD 内部展开 |
+| Gp_NCA95yy_Prv_SampleInt | Internal Interface | 8. 内部接口设计 | Gp_NCA95yy_Prv_SampleInt | Covered | 由 DD 内部展开 |
 | Gp_NCA95yy_Prv_WriteRegister | Internal Interface | 8. 内部接口设计 | Gp_NCA95yy_Prv_WriteRegister | Covered | 由 DD 内部展开 |
 | Gp_NCA95yy_Prv_RmwWriteOutput | Internal Interface | 8. 内部接口设计 | Gp_NCA95yy_Prv_RmwWriteOutput | Covered | 由 DD 内部展开 |
 | Gp_NCA95yy_Prv_HandleInt | Internal Interface | 8. 内部接口设计 | Gp_NCA95yy_Prv_HandleInt | Covered | 由 DD 内部展开 |

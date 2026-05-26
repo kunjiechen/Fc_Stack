@@ -285,6 +285,7 @@ class RawInputEntry:
     """归一化后的输入条目"""
     raw_text: str
     likely_category: str | None = None
+    source_section: str = ""  # e.g. "原始功能需求", "原始接口需求"
     structured_fields: dict[str, str] = field(default_factory=dict)
     source_ref: str = ""
 

@@ -1,0 +1,21 @@
+原始功能需求
+- 驱动需要支持通过 uint16 信号 ID 访问 DIO 通道，每个信号的物理端口由配置表映射
+- 支持上电初始化，对已配置 DIO 通道设置初始默认值
+- 支持运行时方向控制（set direction），明确当前 FC 版本不直接支持，需走 Callout
+- 支持输入电平读取（get input level），数据来源为 Callout 函数或 MCAL DIO
+原始接口需求
+- Init(void) - 初始化当前核所有已配置 DIO 通道，无返回值
+- SetDioSigDir(uint16 Id, Gp_IoMcuDio_DirType Dir) - 设置信号方向，返回 E_OK/E_NOT_OK
+- GetDioSigLvlIn(uint16 Id, boolean* LvlIn) - 读取输入电平，返回 E_OK/E_NOT_OK
+- SetDioSigLvlOut(uint16 Id, boolean LvlOut) - 设置输出电平，返回 E_OK/E_NOT_OK
+原始配置需求
+- 多核使能配置（每核独立开关）
+- DET 开发错误检测开关
+- 信号 ID 映射表（信号 ID → 物理端口/Pin）
+- 默认方向配置（输入/输出）
+- 默认输出电平配置（STD_LOW/STD_HIGH）
+原始非功能需求
+- 安全等级 QM
+- DET 错误检测：未初始化访问、非法信号 ID、空指针返回 E_NOT_OK
+- 函数不可重入
+- 同步接口，无 MainFunction 周期调度需求

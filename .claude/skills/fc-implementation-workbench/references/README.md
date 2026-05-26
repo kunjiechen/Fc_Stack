@@ -35,9 +35,22 @@ Responsibility boundary:
   - renders a first-pass detailed design markdown from the structured bundle
 - `../scripts/extract_cfg_objects.py`
   - extracts real `Cfg.c` objects, fields, and per-core or per-chip layout cues from grounding FC sources
+- `../scripts/run_regression_pack.py`
+  - replays the current stable `bundle -> rendered DD -> arch/DD validator` regression chain
 - this `README.md`
   - index and minimal loading guidance only
 - execution logic stays in `../SKILL.md`
+
+Python dependencies for the script set:
+
+- `PyYAML`
+- `jsonschema`
+
+Recommended install command:
+
+```bash
+python3 -m pip install -r .claude/skills/fc-implementation-workbench/requirements-dev.txt
+```
 
 ## A. Core Rules
 

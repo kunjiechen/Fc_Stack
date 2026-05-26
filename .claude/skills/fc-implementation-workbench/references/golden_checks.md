@@ -12,8 +12,9 @@
 - A generation bundle example exists for a real target module.
 - The validator catches forbidden conditional interfaces in architecture or DD interface sections.
 - The validator checks that `关联接口` references do not point to undefined local design objects.
+- A real `Gp_NCA95yy` regression case replays `bundle -> rendered DD -> arch/DD validator`.
 
 ## P2 Checks
 
 - Requirement, architecture, and detailed design cross-layer conflicts are checked.
-- Regression cases produce stable markdown diff results.
+- Regression cases expand beyond the first stable baseline and produce stable markdown diff results.

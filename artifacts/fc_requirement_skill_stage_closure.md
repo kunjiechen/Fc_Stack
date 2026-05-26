@@ -20,7 +20,7 @@
 1. `raw input -> requirement bundle -> architecture seed -> test seed -> validation` 主链已跑通
 2. raw extraction gate 已建立并完成两轮以上收敛
 3. `ready/draft/open_issue` 已不再只是展示字段，而会受到 gate 和质量门禁约束
-4. 两个代表性试点已经全部达到 `0 warning / 0 error`
+4. 三个代表性试点已经进入统一 regression pack；其中 2 个达到 `0 warning / 0 error`，1 个保留已知 warning 并纳入 expectation 管理
 
 当前这套 requirement skill 已经不再是“只能生成 SRS 文档”的规则集合，而是具备结构化对象层、门禁、回放和 golden baseline 的独立 skill。
 
@@ -50,7 +50,7 @@
 
 ## 4. Golden Baseline
 
-当前阶段确定以下 2 个 golden baseline：
+当前阶段确定以下 3 个 regression baseline：
 
 ### 4.1 Gp_NCA95yy
 
@@ -91,6 +91,26 @@
 - validation = `0 warning / 0 error`
 - capability promotion 已收口
 - coverage gap 已收口
+
+### 4.3 Gp_IoMcuDio
+
+输入：
+
+- [Gp_IoMcuDio_grounding_input.md](/Users/chenkunjie/Downloads/SBPAI/Proj/Fc_Stack/artifacts/Gp_IoMcuDio_grounding_input.md)
+- [raw_input_Gp_IoMcuDio.txt](/Users/chenkunjie/Downloads/SBPAI/Proj/Fc_Stack/artifacts/raw_input_Gp_IoMcuDio.txt)
+
+输出：
+
+- [gp_iomcudio_requirement_bundle.yaml](/Users/chenkunjie/Downloads/SBPAI/Proj/Fc_Stack/artifacts/gp_iomcudio_requirement_bundle.yaml)
+- [gp_iomcudio_architecture_seed.yaml](/Users/chenkunjie/Downloads/SBPAI/Proj/Fc_Stack/artifacts/gp_iomcudio_architecture_seed.yaml)
+- [gp_iomcudio_test_seed.yaml](/Users/chenkunjie/Downloads/SBPAI/Proj/Fc_Stack/artifacts/gp_iomcudio_test_seed.yaml)
+- [gp_iomcudio_bundle_validation.json](/Users/chenkunjie/Downloads/SBPAI/Proj/Fc_Stack/artifacts/gp_iomcudio_bundle_validation.json)
+
+收口结果：
+
+- validation = `0 error / 2 warning`
+- warning 已固化到 regression expectation，不再作为隐性漂移
+- 当前已知 warning 包括 1 个 `coverage_gap` 与 1 个 `ready_gate_weak`
 
 ---
 
@@ -154,8 +174,9 @@ PYTHONPATH=.claude/skills/fc-requirement-workbench/src python3.11 -m fc_requirem
 
 当前阶段回归通过标准：
 
-- bundle 能成功生成
-- validation 结果为 `0 warning / 0 error`
+- bundle / architecture seed / test seed / validation 能成功生成并与 golden 对齐
+- 生成态 `srs-markdown` 必须与对应 requirement bundle 一致
+- 每个 case 的 validation summary 必须满足该 case 自身 expectation
 
 ---
 

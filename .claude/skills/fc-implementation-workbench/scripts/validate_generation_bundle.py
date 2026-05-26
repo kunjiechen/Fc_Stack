@@ -7,6 +7,10 @@ import argparse
 import json
 from pathlib import Path
 
+from script_dependency_support import require_modules
+
+require_modules({"PyYAML": "yaml", "jsonschema": "jsonschema"}, context="validate_generation_bundle.py")
+
 import yaml
 from jsonschema import Draft202012Validator
 

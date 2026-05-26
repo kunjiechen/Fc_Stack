@@ -3,7 +3,8 @@
   "module": "Gp_TLE92104",
   "input_document": "artifacts/Gp_TLE92104_grounding_input.md",
   "raw_input": "artifacts/raw_input_Gp_TLE92104.txt",
-  "source_root": "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G",
+  "source_root": "",
+  "source_root_abs": "/Users/chenkunjie/Downloads/SBPAI/Proj/FcStack-main-2/src/FcStackBase/AURIX2G",
   "golden": {
     "requirement-bundle": "artifacts/gp_tle92104_requirement_bundle.yaml",
     "architecture-seed": "artifacts/gp_tle92104_architecture_seed.yaml",
@@ -26,7 +27,7 @@
       "Gp_TLE92104_GetHBVOUT"
     ],
     "requirement_titles": [
-      "开发错误检测",
+      "DET配置",
       "PWM依赖集成",
       "SPI通信依赖"
     ]

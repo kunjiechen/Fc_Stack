@@ -9,6 +9,10 @@ import re
 from pathlib import Path
 from typing import Any
 
+from script_dependency_support import require_modules
+
+require_modules({"PyYAML": "yaml"}, context="extract_cfg_objects.py")
+
 import yaml
 
 

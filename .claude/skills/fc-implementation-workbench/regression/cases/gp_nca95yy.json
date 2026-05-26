@@ -1,0 +1,8 @@
+{
+  "case_id": "gp_nca95yy",
+  "bundle": "artifacts/gp_nca95yy_bundle_generated.yaml",
+  "architecture_markdown": "artifacts/arch_Gp_NCA95yy.md",
+  "golden_rendered_dd": "artifacts/gp_nca95yy_rendered_dd.md",
+  "generated_at": "2026-05-25 22:32:26",
+  "doc_validation_mode": "arch_dd_only"
+}

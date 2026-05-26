@@ -1,0 +1,112 @@
+# Raw Requirement Gate Classification Rules
+#
+# This file defines the gate rules that decide whether a raw extracted item
+# enters the formal requirement pool or stays as constraint/capability/evidence
+# metadata.  Rules are evaluated in order; the first matching rule wins.
+#
+# Each rule has:
+#   disposition: the RawDisposition to assign when the rule matches
+#   reason:      human-readable explanation for the gate decision
+#   match:       condition dictionary with these possible keys:
+#     - tokens_in_text: list of substrings — any must appear in (title + description)
+#     - category_is:    list of category values — item.category must be one of these
+#     - regex:          Python regex pattern applied to (title + description)
+#     - source_section_tokens: list of substrings — any must appear in source section heading
+#     - source_section_regex:  Python regex pattern applied to source section heading
+
+rules:
+  # ---- Metadata exclusions (module/document boilerplate) ----
+  - disposition: metadata
+    reason: "Module/document metadata should not enter the formal requirement pool."
+    match:
+      tokens_in_text: ["模块名称", "模块简称", "文档编号", "项目编号"]
+
+  # ---- Open issues (unresolved confirmations) ----
+  - disposition: open_issue
+    reason: "The raw item still depends on unresolved confirmation or project decision."
+    match:
+      tokens_in_text: ["待确认", "需确认"]
+
+  # ---- Resource / coding-standard constraints ----
+  - disposition: constraint
+    reason: "Resource budget statements should stay as nonfunctional constraints."
+    match:
+      tokens_in_text: ["rom/ram", "资源", "resource"]
+
+  - disposition: constraint
+    reason: "Coding-standard statements should stay as compliance constraints, not functional requirements."
+    match:
+      tokens_in_text: ["misra", "编码规范", "coding standard"]
+
+  - disposition: constraint
+    reason: "Memory-section organization should stay as implementation and architecture constraint."
+    match:
+      tokens_in_text: ["memmap", "代码段", "常量区", "段布局"]
+
+  # ---- Evidence / review records ----
+  - disposition: evidence
+    reason: "Review/evaluation recording statements are evidence obligations, not formal software behavior."
+    match:
+      tokens_in_text: ["评估记录", "review record", "记录"]
+
+  - disposition: evidence
+    reason: "Items under review/evaluation record sections should stay as evidence records."
+    match:
+      source_section_tokens: ["评审记录", "评估记录"]
+
+  # ---- Architecture seed only ----
+  - disposition: architecture_seed_only
+    reason: "Multi-core ownership statements should directly guide architecture freezing."
+    match:
+      tokens_in_text: ["多核", "per-core", "独立运行时", "独立数据区", "运行时容器"]
+
+  # ---- Sync/async scheduling constraints ----
+  - disposition: constraint
+    reason: "Sync/async scheduling policy statements should stay as governing constraints."
+    match:
+      tokens_in_text: ["同步接口", "异步接口"]
+
+  # ---- DET/diagnostic constraints (INTF and FUNC only) ----
+  - disposition: constraint
+    reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
+    match:
+      category_is: ["INTF", "FUNC"]
+      tokens_in_text: ["参数有效性检查", "det错误检测", "det "]
+
+  # ---- NFR safety-level constraints ----
+  - disposition: constraint
+    reason: "Safety level statements are governing constraints rather than direct functional requirements."
+    match:
+      category_is: ["NFR"]
+      tokens_in_text: ["asil", "qm", "安全等级", "安全要求"]
+
+  - disposition: constraint
+    reason: "Safety-governance statements are constraints and should not silently become formal behavior."
+    match:
+      category_is: ["NFR"]
+      tokens_in_text: ["安全机制", "安全约束"]
+
+  # ---- Chip capability detection (FUNC and CFG only) ----
+  - disposition: capability
+    reason: "The statement currently looks like a chip/project capability summary rather than an implementation-ready formal requirement."
+    match:
+      category_is: ["FUNC", "CFG"]
+      capability_pattern: true
+
+# Patterns that indicate a chip/project capability statement rather than
+# an implementation-ready formal requirement.
+capability_patterns:
+  tokens:
+    - "能力"
+    - "支持通过"
+    - "支持中断检测和响应机制"
+    - "支持极性反转配置"
+    - "支持通过i2c总线访问"
+    - "支持通过spi访问"
+    - "支持通过spi总线访问"
+    - "支持读取设备模式"
+    - "支持故障清除和看门狗相关模式控制"
+  regexes:
+    - "支持.+能力"
+    - "支持通过(?:i2c|spi).+访问"
+    - "chip.*support"

@@ -328,6 +328,9 @@ architecture:
       evidence:
         - "Existing per-core FC pattern in current codebase"
         - "per-core runtime and MemMap strategy in this architecture."
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0001"
+        - "SRS-GPNCA95YY-FUNC-0008"
   config_items:
     - name: "GP_NCA95YY_CFG_DEV_ERROR_DETECT"
       status: "formal"
@@ -378,6 +381,7 @@ detailed_design:
         - "SRS-GPNCA95YY-IF-0001"
     - name: "Gp_NCA95yy_MainFunction"
       relationship_links:
+        - "Gp_NCA95yy_CalloutGetCoreId"
         - "Gp_NCA95yy_Prv_SampleInt"
         - "Gp_NCA95yy_Prv_HandleInt"
         - "Gp_NCA95yy_Prv_UpdateFaultState"
@@ -448,6 +452,13 @@ detailed_design:
         - "Gp_NCA95yy_CalloutI2cRead"
       evidence:
         - "通用 I2C 读寄存器封装。"
+    - name: "Gp_NCA95yy_Prv_SampleInt"
+      relationship_links:
+        - "Gp_NCA95yy_MainFunction"
+        - "Gp_NCA95yy_CalloutReadDio"
+        - "Gp_NCA95yy_CalloutGetCoreId"
+      evidence:
+        - "读取当前 core 上已配置芯片实例的 INT 引脚状态，并筛选需要进入后续处理中断路径的实例。"
     - name: "Gp_NCA95yy_Prv_WriteRegister"
       relationship_links:
         - "Gp_NCA95yy_Init"
@@ -502,6 +513,14 @@ detailed_design:
       prototype: "Std_ReturnType Gp_NCA95yy_CalloutReadDio"
       trace_ids:
         - "SRS-GPNCA95YY-FUNC-0006"
+        - "SRS-GPNCA95YY-FUNC-0008"
+    - name: "Gp_NCA95yy_CalloutGetCoreId"
+      relationship_links:
+        - "Gp_NCA95yy_MainFunction"
+        - "Gp_NCA95yy_Prv_SampleInt"
+      prototype: "uint32 Gp_NCA95yy_CalloutGetCoreId"
+      trace_ids:
+        - "SRS-GPNCA95YY-FUNC-0001"
         - "SRS-GPNCA95YY-FUNC-0008"
 conf_evidence:
   - "Gp_TPT1145_CfgData.h"

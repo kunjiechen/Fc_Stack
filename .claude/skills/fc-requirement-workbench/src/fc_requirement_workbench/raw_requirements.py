@@ -52,10 +52,11 @@ class RawInputLoader:
         entries = [
             RawInputEntry(
                 raw_text=item,
-                likely_category=explicit_category or _guess_category(item),
+                likely_category=explicit_category or _guess_category(item, source_section=section),
+                source_section=section,
                 source_ref=name,
             )
-            for item, explicit_category in _split_raw_entries(text)
+            for item, explicit_category, section in _split_raw_entries(text)
         ]
         hints = _extract_module_hints(text)
         return UnifiedRawInput(
@@ -156,6 +157,7 @@ class RawRequirementExtractor:
                 text=entry.raw_text,
                 source_ref=entry.source_ref,
                 structured_fields=entry.structured_fields,
+                source_section=entry.source_section,
             )
             items[category].append(raw)
 
@@ -435,9 +437,16 @@ def render_raw_coverage_matrix_markdown(
     return "\n".join(lines)
 
 
-def _split_raw_entries(text: str) -> list[tuple[str, str | None]]:
-    items: list[tuple[str, str | None]] = []
+def _split_raw_entries(text: str) -> list[tuple[str, str | None, str]]:
+    """Split raw input text into entries.
+
+    Returns list of (text, category_hint, section_heading) tuples.
+    The section_heading preserves the original heading text (e.g. "原始功能需求")
+    for downstream classification context.
+    """
+    items: list[tuple[str, str | None, str]] = []
     current_category: str | None = None
+    current_section: str = ""
     for raw_line in text.splitlines():
         line = raw_line.strip()
         if not line:
@@ -449,6 +458,7 @@ def _split_raw_entries(text: str) -> list[tuple[str, str | None]]:
         category = _heading_category(line)
         if category:
             current_category = category
+            current_section = line.rstrip("：:")
             continue
         line = re.sub(r"^[>\-\*\d\.\)\(（）：:、\s]+", "", line).strip()
         if len(line) < 4:
@@ -457,11 +467,11 @@ def _split_raw_entries(text: str) -> list[tuple[str, str | None]]:
         for piece in pieces:
             value = piece.strip(" ;")
             if len(value) >= 4:
-                items.append((value, current_category))
+                items.append((value, current_category, current_section))
     return items
 
 
-def _guess_category(text: str, structured_fields: dict[str, str] | None = None) -> str:
+def _guess_category(text: str, structured_fields: dict[str, str] | None = None, *, source_section: str = "") -> str:
     structured_fields = structured_fields or {}
     explicit = (structured_fields.get("category") or structured_fields.get("type") or "").upper()
     if explicit in {"FUNC", "FUNCTIONAL", "功能", "功能需求"}:
@@ -472,6 +482,14 @@ def _guess_category(text: str, structured_fields: dict[str, str] | None = None) 
         return "CFG"
     if explicit in {"NFR", "NONFUNCTIONAL", "CONSTRAINT", "约束", "非功能", "非功能需求"}:
         return "NFR"
+
+    # Section-derived category is authoritative when the section heading
+    # unambiguously declares the category.  This prevents keyword guessing
+    # from overriding the structural context.
+    section_category = _heading_category(source_section) if source_section else None
+    if section_category:
+        return section_category
+
     lowered = text.lower()
     if re.search(r"\b[A-Za-z_][A-Za-z0-9_]*\s*\(", text):
         return "INTF"
@@ -533,6 +551,8 @@ def _entry_from_text(
     text: str,
     source_ref: str,
     structured_fields: dict[str, str] | None = None,
+    *,
+    source_section: str = "",
 ) -> RawRequirementEntry:
     structured_fields = structured_fields or {}
     title = structured_fields.get("title") or _derive_title(text, category)
@@ -540,6 +560,7 @@ def _entry_from_text(
         category=category,
         title=title,
         description=_description_value(text, structured_fields),
+        source_section=source_section,
     )
     common = dict(
         id=item_id,
@@ -836,6 +857,13 @@ def _merge_signature(item: RequirementObject) -> dict[str, object]:
 def _merge_similarity(left: dict[str, object], right: dict[str, object]) -> float:
     if left["type"] != right["type"]:
         return 0.0
+    # When both items carry explicit, different function names (extracted from
+    # real C function signatures), they represent distinct interfaces — never merge.
+    if str(left["type"]) == "interface":
+        left_fn = left["fields"].get("function_name", "")
+        right_fn = right["fields"].get("function_name", "")
+        if left_fn and right_fn and left_fn != right_fn:
+            return 0.0
     if left["name"] and left["name"] == right["name"]:
         field_overlap = _field_overlap(left["fields"], right["fields"])
         return 0.92 + min(0.08, field_overlap * 0.08)

@@ -67,8 +67,8 @@ requirements:
         line_start: null
         line_end: null
         evidence: "Planned from feature and candidate intermediate artifacts."
-    status: "ready"
-    decision: "accepted_for_downstream"
+    status: "open_issue"
+    decision: "hold_for_resolution"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
@@ -109,8 +109,8 @@ requirements:
         line_start: null
         line_end: null
         evidence: "Planned from feature and candidate intermediate artifacts."
-    status: "ready"
-    decision: "accepted_for_downstream"
+    status: "open_issue"
+    decision: "hold_for_resolution"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
@@ -151,8 +151,8 @@ requirements:
         line_start: null
         line_end: null
         evidence: "Planned from feature and candidate intermediate artifacts."
-    status: "ready"
-    decision: "accepted_for_downstream"
+    status: "open_issue"
+    decision: "hold_for_resolution"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
@@ -193,8 +193,8 @@ requirements:
         line_start: null
         line_end: null
         evidence: "Planned from feature and candidate intermediate artifacts."
-    status: "ready"
-    decision: "accepted_for_downstream"
+    status: "open_issue"
+    decision: "hold_for_resolution"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
@@ -235,8 +235,8 @@ requirements:
         line_start: null
         line_end: null
         evidence: "Planned from feature and candidate intermediate artifacts."
-    status: "ready"
-    decision: "accepted_for_downstream"
+    status: "open_issue"
+    decision: "hold_for_resolution"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
@@ -277,8 +277,8 @@ requirements:
         line_start: null
         line_end: null
         evidence: "Planned from feature and candidate intermediate artifacts."
-    status: "ready"
-    decision: "accepted_for_downstream"
+    status: "open_issue"
+    decision: "hold_for_resolution"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
@@ -319,8 +319,8 @@ requirements:
         line_start: null
         line_end: null
         evidence: "Planned from feature and candidate intermediate artifacts."
-    status: "ready"
-    decision: "accepted_for_downstream"
+    status: "open_issue"
+    decision: "hold_for_resolution"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
@@ -361,8 +361,8 @@ requirements:
         line_start: null
         line_end: null
         evidence: "Planned from feature and candidate intermediate artifacts."
-    status: "ready"
-    decision: "accepted_for_downstream"
+    status: "open_issue"
+    decision: "hold_for_resolution"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
@@ -403,8 +403,8 @@ requirements:
         line_start: null
         line_end: null
         evidence: "Planned from feature and candidate intermediate artifacts."
-    status: "ready"
-    decision: "accepted_for_downstream"
+    status: "open_issue"
+    decision: "hold_for_resolution"
     decision_reason: "Requirement currently has no requirement-level validation findings."
     trace:
       source_ids:
@@ -1099,6 +1099,53 @@ requirements:
     global_validation_context:
       []
   -
+    requirement_id: "SRS-GPNCA95YY-FUNC-0013"
+    semantic_id: "REQ-GPNCA95YY-NFR-0004"
+    type: "functional"
+    bundle_type: "functional"
+    title: "所有外部接口需进行参数有效性检查"
+    shall: "软件应支持所有外部接口需进行参数有效性检查。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "Review"
+    verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。"
+    function_name: ""
+    source:
+      -
+        document: "RAWREQ-GPNCA95YY-001"
+        chunk_id: "RAW-GPNCA95YY-NFR-0004"
+        heading_path:
+          - "原始开发需求"
+          - "NFR"
+        content_type: "raw_input"
+        line_start: null
+        line_end: null
+        evidence: "所有外部接口需进行参数有效性检查。"
+    status: "ready"
+    decision: "accepted_for_downstream"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "RAW-GPNCA95YY-NFR-0004"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        -
+          raw_id: "RAW-GPNCA95YY-NFR-0004"
+          title: "所有外部接口需进行参数有效性检查"
+          category: "NFR"
+          status: "covered"
+    validation:
+      []
+    global_validation_context:
+      []
+  -
     requirement_id: "SRS-GPNCA95YY-DIAG-9001"
     semantic_id: "ENRICHED-GPNCA95YY-DIAG-DET"
     type: "diagnostic"
@@ -1172,10 +1219,121 @@ requirements:
       []
     global_validation_context:
       []
+  -
+    requirement_id: "SRS-GPNCA95YY-SAFE-0001"
+    semantic_id: "DEFAULT-GPNCA95YY-SAFE-0001"
+    type: "safety"
+    bundle_type: "safety"
+    title: "安全等级默认要求"
+    shall: "若项目未提供功能安全等级输入，软件需求默认按 QM 等级管理；若后续项目输入给出 ASIL/QM 要求，应按项目输入更新本需求。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目安全等级、ASIL 分配、诊断覆盖目标。"
+    verification: "通过安全需求评审验证。"
+    function_name: ""
+    source:
+      -
+        document: "SRS Template"
+        chunk_id: "DEFAULT-SAFETY-QM"
+        evidence: "No project safety input; default QM requirement generated."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "DEFAULT-SAFETY-QM"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPNCA95YY-CODE-0001"
+    semantic_id: "DEFAULT-GPNCA95YY-CODE-0001"
+    type: "coding"
+    bundle_type: "coding"
+    title: "编码规范符合性要求"
+    shall: "软件实现应遵循项目编码规范、命名规范、静态检查规则和评审要求；若项目提供具体编码规范，应按项目规范替换或细化本需求。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：项目编码规范版本、MISRA/静态检查规则、复杂度阈值。"
+    verification: "通过代码评审、静态分析和编码规范检查验证。"
+    function_name: ""
+    source:
+      -
+        document: "SRS Template"
+        chunk_id: "DEFAULT-CODING-STANDARD"
+        evidence: "Default coding standard requirement generated from template."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "DEFAULT-CODING-STANDARD"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
+  -
+    requirement_id: "SRS-GPNCA95YY-RES-0001"
+    semantic_id: "DEFAULT-GPNCA95YY-RES-0001"
+    type: "resource"
+    bundle_type: "resource"
+    title: "资源消耗默认要求"
+    shall: "软件资源消耗应满足项目资源预算；若项目未提供预算，需在设计和集成阶段统计 ROM、RAM、栈、CPU、I/O 和总线访问占用并形成评审结论。"
+    pre_condition: ""
+    trigger: ""
+    input: ""
+    output: ""
+    exception: ""
+    constraint: "需确认：ROM/RAM/栈/CPU/I/O/I2C 总线预算和测量方法。"
+    verification: "通过资源统计、集成测试或评审验证。"
+    function_name: ""
+    source:
+      -
+        document: "SRS Template"
+        chunk_id: "DEFAULT-RESOURCE-BUDGET"
+        evidence: "No project resource budget input; default resource requirement generated."
+    status: "open_issue"
+    decision: "hold_for_resolution"
+    decision_reason: "Requirement currently has no requirement-level validation findings."
+    trace:
+      source_ids:
+        - "DEFAULT-RESOURCE-BUDGET"
+      tests:
+        []
+      verification_levels:
+        - "Review"
+      coverage_status: "partial_covered"
+      linked_raw_items:
+        []
+    validation:
+      []
+    global_validation_context:
+      []
 raw_gate_summary:
   counts:
-    formal_requirement: 14
-    constraint: 5
+    formal_requirement: 15
+    constraint: 4
     capability: 3
     evidence: 0
     metadata: 0
@@ -1341,18 +1499,29 @@ raw_gate_summary:
         - "SRS-GPNCA95YY-CFG-0006"
       promotion_candidate: false
       promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
+    -
+      raw_id: "RAW-GPNCA95YY-NFR-0004"
+      category: "NFR"
+      title: "所有外部接口需进行参数有效性检查"
+      description: "所有外部接口需进行参数有效性检查。"
+      gate_reason: "The raw item is currently eligible to enter the formal requirement pool."
+      source_detail: "raw_input_Gp_NCA95yy.txt"
+      linked_formal_requirements:
+        - "SRS-GPNCA95YY-FUNC-0013"
+      promotion_candidate: false
+      promotion_reason: "The raw item is currently eligible to enter the formal requirement pool."
   constraint_items:
     -
       raw_id: "RAW-GPNCA95YY-INTF-0006"
       category: "INTF"
       title: "所有接口必须支持DET错误检测"
       description: "所有接口必须支持DET错误检测。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      gate_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
       source_detail: "raw_input_Gp_NCA95yy.txt"
       linked_formal_requirements:
         []
       promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      promotion_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
     -
       raw_id: "RAW-GPNCA95YY-NFR-0001"
       category: "NFR"
@@ -1361,7 +1530,7 @@ raw_gate_summary:
       gate_reason: "Safety level statements are governing constraints rather than direct functional requirements."
       source_detail: "raw_input_Gp_NCA95yy.txt"
       linked_formal_requirements:
-        []
+        - "SRS-GPNCA95YY-SAFE-0001"
       promotion_candidate: false
       promotion_reason: "Safety level statements are governing constraints rather than direct functional requirements."
     -
@@ -1372,20 +1541,9 @@ raw_gate_summary:
       gate_reason: "Resource budget statements should stay as nonfunctional constraints."
       source_detail: "raw_input_Gp_NCA95yy.txt"
       linked_formal_requirements:
-        []
+        - "SRS-GPNCA95YY-RES-0001"
       promotion_candidate: false
       promotion_reason: "Resource budget statements should stay as nonfunctional constraints."
-    -
-      raw_id: "RAW-GPNCA95YY-NFR-0004"
-      category: "NFR"
-      title: "所有外部接口需进行参数有效性检查"
-      description: "所有外部接口需进行参数有效性检查。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-      source_detail: "raw_input_Gp_NCA95yy.txt"
-      linked_formal_requirements:
-        []
-      promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
     -
       raw_id: "RAW-GPNCA95YY-NFR-0005"
       category: "NFR"
@@ -1629,9 +1787,9 @@ coverage_matrix:
     category: "NFR"
     title: "所有外部接口需进行参数有效性检查"
     source: "raw_input_Gp_NCA95yy.txt"
-    status: "excluded_by_gate"
+    status: "covered"
     matched_requirements:
-      []
+      - "SRS-GPNCA95YY-FUNC-0013"
   -
     raw_id: "RAW-GPNCA95YY-NFR-0005"
     category: "NFR"
@@ -1641,6 +1799,60 @@ coverage_matrix:
     matched_requirements:
       []
 open_issues:
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-FUNC-0001"
+    title: "GPIO 方向配置"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-FUNC-0002"
+    title: "GPIO 输入读取"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-FUNC-0003"
+    title: "GPIO 输出写入"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-FUNC-0004"
+    title: "GPIO 极性反转"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-FUNC-0005"
+    title: "中断与诊断"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-FUNC-0006"
+    title: "边界与异常处理"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-FUNC-0007"
+    title: "I2C 寄存器访问"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-FUNC-0008"
+    title: "复位与默认状态"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-FUNC-0009"
+    title: "时序约束"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
   -
     type: "requirement_status"
     requirement_id: "SRS-GPNCA95YY-FUNC-0010"
@@ -1660,74 +1872,29 @@ open_issues:
     status: "draft"
     reason: "Requirement currently has no requirement-level validation findings."
   -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-SAFE-0001"
+    title: "安全等级默认要求"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-CODE-0001"
+    title: "编码规范符合性要求"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
+    type: "requirement_status"
+    requirement_id: "SRS-GPNCA95YY-RES-0001"
+    title: "资源消耗默认要求"
+    status: "open_issue"
+    reason: "Requirement currently has no requirement-level validation findings."
+  -
     type: "global_validation"
     rule: "completeness"
     severity: "warning"
     reason: "Mandatory DET requirement is missing."
     recommendation: "Add a diagnostic requirement covering uninitialized access, invalid parameters, and DET or equivalent development error reporting."
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPNCA95YY-FUNC-0001"
-    title: "驱动需要支持通过I2C总线访问NCA9539-Q"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPNCA95YY-FUNC-0004"
-    title: "中断处理"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPNCA95YY-FUNC-0006"
-    title: "配置管理"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPNCA95YY-INTF-0006"
-    title: "所有接口必须支持DET错误检测"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPNCA95YY-NFR-0001"
-    title: "ASIL-D安全等级"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPNCA95YY-NFR-0002"
-    title: "ROM/RAM资源消耗需评估记录"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPNCA95YY-NFR-0003"
-    title: "多核支持"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPNCA95YY-NFR-0004"
-    title: "所有外部接口需进行参数有效性检查"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
-  -
-    type: "coverage_gap"
-    raw_id: "RAW-GPNCA95YY-NFR-0005"
-    title: "满足MISRA-C编码规范"
-    status: "excluded_by_gate"
-    matched_requirements:
-      []
 architecture_seed:
   module_name: "Gp_NCA95yy"
   layer: "IoExtDrv"
@@ -1797,7 +1964,7 @@ architecture_seed:
       requirement_id: "SRS-GPNCA95YY-FUNC-0005"
       title: "中断与诊断"
       description: "软件应实现 中断与诊断 相关行为，并定义输入、输出、边界条件和异常处理。"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-IF-0002"
       title: "中断处理接口"
@@ -1815,6 +1982,42 @@ architecture_seed:
       status: "ready"
   pending_confirm_items:
     -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0001"
+      title: "GPIO 方向配置"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0002"
+      title: "GPIO 输入读取"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0003"
+      title: "GPIO 输出写入"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0004"
+      title: "GPIO 极性反转"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0005"
+      title: "中断与诊断"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0006"
+      title: "边界与异常处理"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0007"
+      title: "I2C 寄存器访问"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0008"
+      title: "复位与默认状态"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0009"
+      title: "时序约束"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
       requirement_id: "SRS-GPNCA95YY-FUNC-0010"
       title: "状态读取"
       reason: "Requirement currently has no requirement-level validation findings."
@@ -1826,18 +2029,30 @@ architecture_seed:
       requirement_id: "SRS-GPNCA95YY-FUNC-0012"
       title: "初始化"
       reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-SAFE-0001"
+      title: "安全等级默认要求"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-CODE-0001"
+      title: "编码规范符合性要求"
+      reason: "Requirement currently has no requirement-level validation findings."
+    -
+      requirement_id: "SRS-GPNCA95YY-RES-0001"
+      title: "资源消耗默认要求"
+      reason: "Requirement currently has no requirement-level validation findings."
   constraint_items:
     -
       raw_id: "RAW-GPNCA95YY-INTF-0006"
       category: "INTF"
       title: "所有接口必须支持DET错误检测"
       description: "所有接口必须支持DET错误检测。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      gate_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
       source_detail: "raw_input_Gp_NCA95yy.txt"
       linked_formal_requirements:
         []
       promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      promotion_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
     -
       raw_id: "RAW-GPNCA95YY-NFR-0001"
       category: "NFR"
@@ -1846,7 +2061,7 @@ architecture_seed:
       gate_reason: "Safety level statements are governing constraints rather than direct functional requirements."
       source_detail: "raw_input_Gp_NCA95yy.txt"
       linked_formal_requirements:
-        []
+        - "SRS-GPNCA95YY-SAFE-0001"
       promotion_candidate: false
       promotion_reason: "Safety level statements are governing constraints rather than direct functional requirements."
     -
@@ -1857,20 +2072,9 @@ architecture_seed:
       gate_reason: "Resource budget statements should stay as nonfunctional constraints."
       source_detail: "raw_input_Gp_NCA95yy.txt"
       linked_formal_requirements:
-        []
+        - "SRS-GPNCA95YY-RES-0001"
       promotion_candidate: false
       promotion_reason: "Resource budget statements should stay as nonfunctional constraints."
-    -
-      raw_id: "RAW-GPNCA95YY-NFR-0004"
-      category: "NFR"
-      title: "所有外部接口需进行参数有效性检查"
-      description: "所有外部接口需进行参数有效性检查。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-      source_detail: "raw_input_Gp_NCA95yy.txt"
-      linked_formal_requirements:
-        []
-      promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
     -
       raw_id: "RAW-GPNCA95YY-NFR-0005"
       category: "NFR"
@@ -1940,7 +2144,7 @@ test_seed:
       expected_output: ""
       exception_path: ""
       acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-FUNC-0002"
       title: "GPIO 输入读取"
@@ -1950,7 +2154,7 @@ test_seed:
       expected_output: ""
       exception_path: ""
       acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-FUNC-0003"
       title: "GPIO 输出写入"
@@ -1960,7 +2164,7 @@ test_seed:
       expected_output: ""
       exception_path: ""
       acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-FUNC-0004"
       title: "GPIO 极性反转"
@@ -1970,7 +2174,7 @@ test_seed:
       expected_output: ""
       exception_path: ""
       acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-FUNC-0005"
       title: "中断与诊断"
@@ -1980,7 +2184,7 @@ test_seed:
       expected_output: ""
       exception_path: ""
       acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-FUNC-0006"
       title: "边界与异常处理"
@@ -1990,7 +2194,7 @@ test_seed:
       expected_output: ""
       exception_path: ""
       acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-FUNC-0007"
       title: "I2C 寄存器访问"
@@ -2000,7 +2204,7 @@ test_seed:
       expected_output: ""
       exception_path: ""
       acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-FUNC-0008"
       title: "复位与默认状态"
@@ -2010,7 +2214,7 @@ test_seed:
       expected_output: ""
       exception_path: ""
       acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-FUNC-0009"
       title: "时序约束"
@@ -2020,7 +2224,7 @@ test_seed:
       expected_output: ""
       exception_path: ""
       acceptance_basis: "需确认：项目使用范围、接口粒度、错误返回语义和验证方法"
-      status: "ready"
+      status: "open_issue"
     -
       requirement_id: "SRS-GPNCA95YY-FUNC-0010"
       title: "状态读取"
@@ -2162,6 +2366,16 @@ test_seed:
       acceptance_basis: "范围：2；默认值：待确认"
       status: "ready"
     -
+      requirement_id: "SRS-GPNCA95YY-FUNC-0013"
+      title: "所有外部接口需进行参数有效性检查"
+      verification: "通过功能测试和边界测试验证：对有效输入执行目标行为时，应输出预期结果；对非法输入、失败依赖或前置条件不满足场景，应返回定义错误并保持无关状态不被意外修改。"
+      trigger: ""
+      input: ""
+      expected_output: ""
+      exception_path: ""
+      acceptance_basis: "Review"
+      status: "ready"
+    -
       requirement_id: "SRS-GPNCA95YY-DIAG-9001"
       title: "开发错误检测"
       verification: "通过接口测试、边界测试和故障注入验证：触发未初始化访问、空指针、非法参数和非法调用顺序时，应产生定义的 DET 上报或错误返回，且内部状态保持一致。"
@@ -2189,12 +2403,12 @@ test_seed:
       category: "INTF"
       title: "所有接口必须支持DET错误检测"
       description: "所有接口必须支持DET错误检测。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      gate_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
       source_detail: "raw_input_Gp_NCA95yy.txt"
       linked_formal_requirements:
         []
       promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
+      promotion_reason: "DET/diagnostic policy statements should stay as governing constraints, unless the item expresses a concrete software action."
     -
       raw_id: "RAW-GPNCA95YY-NFR-0001"
       category: "NFR"
@@ -2203,7 +2417,7 @@ test_seed:
       gate_reason: "Safety level statements are governing constraints rather than direct functional requirements."
       source_detail: "raw_input_Gp_NCA95yy.txt"
       linked_formal_requirements:
-        []
+        - "SRS-GPNCA95YY-SAFE-0001"
       promotion_candidate: false
       promotion_reason: "Safety level statements are governing constraints rather than direct functional requirements."
     -
@@ -2214,20 +2428,9 @@ test_seed:
       gate_reason: "Resource budget statements should stay as nonfunctional constraints."
       source_detail: "raw_input_Gp_NCA95yy.txt"
       linked_formal_requirements:
-        []
+        - "SRS-GPNCA95YY-RES-0001"
       promotion_candidate: false
       promotion_reason: "Resource budget statements should stay as nonfunctional constraints."
-    -
-      raw_id: "RAW-GPNCA95YY-NFR-0004"
-      category: "NFR"
-      title: "所有外部接口需进行参数有效性检查"
-      description: "所有外部接口需进行参数有效性检查。"
-      gate_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
-      source_detail: "raw_input_Gp_NCA95yy.txt"
-      linked_formal_requirements:
-        []
-      promotion_candidate: false
-      promotion_reason: "Interface contract and diagnostic policy statements should stay as governing constraints."
     -
       raw_id: "RAW-GPNCA95YY-NFR-0005"
       category: "NFR"
@@ -2244,8 +2447,8 @@ generation_notes:
   raw_requirement_input_used: true
   coverage_gap_count: 0
   raw_gate_counts:
-    formal_requirement: 14
-    constraint: 5
+    formal_requirement: 15
+    constraint: 4
     capability: 3
     evidence: 0
     metadata: 0
