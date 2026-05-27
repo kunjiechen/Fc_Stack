@@ -280,7 +280,7 @@ class TraceabilityMarkdownRenderer:
         raw_coverage: list[dict[str, Any]] | None = None,
     ) -> str:
         lines = [
-            f"# {module} 追溯与覆盖矩阵",
+            f"# Trace 追溯矩阵 — {module}",
             "",
             "## Source -> Requirement Trace Matrix",
             "",

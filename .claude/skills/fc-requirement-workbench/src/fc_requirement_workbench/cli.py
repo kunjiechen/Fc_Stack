@@ -34,6 +34,7 @@ from .filenames import (
     source_extract_doc,
     source_index_doc,
     srs_doc,
+    trace_matrix_doc,
 )
 from .gate_check import GateChecker, render_gate_check_markdown
 from .open_items import OpenItemsCollector, render_open_items_markdown
@@ -68,7 +69,7 @@ from .srs import (
     MarkdownSrsRenderer,
     SrsStructureGenerator,
 )
-from .traceability import TraceabilityPipeline, load_trace_mapping
+from .traceability import TraceabilityMarkdownRenderer, TraceabilityPipeline, load_trace_mapping
 from .workflow import FixLoopEngine
 
 
@@ -111,11 +112,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Generate SRS + full workflow deliverables from datasheet / raw requirements."
     )
-    parser.add_argument("input", type=Path, help="Markdown datasheet file")
+    parser.add_argument("input", type=Path, help="Requirements input datasheet file or input directory")
     parser.add_argument("--module", default="FC", help="Module name used in requirement IDs")
     parser.add_argument(
-        "--constraints", type=Path,
-        help="Optional project constraint Markdown file for rule validation",
+        "--constraints", "--requirement-doc", dest="constraints", type=Path,
+        help="Project requirement document / constraint Markdown file.",
     )
     parser.add_argument(
         "--tests", type=Path,
@@ -123,7 +124,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--raw-input", type=Path,
-        help="Optional raw requirement input file (dialog/txt/excel).",
+        help="Original development requirement input file (dialog/txt/excel).",
     )
     parser.add_argument(
         "--raw-input-type",
@@ -145,7 +146,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--output-dir", type=Path,
-        help="Output directory for full-workflow deliverables (default: Output/<MODULE>/Doc/SRS).",
+        help="Output directory for full-workflow deliverables (default: <input-root>/Output/<MODULE>/Doc/SRS).",
     )
     parser.add_argument(
         "--output", type=Path,
@@ -156,7 +157,7 @@ def main() -> int:
         help="Write intermediate Markdown artefacts to --intermediate-dir.",
     )
     parser.add_argument(
-        "--intermediate-dir", type=Path, default=Path("artifacts/intermediate"),
+        "--intermediate-dir", type=Path, default=Path("Output/intermediate"),
         help="Directory for --with-intermediates outputs.",
     )
     parser.add_argument(
@@ -180,6 +181,16 @@ def main() -> int:
         help="Print summary JSON only; suppress the human-readable next-step message.",
     )
     args = parser.parse_args()
+
+    resolved = _resolve_requirement_inputs(
+        input_path=args.input,
+        raw_input=args.raw_input,
+        requirement_doc=args.constraints,
+    )
+    args.input = resolved["datasheet"]
+    args.raw_input = resolved["raw_input"]
+    args.constraints = resolved["requirement_doc"]
+    input_root = resolved["input_root"]
 
     cache_dir = args.cache_dir
     use_cache = not args.no_cache
@@ -296,7 +307,7 @@ def main() -> int:
         )
 
     # ---- Default: full-workflow deliverables ----
-    output_dir = args.output_dir or Path("Output") / builder_module / "Doc" / "SRS"
+    output_dir = args.output_dir or input_root / "Output" / builder_module / "Doc" / "SRS"
     output_dir.mkdir(parents=True, exist_ok=True)
     module = builder_module
     has_raw = raw_document is not None
@@ -334,6 +345,16 @@ def main() -> int:
         render_open_items_markdown(open_items, module), encoding="utf-8")
 
     # --- Phase 3: Gate check ---
+    (output_dir / trace_matrix_doc(module)).write_text(
+        TraceabilityMarkdownRenderer().render(
+            traceability,
+            module=module,
+            raw_document=raw_document,
+            raw_coverage=raw_coverage_detail,
+        ),
+        encoding="utf-8",
+    )
+
     checker = GateChecker(
         module=module,
         source_count=len(source_entries),
@@ -524,6 +545,68 @@ def main() -> int:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+_TEXT_INPUT_SUFFIXES = {".md", ".txt", ".csv", ".tsv", ".xlsx"}
+_DATASHEET_KEYWORDS = ("datasheet", "手册", "芯片", "manual")
+_RAW_REQUIREMENT_KEYWORDS = (
+    "原始开发需求", "原始需求", "rawreq", "raw_requirement", "raw-requirement",
+    "original_requirement", "original-requirement",
+)
+_REQUIREMENT_DOC_KEYWORDS = ("需求文档", "项目需求", "需求规范", "requirement", "srs")
+
+
+def _resolve_requirement_inputs(
+    *,
+    input_path: Path,
+    raw_input: Path | None,
+    requirement_doc: Path | None,
+) -> dict[str, Path]:
+    if input_path.is_dir():
+        input_root = input_path
+        datasheet = _pick_input_file(input_root, "datasheet")
+        raw_req = raw_input or _pick_input_file(input_root, "raw_requirement")
+        req_doc = requirement_doc or _pick_input_file(input_root, "requirement_doc")
+    else:
+        input_root = input_path.parent
+        category = _classify_input_file(input_path)
+        datasheet = input_path if category == "datasheet" else None
+        raw_req = raw_input or (input_path if category == "raw_requirement" else None)
+        req_doc = requirement_doc or (input_path if category == "requirement_doc" else None)
+
+    primary_input = datasheet or raw_req or req_doc
+    if primary_input is None:
+        raise ValueError(
+            "需求生成输入不完整，至少需要提供以下三者之一：芯片资料、原始开发需求、需求文档。"
+        )
+
+    return {
+        "input_root": input_root,
+        "datasheet": primary_input,
+        "raw_input": raw_req,
+        "requirement_doc": req_doc,
+    }
+
+
+def _pick_input_file(input_root: Path, category: str) -> Path | None:
+    candidates = [
+        path for path in sorted(input_root.iterdir())
+        if path.is_file() and path.suffix.lower() in _TEXT_INPUT_SUFFIXES
+    ]
+    for path in candidates:
+        if _classify_input_file(path) == category:
+            return path
+    return None
+
+
+def _classify_input_file(path: Path) -> str:
+    name = path.name.lower()
+    if any(keyword in name for keyword in _RAW_REQUIREMENT_KEYWORDS):
+        return "raw_requirement"
+    if any(keyword in name for keyword in _DATASHEET_KEYWORDS):
+        return "datasheet"
+    if any(keyword in name for keyword in _REQUIREMENT_DOC_KEYWORDS):
+        return "requirement_doc"
+    return "datasheet"
 
 def _collect_datasheet_chapters(parsed: Any) -> list[str]:
     """Extract top-level heading texts from a parsed document."""

@@ -1,15 +1,15 @@
 {
   "case_id": "gp_tle92104",
   "module": "Gp_TLE92104",
-  "input_document": "artifacts/Gp_TLE92104_grounding_input.md",
-  "raw_input": "artifacts/raw_input_Gp_TLE92104.txt",
+  "input_document": "Output/Gp_TLE92104_grounding_input.md",
+  "raw_input": "Output/raw_input_Gp_TLE92104.txt",
   "source_root": "src/FcStackBase/AURIX2G",
   "source_root_abs": "",
   "golden": {
-    "requirement-bundle": "artifacts/gp_tle92104_requirement_bundle.yaml",
-    "architecture-seed": "artifacts/gp_tle92104_architecture_seed.yaml",
-    "test-seed": "artifacts/gp_tle92104_test_seed.yaml",
-    "bundle-validation": "artifacts/gp_tle92104_bundle_validation.json"
+    "requirement-bundle": "Output/gp_tle92104_requirement_bundle.yaml",
+    "architecture-seed": "Output/gp_tle92104_architecture_seed.yaml",
+    "test-seed": "Output/gp_tle92104_test_seed.yaml",
+    "bundle-validation": "Output/gp_tle92104_bundle_validation.json"
   },
   "expectations": {
     "validation_summary": {

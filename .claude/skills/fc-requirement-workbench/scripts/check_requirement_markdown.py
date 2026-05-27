@@ -11,8 +11,8 @@ and has not drifted independently.  Checks:
 
 Usage:
   python3.11 scripts/check_requirement_markdown.py \\
-      --bundle artifacts/gp_nca95yy_requirement_bundle.yaml \\
-      --srs artifacts/srs_Gp_NCA95yy.md
+      --bundle Output/gp_nca95yy_requirement_bundle.yaml \\
+      --srs Output/srs_Gp_NCA95yy.md
 """
 
 from __future__ import annotations

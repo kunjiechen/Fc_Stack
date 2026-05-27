@@ -198,7 +198,7 @@ def _extract_requirement_open_items(
 def render_open_items_markdown(items: list[OpenItem], module: str) -> str:
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     lines = [
-        f"# 开放项登记表 — {module}",
+        f"# SRS 开放项登记表 — {module}",
         "",
         f"**生成时间**: {now}",
         f"**模块**: {module}",

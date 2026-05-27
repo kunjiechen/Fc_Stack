@@ -102,9 +102,11 @@ class MarkdownSrsRenderer:
             lines.pop()  # remove the "## 6 非功能需求" heading
             lines.pop()
 
+        lines.extend(_risk_register_markdown(document))
         lines.extend(_sources_markdown(document.requirements))
         lines.extend(_requirement_list_markdown(document.requirements))
         lines.extend(_supporting_files_markdown())
+        lines.extend(_review_and_release_guidance_markdown())
         return "\n".join(lines).rstrip() + "\n"
 
 
@@ -186,12 +188,45 @@ class DocxSrsRenderer:
             for req in reqs:
                 _add_requirement_docx(doc, req)
 
-        doc.add_heading("7 需求来源", level=1)
+        doc.add_heading("7 风险与待确认问题", level=1)
+        doc.add_heading("7.0 需求风险与待确认总表", level=2)
+        _add_matrix_docx(
+            doc,
+            ["索引", "问题项", "问题/风险", "影响", "建议动作", "备注", "状态"],
+            _risk_register_rows(document),
+        )
+        doc.add_heading("7.1 接口遗漏风险清单", level=2)
+        _add_matrix_docx(
+            doc,
+            ["风险项", "风险等级", "说明", "建议动作"],
+            _interface_omission_rows(document),
+        )
+        doc.add_heading("7.2 待确认接口清单", level=2)
+        _add_matrix_docx(
+            doc,
+            ["接口名", "来源需求", "置信度", "待确认原因", "建议处理"],
+            _pending_interface_rows(document),
+        )
+        doc.add_heading("7.3 不建议直接生成的低置信度接口", level=2)
+        low_conf_rows = _low_confidence_interface_rows(document)
+        if low_conf_rows:
+            _add_matrix_docx(
+                doc,
+                ["接口名", "来源需求", "置信度", "不建议原因", "建议处理"],
+                low_conf_rows,
+            )
+        else:
+            doc.add_paragraph("本节为空——当前所有候选接口置信度均为中或高。")
+        doc.add_heading("8 需求来源", level=1)
         _add_matrix_docx(doc, ["来源类别", "来源名称", "与本文档关系", "状态"], _source_rows(document.requirements))
         doc.add_heading("附录A 需求清单", level=1)
         _add_matrix_docx(doc, ["需求ID", "类别", "需求名称", "验证方式", "验证阶段", "状态"], _requirement_list_rows(document.requirements))
         doc.add_heading("附录B 支持和相关性文件", level=1)
         _add_matrix_docx(doc, ["序号", "文件名称", "文件编号/版本", "来源", "与本文档关系"], _supporting_file_rows())
+        doc.add_heading("下一步：评审与发布引导", level=1)
+        doc.add_paragraph("当需求状态为 Draft 时必须执行以下评审与发布引导：")
+        for line in _review_and_release_guidance_lines():
+            doc.add_paragraph(line, style="List Bullet")
         doc.save(output)
         return output
 
@@ -236,9 +271,9 @@ def _document_header_markdown(document: SrsDocument) -> list[str]:
     return [
         f"# 《{document.title}》",
         "",
-        f"**{document.module}_需求规范**",
+        f"**{document.module}_软件需求规范**",
         "",
-        f"**{document.module}_Requirements Specification**",
+        f"**{document.module} Software Requirements Specification**",
         "",
         f"项目编号/Project number:{document.module}",
         "保密性/Security:**内部使用**",
@@ -284,9 +319,11 @@ def _document_header_markdown(document: SrsDocument) -> list[str]:
         "- [4 概述](#4-概述)",
         "- [5 功能需求](#5-功能需求)",
         "- [6 非功能需求](#6-非功能需求)",
-        "- [7 需求来源](#7-需求来源)",
+        "- [7 风险与待确认问题](#7-风险与待确认问题)",
+        "- [8 需求来源](#8-需求来源)",
         "- [附录A 需求清单](#附录a-需求清单)",
         "- [附录B 支持和相关性文件](#附录b-支持和相关性文件)",
+        "- [下一步：评审与发布引导](#下一步评审与发布引导)",
         "",
         "---",
         "",
@@ -675,7 +712,7 @@ def _escape_inline(value: str) -> str:
 
 def _sources_markdown(requirements: list[EngineeringRequirement]) -> list[str]:
     return [
-        "## 7 需求来源",
+        "## 8 需求来源",
         "",
         "| 来源类别 | 来源名称 | 与本文档关系 | 状态 |",
         "| --- | --- | --- | --- |",
@@ -697,6 +734,196 @@ def _requirement_list_markdown(requirements: list[EngineeringRequirement]) -> li
         f"| {req.requirement_id} | {_category_label(req)} | {_escape_table_text(req.title)} | {_verification_method(req.verification)} | {_verification_stage(req.verification)} | {_requirement_status(req)} |"
         for req in requirements
     )
+    lines.extend(["", "---", ""])
+    return lines
+
+
+def _risk_register_markdown(document: SrsDocument) -> list[str]:
+    risk_rows = _risk_register_rows(document)
+    interface_risk_rows = _interface_omission_rows(document)
+    pending_interface_rows = _pending_interface_rows(document)
+    low_conf_rows = _low_confidence_interface_rows(document)
+    lines = [
+        "## 7 风险与待确认问题",
+        "",
+        "本章汇总当前需求版本中仍需项目确认、补料或后续评审关闭的事项，结构和评审方式与架构阶段保持一致，便于后续继承评审结论。",
+        "",
+        "### 7.0 需求风险与待确认总表",
+        "",
+        "| 索引 | 问题项 | 问题/风险 | 影响 | 建议动作 | 备注 | 状态 |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in risk_rows:
+        lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} | {row[4]} | {row[5]} | {row[6]} |")
+    lines.extend([
+        "",
+        "### 7.1 接口遗漏风险清单",
+        "",
+        "| 风险项 | 风险等级 | 说明 | 建议动作 |",
+        "| --- | --- | --- | --- |",
+    ])
+    for row in interface_risk_rows:
+        lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} |")
+    lines.extend([
+        "",
+        "### 7.2 待确认接口清单",
+        "",
+        "| 接口名 | 来源需求 | 置信度 | 待确认原因 | 建议处理 |",
+        "| --- | --- | --- | --- | --- |",
+    ])
+    for row in pending_interface_rows:
+        lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} | {row[4]} |")
+    lines.extend([
+        "",
+        "### 7.3 不建议直接生成的低置信度接口",
+        "",
+    ])
+    if low_conf_rows:
+        lines.extend([
+            "| 接口名 | 来源需求 | 置信度 | 不建议原因 | 建议处理 |",
+            "| --- | --- | --- | --- | --- |",
+        ])
+        for row in low_conf_rows:
+            lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} | {row[4]} |")
+    else:
+        lines.append("本节为空——当前所有候选接口置信度均为中或高。")
+    lines.extend(["", "---", ""])
+    return lines
+
+
+def _risk_register_rows(document: SrsDocument) -> list[tuple[str, str, str, str, str, str, str]]:
+    rows: list[tuple[str, str, str, str, str, str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    index = 1
+
+    for req in document.requirements:
+        status = compute_requirement_status(req)
+        if status == "ready":
+            continue
+        issue_type, summary, action = _summarize_requirement_pending(req, status)
+        affected = req.requirement_id
+        dedupe_key = (issue_type, summary, affected)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        rows.append(
+            (
+                f"R{index}",
+                _escape_table_text(issue_type),
+                _escape_table_text(summary),
+                _escape_table_text(affected),
+                _escape_table_text(action),
+                "",
+                "待评审",
+            )
+        )
+        index += 1
+
+    for finding in document.findings:
+        if finding.status != "failed" or finding.requirement_ids:
+            continue
+        issue_type = _pending_type_label_from_finding(finding.rule_group)
+        summary = finding.message.strip() or f"{finding.rule_group} 存在待确认问题"
+        action = _pending_action_from_finding(finding.rule_group)
+        dedupe_key = (issue_type, summary, "-")
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        rows.append(
+            (
+                f"R{index}",
+                _escape_table_text(issue_type),
+                _escape_table_text(summary),
+                "-",
+                _escape_table_text(action),
+                "",
+                "待评审",
+            )
+        )
+        index += 1
+
+    rows = rows[:20]
+    rows.append(("R-OTHER", "其他", "用户补充的其他建议或风险。", "用户填写。", "用户填写。", "无其他建议。", "待评审"))
+    return rows
+
+
+def _interface_omission_rows(document: SrsDocument) -> list[tuple[str, str, str, str]]:
+    rows: list[tuple[str, str, str, str]] = []
+    for req in document.requirements:
+        if req.requirement_type != "interface":
+            continue
+        if compute_requirement_status(req) == "ready" and not req.validation:
+            continue
+        rows.append(
+            (
+                _escape_table_text(req.title),
+                "中",
+                _escape_table_text(f"{req.requirement_id} 当前仍存在接口边界、命名、依赖或责任归属待确认项。"),
+                "结合风险总表结论确认后保留、修改或移除该接口。",
+            )
+        )
+    if not rows:
+        rows.append(("无", "低", "当前无新增接口遗漏风险。", "无"))
+    return rows
+
+
+def _pending_interface_rows(document: SrsDocument) -> list[tuple[str, str, str, str, str]]:
+    rows: list[tuple[str, str, str, str, str]] = []
+    for req in document.requirements:
+        if req.requirement_type != "interface":
+            continue
+        status = compute_requirement_status(req)
+        if status == "ready" and not req.validation:
+            continue
+        _, summary, action = _summarize_requirement_pending(req, status)
+        confidence = "中" if status != "ready" else "高"
+        rows.append(
+            (
+                _escape_table_text(req.title),
+                _escape_table_text(req.requirement_id),
+                confidence,
+                _escape_table_text(summary),
+                _escape_table_text(action),
+            )
+        )
+    if not rows:
+        rows.append(("无", "无", "高", "当前无待确认接口。", "无"))
+    return rows
+
+
+def _low_confidence_interface_rows(document: SrsDocument) -> list[tuple[str, str, str, str, str]]:
+    rows: list[tuple[str, str, str, str, str]] = []
+    for req in document.requirements:
+        if req.requirement_type != "interface":
+            continue
+        if compute_requirement_status(req) != "open_issue":
+            continue
+        rows.append(
+            (
+                _escape_table_text(req.title),
+                _escape_table_text(req.requirement_id),
+                "低",
+                _escape_table_text(f"{req.title} 当前仍存在较大的责任边界或接口契约不确定性。"),
+                "建议待项目输入收敛后再正式生成该接口。",
+            )
+        )
+    return rows
+
+
+def _review_and_release_guidance_lines() -> list[str]:
+    return [
+        "推荐评审方式 1：直接修改上方风险表中的`状态`和`备注`。",
+        "推荐评审方式 2：在当前窗口回复，例如`R1、R3 已评审；R5 待修改，备注：接口名统一为 xxx`。",
+        "如果所有风险项均认可，可回复：`全部已评审，R-OTHER 无其他建议，直接发布`。",
+        "如果某项需要修改，可回复：`R5 待修改，备注：xxx`。",
+        "修改完成后仍保持当前版本的`Draft`，直到所有真实风险项均为`已评审`后发布为`Released`。",
+        "草稿评审发布不升级版本；只有正式需求文件 + 新架构/下游交付基线发布时才升级到下一版本。",
+    ]
+
+
+def _review_and_release_guidance_markdown() -> list[str]:
+    lines = ["## 下一步：评审与发布引导", "", "当需求状态为 `Draft` 时必须执行以下评审与发布引导：", ""]
+    lines.extend(f"- {item}" for item in _review_and_release_guidance_lines())
     lines.extend(["", "---", ""])
     return lines
 
@@ -758,6 +985,82 @@ def _verification_stage(verification: str) -> str:
 
 def _requirement_status(req: EngineeringRequirement) -> str:
     return render_status_label(compute_requirement_status(req))
+
+
+def _summarize_requirement_pending(
+    req: EngineeringRequirement,
+    status: str,
+) -> tuple[str, str, str]:
+    text_blob = " ".join(
+        [
+            req.description,
+            req.constraint,
+            req.pre_condition,
+            req.trigger,
+            req.input,
+            req.output,
+            req.exception,
+            req.verification,
+        ]
+    )
+    if not req.source:
+        return (
+            "来源待补充",
+            f"{req.title} 缺少可追溯来源，当前不能作为稳定输入下传。",
+            "补充 datasheet、项目需求或追溯依据，并重新评审该需求。",
+        )
+    if "需项目输入确认" in text_blob or "需确认" in text_blob:
+        return (
+            "项目输入待确认",
+            f"{req.title} 仍依赖项目侧输入确认，边界尚未完全收敛。",
+            "明确默认值、范围、命名、所有权或模式支持后更新需求。",
+        )
+    if req.validation:
+        first_warning = str(req.validation[0].get("message", "")).strip() or f"{req.title} 存在规则校验遗留项。"
+        return (
+            "规则校验风险",
+            first_warning,
+            "根据评审提示修改需求表述，并确认验证方式和约束字段完整。",
+        )
+    if status == "open_issue":
+        return (
+            "行为边界待确认",
+            f"{req.title} 仍存在未闭合的行为边界或责任归属问题。",
+            "在需求评审中确认责任边界，并同步更新下游设计输入。",
+        )
+    return (
+        "Draft 待收敛",
+        f"{req.title} 当前仍为 Draft，建议在进入架构前继续收敛。",
+        "结合补料结果完善需求，使其达到可稳定下传的状态。",
+    )
+
+
+def _pending_type_label_from_finding(rule_group: str) -> str:
+    mapping = {
+        "trace": "来源覆盖风险",
+        "ownership": "所有权待确认",
+        "configuration": "配置待确认",
+        "dependency": "依赖待确认",
+        "consistency": "一致性风险",
+        "constraint": "约束冲突风险",
+        "naming": "命名待收敛",
+        "completeness": "字段缺失风险",
+    }
+    return mapping.get(rule_group, "全局待确认事项")
+
+
+def _pending_action_from_finding(rule_group: str) -> str:
+    mapping = {
+        "trace": "补充来源或明确追溯关系后再下传。",
+        "ownership": "补充接口、引脚或责任归属定义。",
+        "configuration": "补充项目配置值、默认值或范围。",
+        "dependency": "补充依赖接口、外部条件或协作边界。",
+        "consistency": "统一相互冲突的需求表述和约束。",
+        "constraint": "确认冲突约束的优先级和生效版本。",
+        "naming": "统一命名后再进入下游设计。",
+        "completeness": "补齐缺失字段并复核可验证性。",
+    }
+    return mapping.get(rule_group, "在需求评审中确认后关闭。")
 
 
 def _escape_table_text(value: str) -> str:

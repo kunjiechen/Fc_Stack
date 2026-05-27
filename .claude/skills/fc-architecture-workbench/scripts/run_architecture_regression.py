@@ -10,7 +10,7 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parents[3]
-ARTIFACTS_DIR = ROOT_DIR / "artifacts"
+ARTIFACTS_DIR = ROOT_DIR / "Output"
 
 
 def _load_module(name: str, path: Path) -> Any:

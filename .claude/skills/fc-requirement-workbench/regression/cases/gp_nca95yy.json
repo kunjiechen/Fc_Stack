@@ -2,14 +2,14 @@
   "case_id": "gp_nca95yy",
   "module": "Gp_NCA95yy",
   "input_document": "Novosense-NCA9539-Q1TSXR_DatasheetRev1.0_EN.md",
-  "raw_input": "artifacts/raw_input_Gp_NCA95yy.txt",
+  "raw_input": "Output/raw_input_Gp_NCA95yy.txt",
   "source_root": "src/FcStackBase/AURIX2G",
   "source_root_abs": "",
   "golden": {
-    "requirement-bundle": "artifacts/gp_nca95yy_requirement_bundle.yaml",
-    "architecture-seed": "artifacts/gp_nca95yy_architecture_seed.yaml",
-    "test-seed": "artifacts/gp_nca95yy_test_seed.yaml",
-    "bundle-validation": "artifacts/gp_nca95yy_bundle_validation.json"
+    "requirement-bundle": "Output/gp_nca95yy_requirement_bundle.yaml",
+    "architecture-seed": "Output/gp_nca95yy_architecture_seed.yaml",
+    "test-seed": "Output/gp_nca95yy_test_seed.yaml",
+    "bundle-validation": "Output/gp_nca95yy_bundle_validation.json"
   },
   "expectations": {
     "validation_summary": {

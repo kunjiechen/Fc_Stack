@@ -126,8 +126,8 @@ Recommended shape:
 
 ```json
 {
-  "requirement_input": "artifacts/srs_Gp_NCA95yy.md",
-  "architecture_seed": "artifacts/gp_nca95yy_architecture_seed.yaml",
+  "requirement_input": "Output/srs_Gp_NCA95yy.md",
+  "architecture_seed": "Output/gp_nca95yy_architecture_seed.yaml",
   "grounding_sources": [
     "references/source-grounding-aurix2g-live-baseline.md"
   ],

@@ -61,7 +61,7 @@ def dispatch_final_emit(
     if emit == "srs-html":
         return emit_text(HtmlSrsRenderer().render(srs_document), output)
     if emit == "srs-docx":
-        out = output or Path("artifacts/doc/srs.docx")
+        out = output or Path("Output/doc/srs.docx")
         DocxSrsRenderer().render_to_file(srs_document, out)
         print(json.dumps({"output": str(out)}, ensure_ascii=False, indent=2))
         return 0

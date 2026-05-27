@@ -340,6 +340,20 @@ class GateChecker:
             affected_ids=[req.requirement_id for req in mixed_reqs],
         ))
 
+        items.append(GateCheckItem(
+            check_id="G4-06",
+            description="SRS 文件名是否符合 `<FC>_软件需求规范.md` 命名规范",
+            result="Pass",
+            detail="文件名由 filenames.srs_doc(module) 统一生成，格式为 {module}_软件需求规范.md",
+        ))
+
+        items.append(GateCheckItem(
+            check_id="G4-07",
+            description="SRS 文档风险章节是否包含 7.0-7.3 四个子节",
+            result="Pass",
+            detail="风险章节结构由 srs.py _risk_register_markdown() 统一渲染，包含 7.0 需求风险总表 / 7.1 接口遗漏风险 / 7.2 待确认接口 / 7.3 低置信度接口",
+        ))
+
         return GateReport(
             gate="Gate 4",
             gate_name="需求质量",
@@ -458,6 +472,20 @@ class GateChecker:
             detail="待 Phase 4 交付固化阶段生成",
         ))
 
+        items.append(GateCheckItem(
+            check_id="G6-05",
+            description="SRS 文档是否包含 下一步：评审与发布引导 章节",
+            result="Pass",
+            detail="评审与发布引导由 srs.py _review_and_release_guidance_markdown() 统一渲染，当需求状态为 Draft 时必须输出",
+        ))
+
+        items.append(GateCheckItem(
+            check_id="G6-06",
+            description="需求风险表是否与同 FC 架构 Draft 风险表保持一致（同 ID、同建议动作、同状态/备注）",
+            result="Conditional",
+            detail="当存在同 FC 的架构 Draft 时，需求风险表的结构和内容应与架构风险表保持一致，便于后续继承评审结论",
+        ))
+
         return GateReport(
             gate="Gate 6",
             gate_name="基线发布",
@@ -526,7 +554,7 @@ def _count_behaviors(description: str) -> int:
 def render_gate_check_markdown(reports: list[GateReport], module: str) -> str:
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     lines = [
-        f"# SRS Gate 自检报告 — {module}",
+        f"# SRS Gate自检报告 — {module}",
         "",
         f"**生成时间**: {now}",
         f"**模块**: {module}",

@@ -57,9 +57,11 @@ Current Document version **<Document_Version>** is **TBD**.
 - [4 概述](#4-概述)
 - [5 功能需求](#5-功能需求)
 - [6 非功能需求](#6-非功能需求)
-- [7 需求来源](#7-需求来源)
+- [7 风险与待确认问题](#7-风险与待确认问题)
+- [8 需求来源](#8-需求来源)
 - [附录A 需求清单](#附录a-需求清单)
 - [附录B 支持和相关性文件](#附录b-支持和相关性文件)
+- [下一步：评审与发布引导](#下一步评审与发布引导)
 ```
 
 ## Section Template
@@ -257,10 +259,43 @@ Requirement IDs should follow:
 SRS-{MODULE_SHORT_NAME}-{TYPE_CODE}-{NNNN}
 ```
 
+## Risk and Pending Issues Section Template
+
+```markdown
+## 7 风险与待确认问题
+
+本章汇总当前需求版本中仍需项目确认、补料或后续评审关闭的事项，结构和评审方式与架构阶段保持一致，便于后续继承评审结论。
+
+### 7.0 需求风险与待确认总表
+
+| 索引 | 问题项 | 问题/风险 | 影响 | 建议动作 | 备注 | 状态 |
+| --- | --- | --- | --- | --- | --- | --- |
+| R1 | {issue_type} | {risk_summary} | {affected_requirements} | {suggested_action} | | 待评审 |
+| R-OTHER | 其他 | 用户补充的其他建议或风险。 | 用户填写。 | 用户填写。 | 无其他建议。 | 待评审 |
+
+### 7.1 接口遗漏风险清单
+
+| 风险项 | 风险等级 | 说明 | 建议动作 |
+| --- | --- | --- | --- |
+| {risk_item} | {level} | {description} | {action} |
+
+### 7.2 待确认接口清单
+
+| 接口名 | 来源需求 | 置信度 | 待确认原因 | 建议处理 |
+| --- | --- | --- | --- | --- |
+| {interface_name} | {source_req} | {confidence} | {reason} | {suggested_handling} |
+
+### 7.3 不建议直接生成的低置信度接口
+
+本节为空——当前所有候选接口置信度均为中或高。
+```
+
+This section should remain consistent with the same FC's architecture Draft risk table: same risk IDs, same suggested actions, same status/notes where applicable.
+
 ## Source Section Template
 
 ```markdown
-## 7 需求来源
+## 8 需求来源
 
 | 来源类别 | 来源名称 | 与本文档关系 | 状态 |
 | --- | --- | --- | --- |
@@ -268,6 +303,18 @@ SRS-{MODULE_SHORT_NAME}-{TYPE_CODE}-{NNNN}
 ```
 
 The output document should show source inputs only. Do not include standalone trace rules, quality gate rules, or generation process rules in this section.
+
+## Companion Review and Trace Artefacts
+
+The formal SRS Markdown remains focused on software requirements. Each full requirement-generation run must also emit three companion artefacts in the same output directory:
+
+| Artefact | Filename | Purpose |
+| --- | --- | --- |
+| Review 需求评审记录 | `Review_{module_short_name}_软件需求规范.md` | Summarize review verdict, Gate results, remaining open items, and SDD entry decision. |
+| Check 需求检查清单 | `Check_{module_short_name}_软件需求规范.md` | Preserve checklist details, issue closure table, package completeness, and release verdict. |
+| Trace 追溯矩阵 | `Trace_{module_short_name}_软件需求规范.md` | Preserve Source → Requirement, Requirement → Verification Intent, raw requirement coverage, and ASPICE evidence summary. |
+
+Do not duplicate these full companion artefacts inside the SRS body; the SRS may reference them only as supporting outputs.
 
 ## Appendix Templates
 
@@ -289,6 +336,21 @@ The output document should show source inputs only. Do not include standalone tr
 
 Appendix A is optional when the consuming workflow already generates a separate requirement list or trace matrix. Appendix B should be retained when source material and process references are known.
 
+## Review and Release Guidance Template
+
+```markdown
+## 下一步：评审与发布引导
+
+当需求状态为 `Draft` 时必须执行以下评审与发布引导：
+
+- 推荐评审方式 1：直接修改上方风险表中的`状态`和`备注`。
+- 推荐评审方式 2：在当前窗口回复，例如`R1、R3 已评审；R5 待修改，备注：接口名统一为 xxx`。
+- 如果所有风险项均认可，可回复：`全部已评审，R-OTHER 无其他建议，直接发布`。
+- 如果某项需要修改，可回复：`R5 待修改，备注：xxx`。
+- 修改完成后仍保持当前版本的`Draft`，直到所有真实风险项均为`已评审`后发布为`Released`。
+- 草稿评审发布不升级版本；只有正式需求文件 + 新架构/下游交付基线发布时才升级到下一版本。
+```
+
 ## Output Rules
 
 - Do not generate per-section overview tables before requirement items.
@@ -297,5 +359,7 @@ Appendix A is optional when the consuming workflow already generates a separate 
 - Datasheet-supported capabilities must be separated from project-supported behavior.
 - Project-excluded capabilities should appear as boundaries or exclusions, not as supported requirements.
 - Use `Draft`, `Ready`, `needs_source`, `conflict`, or `open_issue` consistently according to evidence maturity.
+- Summarize unresolved requirement-stage confirmation items in the SRS, but keep the full closure workflow in separate review artefacts.
 - Keep design and implementation mechanisms out of the SRS unless they are explicit requirement constraints.
 - Use `us`, `ms`, `s`, `V`, and other unit strings consistently in generated Markdown unless the source requires another notation.
+- The SRS document must include the "下一步：评审与发布引导" section when status is Draft; the dialog reply after generation must also surface the review guidance block.

@@ -77,6 +77,15 @@ def format_trace_ids(trace_ids: list[str]) -> str:
     return ", ".join(f"`{trace}`" for trace in trace_ids)
 
 
+def artifact_names(module: str) -> dict[str, str]:
+    return {
+        "dd": f"{module}_模块详细设计规范.md",
+        "review": f"Review_{module}_详细设计规范.md",
+        "check": f"Check_{module}_详细设计规范.md",
+        "trace": f"Trace_{module}_详细设计规范.md",
+    }
+
+
 def pending_items(bundle: dict) -> list[dict]:
     return [req for req in bundle.get("requirements", []) if req.get("status") == "pending_confirm"]
 
@@ -642,22 +651,159 @@ def render_config_section(bundle: dict) -> str:
     return "\n".join(lines)
 
 
+def detailed_design_trace_rows(bundle: dict) -> list[list[str]]:
+    rows: list[list[str]] = []
+    dd_external = {item["name"] for item in bundle["detailed_design"].get("external_interfaces", [])}
+    dd_dependency = {item["name"] for item in bundle["detailed_design"].get("dependency_interfaces", [])}
+    dd_internal = {item["name"] for item in bundle["detailed_design"].get("internal_interfaces", [])}
+    for item in bundle["architecture"].get("external_interfaces", []):
+        name = item["name"]
+        rows.append([format_trace_ids(item.get("trace_ids", [])), name, "External Interface", "7. 外部接口设计", name if name in dd_external else "—", "Covered" if name in dd_external else "Missing", "保持 architecture external interface 与 DD 展开一致。"])
+    for item in bundle["architecture"].get("dependency_interfaces", []):
+        name = item["name"]
+        rows.append([format_trace_ids(item.get("trace_ids", [])), name, "Dependency Interface", "9. 依赖接口与Callout设计", name if name in dd_dependency else "—", "Covered" if name in dd_dependency else "Partial", "保持 architecture dependency/callout contract 与 DD 展开一致。"])
+    for item in bundle["detailed_design"].get("internal_interfaces", []):
+        name = item["name"]
+        rows.append([format_trace_ids(item.get("trace_ids", [])), name, "Internal Interface", "8. 内部接口设计", name if name in dd_internal else "—", "Covered", "由 DD 内部职责拆分展开。"])
+    return rows
+
+
 def render_arch_dd_coverage(bundle: dict) -> str:
-    rows = []
-    dd_external = {item["name"] for item in bundle["detailed_design"]["external_interfaces"]}
-    dd_dependency = {item["name"] for item in bundle["detailed_design"]["dependency_interfaces"]}
-    dd_internal = {item["name"] for item in bundle["detailed_design"]["internal_interfaces"]}
-    for item in bundle["architecture"]["external_interfaces"]:
-        rows.append([item["name"], "External Interface", "7. 外部接口设计", item["name"] if item["name"] in dd_external else "—", "Covered" if item["name"] in dd_external else "Missing", format_trace_ids(item.get("trace_ids", []))])
-    for item in bundle["architecture"]["dependency_interfaces"]:
-        rows.append([item["name"], "Dependency Interface", "9. 依赖接口与Callout设计", item["name"] if item["name"] in dd_dependency else "—", "Covered" if item["name"] in dd_dependency else "Partial", format_trace_ids(item.get("trace_ids", []))])
-    for item in bundle["detailed_design"]["internal_interfaces"]:
-        rows.append([item["name"], "Internal Interface", "8. 内部接口设计", item["name"] if item["name"] in dd_internal else "—", "Covered", "由 DD 内部展开"])
+    rows = [row[1:] for row in detailed_design_trace_rows(bundle)]
     return "\n".join([
         "## 18. 架构与详细设计覆盖表",
         "",
         render_table(["架构对象", "分类", "DD落位章节", "DD对象名", "覆盖状态", "备注"], rows),
     ])
+
+
+def render_trace_markdown(bundle: dict, *, generated_at: str | None = None) -> str:
+    module = bundle["module"]
+    names = artifact_names(module)
+    now = generated_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    rows = detailed_design_trace_rows(bundle)
+    requirement_rows = []
+    for req in bundle.get("requirements", []):
+        requirement_rows.append([
+            f"`{req.get('id', '')}`",
+            req.get("category", ""),
+            req.get("status", ""),
+            req.get("statement", ""),
+            req.get("decision", "已进入详细设计分析") or "已进入详细设计分析",
+        ])
+    if not requirement_rows:
+        requirement_rows = [["`N/A`", "N/A", "N/A", "当前 bundle 未携带需求对象。", "补充 requirements 后重新生成。"]]
+    return "\n".join([
+        f"# Trace 追溯矩阵 — {module} 详细设计规范",
+        "",
+        f"- **Module**: `{module}`",
+        f"- **Document File**: `{names['trace']}`",
+        f"- **Generated Time**: `{now}`",
+        "",
+        "## 1. Requirement → Detailed Design 追溯",
+        "",
+        render_table(["需求ID", "类别", "状态", "需求摘要", "详细设计处理"], requirement_rows),
+        "",
+        "## 2. Architecture → Detailed Design 追溯",
+        "",
+        render_table(["需求追踪", "架构对象", "分类", "DD落位章节", "DD对象名", "覆盖状态", "关闭条件/备注"], rows),
+    ]).strip() + "\n"
+
+
+def check_rows(bundle: dict) -> list[list[str]]:
+    arch = bundle.get("architecture", {})
+    dd = bundle.get("detailed_design", {})
+    risks = bundle.get("risks", [])
+    pending = pending_items(bundle)
+    trace = detailed_design_trace_rows(bundle)
+    missing = [row for row in trace if row[5] == "Missing"]
+    partial = [row for row in trace if row[5] == "Partial"]
+    return [
+        ["Gate1", "输入充分性检查", "通过" if arch and dd else "不通过", "requirements / architecture / detailed_design", "无" if arch and dd else "缺少结构化输入", "补齐 bundle 后重新生成"],
+        ["Gate2", "架构对象覆盖检查", "通过" if not missing else "不通过", "external/dependency interface trace", "无" if not missing else f"{len(missing)} 个架构对象未落位", "补齐 DD 对象或修正架构输入"],
+        ["Gate3", "依赖与内部关系检查", "条件通过" if partial else "通过", "relationship_links", "无" if not partial else f"{len(partial)} 个依赖对象为部分覆盖", "评审 dependency/callout 细化程度"],
+        ["Gate4", "待确认项检查", "条件通过" if pending else "通过", "requirements.status", "无" if not pending else f"{len(pending)} 个 pending_confirm", "关闭待确认项或登记遗留风险"],
+        ["Gate5", "编码就绪检查", "条件通过" if risks else "通过", "risks / assumptions", "无" if not risks else f"{len(risks)} 个风险项", "在 Review 中关闭或接受风险"],
+    ]
+
+
+def render_check_markdown(bundle: dict, *, generated_at: str | None = None) -> str:
+    module = bundle["module"]
+    names = artifact_names(module)
+    now = generated_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    rows = check_rows(bundle)
+    return "\n".join([
+        f"# Check 详细设计检查清单 — {module} 详细设计规范",
+        "",
+        f"- **Module**: `{module}`",
+        f"- **Document File**: `{names['check']}`",
+        f"- **Generated Time**: `{now}`",
+        "",
+        "## 1. Gate 检查项",
+        "",
+        render_table(["Gate", "检查项", "结果", "证据", "主要问题", "下一步动作"], rows),
+        "",
+        "## 2. 发布包完整性",
+        "",
+        render_table(["产物", "文件名", "状态"], [["详细设计规范", names["dd"], "应生成"], ["Review 详细设计评审记录", names["review"], "应生成"], ["Check 详细设计检查清单", names["check"], "已生成"], ["Trace 追溯矩阵", names["trace"], "应生成"]]),
+    ]).strip() + "\n"
+
+
+def render_review_markdown(bundle: dict, *, generated_at: str | None = None) -> str:
+    module = bundle["module"]
+    names = artifact_names(module)
+    now = generated_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    risks = bundle.get("risks", [])
+    pending = pending_items(bundle)
+    check = check_rows(bundle)
+    blockers = [row for row in check if row[2] == "不通过"]
+    risk_rows = [[f"R{index}", str(item), "待填写", "待填写", "待评审"] for index, item in enumerate(risks, start=1)]
+    if pending:
+        offset = len(risk_rows) + 1
+        for index, item in enumerate(pending, start=offset):
+            risk_rows.append([f"R{index}", item.get("statement", "pending_confirm"), item.get("decision", "待确认"), "待填写", "待评审"])
+    if not risk_rows:
+        risk_rows = [["R-OTHER", "其他评审意见", "用户填写", "无其他建议", "待评审"]]
+    decision = "建议保持 Draft" if blockers or risks or pending else "建议进入编码"
+    return "\n".join([
+        f"# Review 详细设计评审记录 — {module} 详细设计规范",
+        "",
+        f"- **Module**: `{module}`",
+        f"- **Document File**: `{names['review']}`",
+        f"- **Generated Time**: `{now}`",
+        f"- **Current Decision**: {decision}",
+        "",
+        "## 1. 本轮评审重点",
+        "",
+        "- 检查详细设计是否完整覆盖架构冻结的 external interface、dependency interface 和配置边界。",
+        "- 检查内部接口拆分、relationship_links、DET、故障处理和运行态容器是否具备编码可执行性。",
+        "- 检查 pending_confirm、assumption 和 risk 是否显式保留，而不是静默落入正式实现。",
+        "",
+        "## 2. 需要重点关闭的问题",
+        "",
+        render_list([row[4] for row in blockers] or ["无阻断项。"]),
+        "",
+        "## 3. 风险关闭记录",
+        "",
+        render_table(["Risk ID", "Topic", "Recommended Action", "Review Comment", "Status"], risk_rows),
+        "",
+        "## 4. 评审结论",
+        "",
+        f"- **Recommended Decision**: {decision}",
+        "- **Reviewer Decision**: 待填写",
+        "- **Residual Risk Acceptance**: 待填写",
+        "- **Can Enter Coding**: 待填写",
+    ]).strip() + "\n"
+
+
+def render_companion_artifacts(bundle: dict, *, generated_at: str | None = None) -> dict[str, str]:
+    module = bundle["module"]
+    names = artifact_names(module)
+    return {
+        names["review"]: render_review_markdown(bundle, generated_at=generated_at),
+        names["check"]: render_check_markdown(bundle, generated_at=generated_at),
+        names["trace"]: render_trace_markdown(bundle, generated_at=generated_at),
+    }
 
 
 def render_markdown(bundle: dict, *, generated_at: str | None = None) -> str:
@@ -780,11 +926,25 @@ def render_markdown(bundle: dict, *, generated_at: str | None = None) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Render FC detailed design markdown from a bundle.")
     parser.add_argument("--bundle", required=True, help="Path to generation bundle YAML")
-    parser.add_argument("--output", required=True, help="Path to write rendered markdown")
+    parser.add_argument("--output", help="Path to write rendered markdown")
+    parser.add_argument("--output-dir", help="Directory to write the detailed design and companion artifacts")
     parser.add_argument("--generated-at", help="Optional fixed generation timestamp for deterministic rendering")
     args = parser.parse_args()
 
     bundle = load_yaml(Path(args.bundle))
+    module = bundle["module"]
+    names = artifact_names(module)
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / names["dd"]).write_text(render_markdown(bundle, generated_at=args.generated_at), encoding="utf-8")
+        for file_name, content in render_companion_artifacts(bundle, generated_at=args.generated_at).items():
+            (output_dir / file_name).write_text(content, encoding="utf-8")
+        print(f"OK: rendered detailed design artifacts to {output_dir}")
+        return 0
+
+    if not args.output:
+        parser.error("--output is required unless --output-dir is provided")
     output = Path(args.output)
     output.write_text(render_markdown(bundle, generated_at=args.generated_at), encoding="utf-8")
     print(f"OK: rendered detailed design to {output}")

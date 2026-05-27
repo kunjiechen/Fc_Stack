@@ -18,6 +18,7 @@ from .filenames import (
     source_extract_doc,
     source_index_doc,
     srs_doc,
+    trace_matrix_doc,
 )
 from .gate_check import GateReport
 from .rules import ValidationFinding
@@ -39,7 +40,7 @@ def render_operation_steps_markdown(
     open_items = open_items or []
 
     lines = [
-        f"# 实际操作步骤记录 — {module}",
+        f"# SRS 操作步骤记录 — {module}",
         "",
         f"**生成时间**: {now}",
         f"**模块**: {module}",
@@ -80,9 +81,9 @@ def render_operation_steps_markdown(
     ]
     if loop_count > 0:
         steps.append(("4", "修正循环", f"执行 {loop_count} 轮修正，自动修正 {auto_fixes_applied} 项", "已完成"))
-        steps.append(("5", "Phase 4: 交付固化", "评审记录 + CHECK 清单 + 操作步骤 + 最终 SRS", "已完成"))
+        steps.append(("5", "Phase 4: 交付固化", "Review需求评审记录 + Check需求检查清单 + Trace追溯矩阵 + SRS操作步骤 + 最终 SRS", "已完成"))
     else:
-        steps.append(("4", "Phase 4: 交付固化", "评审记录 + CHECK 清单 + 操作步骤 + 最终 SRS", "已完成"))
+        steps.append(("4", "Phase 4: 交付固化", "Review需求评审记录 + Check需求检查清单 + Trace追溯矩阵 + SRS操作步骤 + 最终 SRS", "已完成"))
 
     for num, phase, detail, status in steps:
         lines.append(f"| {num} | {phase} | {detail} | {status} |")
@@ -120,10 +121,11 @@ def render_operation_steps_markdown(
         ("输入资料索引", source_index_doc(module)),
         ("来源内容抽取表", source_extract_doc(module)),
         ("需求推导矩阵", derivation_doc(module)),
-        ("开放项登记表", open_items_doc(module)),
-        ("Gate 自检报告", check_list_doc(module)),
-        ("评审记录", review_doc(module)),
-        ("实际操作步骤", operation_steps_doc(module)),
+        ("SRS开放项登记表", open_items_doc(module)),
+        ("Trace追溯矩阵", trace_matrix_doc(module)),
+        ("Check需求检查清单", check_list_doc(module)),
+        ("Review需求评审记录", review_doc(module)),
+        ("SRS操作步骤", operation_steps_doc(module)),
     ]
     for name, filename in outputs:
         lines.append(f"| {name} | {base}/{filename} | 已生成 |")
@@ -267,6 +269,17 @@ def render_post_generation_guidance_markdown(
     else:
         lines.append("- 当前 Gate 已清洁且无阻断开放项，可考虑 `Baselined`。")
     lines.append("")
+    lines.append("## 下一步：评审与发布引导")
+    lines.append("")
+    lines.append("当需求状态为 `Draft` 时必须输出本节：")
+    lines.append("")
+    lines.append("- 推荐评审方式 1：直接修改上方风险表中的`状态`和`备注`。")
+    lines.append("- 推荐评审方式 2：在当前窗口回复，例如`R1、R3 已评审；R5 待修改，备注：接口名统一为 xxx`。")
+    lines.append("- 如果所有风险项均认可，可回复：`全部已评审，R-OTHER 无其他建议，直接发布`。")
+    lines.append("- 如果某项需要修改，可回复：`R5 待修改，备注：xxx`。")
+    lines.append("- 修改完成后仍保持当前版本的`Draft`，直到所有真实风险项均为`已评审`后发布为`Released`。")
+    lines.append("- 草稿评审发布不升级版本；只有正式需求文件 + 新架构/下游交付基线发布时才升级到下一版本。")
+    lines.append("")
 
     return "\n".join(lines)
 
@@ -338,6 +351,17 @@ def render_post_generation_reply(
     lines.append("- Conditional 通过：接受当前需求，允许进入架构设计")
     lines.append("- Baselined：接受当前需求，作为正式 SRS 基线")
     lines.append("")
+    lines.append("## 下一步：评审与发布引导")
+    lines.append("")
+    lines.append("当需求状态为 Draft 时必须执行以下评审与发布引导：")
+    lines.append("")
+    lines.append("- 推荐评审方式 1：直接修改上方风险表中的`状态`和`备注`。")
+    lines.append("- 推荐评审方式 2：在当前窗口回复，例如`R1、R3 已评审；R5 待修改，备注：接口名统一为 xxx`。")
+    lines.append("- 如果所有风险项均认可，可回复：`全部已评审，R-OTHER 无其他建议，直接发布`。")
+    lines.append("- 如果某项需要修改，可回复：`R5 待修改，备注：xxx`。")
+    lines.append("- 修改完成后仍保持当前版本的`Draft`，直到所有真实风险项均为`已评审`后发布为`Released`。")
+    lines.append("- 草稿评审发布不升级版本；只有正式需求文件 + 新架构/下游交付基线发布时才升级到下一版本。")
+    lines.append("")
 
     return "\n".join(lines)
 
@@ -353,7 +377,7 @@ def render_check_list_markdown(
     open_items = open_items or []
 
     lines = [
-        f"# SRS CHECK 清单 — {module}",
+        f"# Check 需求检查清单 — {module}",
         "",
         f"**生成时间**: {now}",
         f"**模块**: {module}",
@@ -438,10 +462,12 @@ def render_check_list_markdown(
     lines.append("- [x] 输入资料索引已生成")
     lines.append("- [x] 来源内容抽取表已生成")
     lines.append("- [x] 需求推导矩阵已生成")
-    lines.append("- [x] 开放项登记表已生成")
-    lines.append("- [x] Gate 自检报告已生成")
-    lines.append("- [x] 评审记录已生成")
-    lines.append("- [x] 实际操作步骤已生成")
+    lines.append("- [x] SRS开放项登记表已生成")
+    lines.append("- [x] SRS Gate自检报告已生成")
+    lines.append("- [x] Trace追溯矩阵已生成")
+    lines.append("- [x] Check需求检查清单已生成")
+    lines.append("- [x] Review需求评审记录已生成")
+    lines.append("- [x] SRS操作步骤已生成")
     lines.append("- [x] 所有产物在同一输出路径")
     lines.append("")
 
@@ -500,7 +526,7 @@ def render_review_record_markdown(
         overall = "通过"
 
     lines = [
-        f"# SRS 评审记录 — {module}",
+        f"# Review 需求评审记录 — {module}",
         "",
         f"**生成时间**: {now}",
         f"**模块**: {module}",
@@ -517,7 +543,7 @@ def render_review_record_markdown(
         lines.append("Gate 检查：未执行")
 
     lines.append(f"实际操作步骤：{'已生成' if operation_steps_generated else '未生成'}")
-    lines.append(f"SRS CHECK 清单：{'已生成' if check_list_generated else '未生成'}")
+    lines.append(f"SRS检查清单：{'已生成' if check_list_generated else '未生成'}")
     lines.append("输出路径一致性：通过")
 
     blocking_count = sum(1 for oi in open_items

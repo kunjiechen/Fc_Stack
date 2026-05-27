@@ -21,6 +21,7 @@ from .filenames import (
     source_extract_doc,
     source_index_doc,
     srs_doc,
+    trace_matrix_doc,
 )
 from .gate_check import GateChecker, GateReport, render_gate_check_markdown
 from .open_items import OpenItemsCollector, render_open_items_markdown
@@ -370,7 +371,7 @@ class WorkflowOrchestrator:
     def _render_review_record(self, ctx: WorkflowContext) -> str:
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
         lines = [
-            f"# SRS 评审记录 — {ctx.module}",
+            f"# Review 需求评审记录 — {ctx.module}",
             "",
             f"**生成时间**: {now}",
             f"**模块**: {ctx.module}",
@@ -400,8 +401,8 @@ class WorkflowOrchestrator:
         lines.append("| --- | --- |")
         for report in ctx.gate_reports:
             lines.append(f"| {report.gate} {report.gate_name} | {report.status} |")
-        lines.append(f"| 实际操作步骤 | {'已生成' if ctx.auto_fixes_applied >= 0 else '未生成'} |")
-        lines.append(f"| SRS CHECK 清单 | {'已生成' if ctx.auto_fixes_applied >= 0 else '未生成'} |")
+        lines.append(f"| SRS操作步骤 | {'已生成' if ctx.auto_fixes_applied >= 0 else '未生成'} |")
+        lines.append(f"| Check需求检查清单 | {'已生成' if ctx.auto_fixes_applied >= 0 else '未生成'} |")
 
         lines.append("")
         open_count = len(ctx.open_items)
@@ -418,7 +419,7 @@ class WorkflowOrchestrator:
     def _render_check_list(self, ctx: WorkflowContext) -> str:
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
         lines = [
-            f"# SRS CHECK 清单 — {ctx.module}",
+            f"# Check 需求检查清单 — {ctx.module}",
             "",
             f"**生成时间**: {now}",
             f"**模块**: {ctx.module}",
@@ -484,7 +485,7 @@ class WorkflowOrchestrator:
     def _render_operation_steps(self, ctx: WorkflowContext) -> str:
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
         lines = [
-            f"# 实际操作步骤记录 — {ctx.module}",
+            f"# SRS 操作步骤记录 — {ctx.module}",
             "",
             f"**生成时间**: {now}",
             f"**模块**: {ctx.module}",
@@ -519,7 +520,7 @@ class WorkflowOrchestrator:
         ]
         if ctx.loop_count > 0:
             steps.append(("修正循环", f"执行 {ctx.loop_count} 轮修正，自动修正 {ctx.auto_fixes_applied} 项"))
-        steps.append(("Phase 4: 交付固化", "评审记录 + CHECK 清单 + 操作步骤 + 最终 SRS"))
+        steps.append(("Phase 4: 交付固化", "Review需求评审记录 + Check需求检查清单 + Trace追溯矩阵 + SRS操作步骤 + 最终 SRS"))
 
         for i, (phase, detail) in enumerate(steps, 1):
             lines.append(f"### 步骤 {i}: {phase}")
@@ -557,10 +558,11 @@ class WorkflowOrchestrator:
             ("来源索引", source_index_doc(ctx.module), "已生成"),
             ("来源抽取表", source_extract_doc(ctx.module), "已生成"),
             ("需求推导矩阵", derivation_doc(ctx.module), "已生成"),
-            ("开放项登记表", open_items_doc(ctx.module), "已生成"),
-            ("Gate 自检报告", check_list_doc(ctx.module), "已生成"),
-            ("评审记录", review_doc(ctx.module), "已生成"),
-            ("操作步骤", operation_steps_doc(ctx.module), "已生成"),
+            ("SRS开放项登记表", open_items_doc(ctx.module), "已生成"),
+            ("Trace追溯矩阵", trace_matrix_doc(ctx.module), "已生成"),
+            ("Check需求检查清单", check_list_doc(ctx.module), "已生成"),
+            ("Review需求评审记录", review_doc(ctx.module), "已生成"),
+            ("SRS操作步骤", operation_steps_doc(ctx.module), "已生成"),
         ]
         for name, filename, status in outputs:
             lines.append(f"| {name} | {ctx.output_dir}/{filename} | {status} |")

@@ -13,7 +13,7 @@ requirements:
   - id: SRS-GPNCA95YY-FUNC-0001
     category: functional
     statement: Init current-core configured chip instances and write default direction, output, and polarity.
-    source: artifacts/srs_Gp_NCA95yy.md
+    source: Output/srs_Gp_NCA95yy.md
     status: draft
     evidence:
       - Gp_TLE92104
@@ -22,7 +22,7 @@ requirements:
   - id: SRS-GPNCA95YY-FUNC-0002
     category: functional
     statement: Support GPIO direction configuration.
-    source: artifacts/raw_input_Gp_NCA95yy.txt
+    source: Output/raw_input_Gp_NCA95yy.txt
     status: pending_confirm
     decision: V1 architecture keeps direction change in init phase only
     decision_reason: architecture freeze should not add conditional external interfaces
@@ -31,7 +31,7 @@ requirements:
       - detailed_design.config
       - risk_list
     evidence:
-      - artifacts/raw_input_Gp_NCA95yy.txt
+      - Output/raw_input_Gp_NCA95yy.txt
       - references/grounding/modules/Gp_DRV8889/summary.md
 
 architecture:

@@ -85,6 +85,15 @@ description: "用于把芯片手册、项目需求、参考 SRS 与追溯材料�
 - Configuration / Register
 - Wake / Sleep
 
+输入门禁：
+
+- 用户可以提供”需求输入文件夹”或直接提供某个需求输入文件
+- 实际启动需求生成前，输入集合中至少需要包含以下三者之一：
+  - 芯片资料
+  - 原始开发需求
+  - 需求文档
+- 三者存一即可启动生成；输入越完整，生成质量越高
+
 ## 7. 最小加载策略
 
 默认按最小集合加载：
@@ -156,6 +165,9 @@ SRS-{MODULE}-{TYPE}-{NNNN}
 默认只输出需求层产物：
 
 - SRS Markdown / HTML / DOCX
+- Review 需求评审记录
+- Check 需求检查清单
+- Trace 追溯矩阵
 - Source → Requirement Trace Matrix
 - Requirement → Verification Intent Coverage Matrix
 - ASPICE Evidence Summary
@@ -164,6 +176,36 @@ SRS-{MODULE}-{TYPE}-{NNNN}
 
 - `--with-intermediates`
 - `--emit features-markdown|candidates-markdown|pruning-markdown|planning-markdown`
+
+输出路径与命名规则：
+
+- 需求生成结果不得写回 skill 目录内部
+- 如果用户显式指定输出路径，按用户路径输出
+- 如果用户未指定输出路径，则默认在输入文件所在目录或输入文件夹下创建：
+
+```text
+Output/<FC_SHORT_NAME>/Doc/SRS/
+```
+
+- 正式需求文档文件名必须固定为：
+
+```text
+[FC] 软件需求规范.md
+```
+
+其中 `[FC]` 为当前模块短名或模块名，不使用下划线版本文件名作为正式输出名。
+
+- 每次正式需求生成必须同步输出以下评审与追溯产物，`xxx` 与正式 SRS 的 `[FC]` 保持一致：
+
+```text
+Review_xxx_软件需求规范.md
+Check_xxx_软件需求规范.md
+Trace_xxx_软件需求规范.md
+```
+
+- `Review_xxx_软件需求规范.md` 记录需求评审结论、Gate 结果、遗留开放项和是否允许进入 SDD。
+- `Check_xxx_软件需求规范.md` 记录需求检查清单、检查项明细、问题闭环表和发布包完整性。
+- `Trace_xxx_软件需求规范.md` 记录 Source → Requirement、Requirement → Verification Intent、Raw Requirement Coverage 与 ASPICE Evidence Summary。
 
 ## 10. 使用边界提醒
 

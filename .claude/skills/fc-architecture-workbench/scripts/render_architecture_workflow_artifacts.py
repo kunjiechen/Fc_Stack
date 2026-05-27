@@ -45,9 +45,9 @@ def _artifact_names(module: str) -> dict[str, str]:
     return {
         "architecture_doc": f"{module}_软件架构设计.md",
         "input_index": f"{module}_架构输入索引.md",
-        "trace": f"{module}_需求架构追溯.md",
-        "check": f"{module}_SDD检查清单.md",
-        "review": f"{module}_架构评审记录.md",
+        "trace": f"Trace_{module}_软件架构设计.md",
+        "check": f"Check_{module}_软件架构设计.md",
+        "review": f"Review_{module}_软件架构设计.md",
         "operation_steps": f"{module}_SDD操作步骤.md",
         "baseline_summary": f"{module}_SDD基线总结.md",
     }
@@ -156,7 +156,7 @@ def render_trace_srs_sdd(bundle: dict[str, Any]) -> str:
     module = bundle.get("module", "")
     names = _artifact_names(module)
     lines = [
-        f"# {module} 需求-架构追溯",
+        f"# Trace 追溯矩阵 — {module} 软件架构设计",
         "",
         f"- **Module**: `{module}`",
         f"- **Document File**: `{names['trace']}`",
@@ -233,7 +233,7 @@ def _gate_rows(bundle: dict[str, Any], report: dict[str, Any]) -> list[dict[str,
                 has_trace and not any(item.get("coverage_status") == "not_covered" for item in coverage_items),
                 conditional=has_trace,
             ),
-            "evidence": "coverage_result / Trace_SRS_SDD",
+            "evidence": "coverage_result / Trace architecture matrix",
             "issue": "仍存在 pending/reserved/not_covered 需求。" if has_trace and any(item.get("coverage_status") in {"pending_confirm", "reserved", "not_covered"} for item in coverage_items) else ("缺少 coverage_result。" if not has_trace else "无"),
             "next_action": "关闭追溯缺口或显式登记开放项。" if has_trace else "先建立 SRS coverage_result。",
         },
@@ -243,7 +243,7 @@ def _gate_rows(bundle: dict[str, Any], report: dict[str, Any]) -> list[dict[str,
             "status": _gate_status(not has_open_risks, conditional=bool(risk_items)),
             "evidence": "risk_items / release_gate warning-blocking split",
             "issue": "仍有待评审或待修改风险项。" if has_open_risks else ("尚未形成风险表。" if not risk_items else "无"),
-            "next_action": "在 Review_SDD 中关闭或接受遗留风险。" if risk_items else "补风险表或评审说明。",
+            "next_action": "在 Review 架构评审记录中关闭或接受遗留风险。" if risk_items else "补风险表或评审说明。",
         },
         {
             "gate": "Gate6",
@@ -268,7 +268,7 @@ def render_check_sdd(bundle: dict[str, Any], report: dict[str, Any]) -> str:
     module = bundle.get("module", "")
     names = _artifact_names(module)
     lines = [
-        f"# {module} SDD检查清单",
+        f"# Check 架构检查清单 — {module} 软件架构设计",
         "",
         f"- **Module**: `{module}`",
         f"- **Document File**: `{names['check']}`",
@@ -289,7 +289,7 @@ def render_review_sdd(bundle: dict[str, Any], report: dict[str, Any]) -> str:
     module = bundle.get("module", "")
     names = _artifact_names(module)
     lines = [
-        f"# {module} 架构评审记录",
+        f"# Review 架构评审记录 — {module} 软件架构设计",
         "",
         f"- **Module**: `{module}`",
         f"- **Document File**: `{names['review']}`",
@@ -363,9 +363,9 @@ def render_operation_steps_sdd(bundle: dict[str, Any], report: dict[str, Any], s
         "",
         f"1. 收集架构输入并建立 `{names['input_index']}`。",
         "2. 基于 architecture seed 构建 freeze bundle，冻结正式对象、保留对象和待确认对象。",
-        f"3. 渲染正式架构文档 `{names['architecture_doc']}`，并同步生成 `{names['trace']}`。",
+        f"3. 渲染正式架构文档 `{names['architecture_doc']}`，并同步生成 Trace 追溯矩阵 `{names['trace']}`。",
         "4. 运行 release gate 评估，确认 pending_confirm、reserved、risk 和 rule_evidence 完整性。",
-        f"5. 输出 `{names['check']}`、`{names['review']}`、`{names['baseline_summary']}`，用于人工评审和阶段归档。",
+        f"5. 输出 Check 架构检查清单 `{names['check']}`、Review 架构评审记录 `{names['review']}` 和 `{names['baseline_summary']}`，用于人工评审和阶段归档。",
         "",
         "## 2. 本次关键判断",
         "",

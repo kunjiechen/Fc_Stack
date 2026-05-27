@@ -90,9 +90,9 @@ description: "用于设计、评审、校验和整理嵌入式汽车 FC 软件�
 
 - `<FC>_软件架构设计.md`
 - `<FC>_架构输入索引.md`
-- `<FC>_需求架构追溯.md`
-- `<FC>_SDD检查清单.md`
-- `<FC>_架构评审记录.md`
+- `Trace_<FC>_软件架构设计.md`
+- `Check_<FC>_软件架构设计.md`
+- `Review_<FC>_软件架构设计.md`
 - `<FC>_SDD操作步骤.md`
 - `<FC>_SDD基线总结.md`
 
@@ -186,6 +186,28 @@ description: "用于设计、评审、校验和整理嵌入式汽车 FC 软件�
 - 架构评审问题清单
 - freeze bundle 相关对象与校验结果
 - 面向 SDD 阶段的工作流交付件集合
+
+输出路径与命名规则：
+
+- 如果用户显式指定输出路径，按用户路径输出
+- 如果用户未指定输出路径，则默认在项目根目录下创建：
+
+```text
+Output/<FC_SHORT_NAME>/Doc/Arch/
+```
+
+- 架构文档文件名格式为 `<FC>_软件架构设计.md`，其余交付件命名由 `render_architecture_workflow_artifacts.py` 中 `_artifact_names()` 统一管理。
+- 每次正式架构工作流交付必须同步输出以下评审与追溯产物，`xxx` 与正式架构文档的 `<FC>` 保持一致：
+
+```text
+Review_xxx_软件架构设计.md
+Check_xxx_软件架构设计.md
+Trace_xxx_软件架构设计.md
+```
+
+- `Review_xxx_软件架构设计.md` 记录架构评审重点、release blocker、风险关闭记录、评审结论和是否允许进入 SDS。
+- `Check_xxx_软件架构设计.md` 记录架构检查清单、Gate 结果、证据、主要问题和下一步动作。
+- `Trace_xxx_软件架构设计.md` 记录 SRS → Architecture 的覆盖对象、覆盖状态、架构落点、设计决策和关闭条件。
 
 ## 12. 使用提醒
 
