@@ -231,11 +231,42 @@ description: "用于设计、评审、校验和整理嵌入式汽车 FC 软件�
 | 项目特定适配、硬件适配、板级逻辑       | **Callout**                | DIO 控制、SPI/I2C 传输、PWM 输出 |
 | 依赖选项少且稳定、效率优先             | **Fixed Integration Code** | 少量已知 MCAL 变体               |
 
+**Callout 归并规则（硬规则）**：
+
+判定为 Callout 后，**严禁逐引脚生成独立 Callout**。必须按硬件访问方式归并：
+
+| 硬件访问方式 | 归并结果 | 函数签名 | Pin 身份区分方式 |
+|-------------|---------|---------|----------------|
+| DIO 输出控制（所有需要 FC 拉高/拉低的 GPIO） | **1 个** `FC_CalloutDioWrite` | `Std_ReturnType FC_CalloutDioWrite(uint16 Id_u16, uint8 Level_u8)` | `Id` 参数 + `FC_CFG_DIO_ID_<PIN>` 配置宏 |
+| DIO 输入读取（所有需要 FC 读取电平的 GPIO） | **1 个** `FC_CalloutDioRead` | `Std_ReturnType FC_CalloutDioRead(uint16 Id_u16)` | `Id` 参数 + `FC_CFG_DIO_ID_<PIN>` 配置宏 |
+| I2C 写 | **1 个** `FC_CalloutI2cWrite` | `Std_ReturnType FC_CalloutI2cWrite(uint16 Id_u16, uint8* Data_pu8, uint16 Size_u16)` | `Id` 参数（I2C 器件地址） |
+| I2C 读 | **1 个** `FC_CalloutI2cRead` | `Std_ReturnType FC_CalloutI2cRead(uint16 Id_u16, uint8* Data_pu8, uint16 Size_u16)` | `Id` 参数（I2C 器件地址） |
+| SPI 收发 | **1 个** `FC_CalloutSpiTransceive` | `Std_ReturnType FC_CalloutSpiTransceive(uint16 Id_u16, uint16* TxData_pu16, uint16* RxData_pu16, uint16 Size_u16)` | `Id` 参数（SPI 器件 ID） |
+| PWM 输出 | **1 个** `FC_CalloutPwmSetDuty` | `Std_ReturnType FC_CalloutPwmSetDuty(uint16 Id_u16, uint16 Duty_u16)` | `Id` 参数 + `FC_CFG_PWM_ID_<CH>` 配置宏 |
+
+**归并判定流程**：
+
+1. 从 A2 引脚清单中提取所有非电源引脚
+2. 将每个引脚按硬件访问方式分到上表的类型桶中（DIO_OUT / DIO_IN / I2C / SPI / PWM）
+3. 每个类型桶生成**恰好 1 个** Callout 依赖接口对象
+4. 桶中每个引脚生成**1 个** `FC_CFG_<TYPE>_ID_<PIN>` 配置宏（归入 §9.4.3 的 `Hardware Mapping` 类型）
+5. A0/A1 等地址/strap/配置引脚 → 纯配置宏，不生成 Callout
+
+**示例**：NCA9539 的 RESET\ 和 INT\ 都是 DIO 引脚，但方向不同：
+- RESET\ → DIO 输出控制 → `FC_CalloutDioWrite(FC_CFG_DIO_ID_RESET, level)` + 配置宏 `FC_CFG_DIO_ID_RESET`
+- INT\ → DIO 输入读取 → `FC_CalloutDioRead(FC_CFG_DIO_ID_INT)` + 配置宏 `FC_CFG_DIO_ID_INT`
+- 只生成 2 个 Callout（1 个 DIO Write + 1 个 DIO Read），不是 2 个 RESET/INT 专用接口
+
+**反例（不允许）**：
+- `FC_CalloutResetDioWrite(Level)` — 引脚身份进入了函数名，无法复用
+- `FC_CalloutIntDioRead()` — 同上
+- 每新增一个 DIO 引脚就新增一个 Callout 函数
+
 判定后为每个依赖构建对应对象：
 
 - Callout → `dependency_apis` 对象（`name`、`prototype`、`description`、`implemented_by`、`evidence`、`status`）
 - Standard Binding → `binding_items` 对象（见 §9.4.4）
-- Macro → `config_macros` 对象（见 §9.4.3）中增加 `Dependency Selection` 类型宏
+- Macro → `config_macros` 对象（见 §9.4.3）中增加 `Dependency Selection` 类型宏，以及 Callout 引脚 ID 的 `Hardware Mapping` 类型宏
 - Fixed Integration → `config_macros` 中增加 `Dependency Selection` 类型宏 + 编译时分支说明
 
 **Callout 原型规范**（参考 `interface-selection.md` §Callout）：
@@ -244,6 +275,7 @@ description: "用于设计、评审、校验和整理嵌入式汽车 FC 软件�
 - I2C 读：`Std_ReturnType FC_CalloutI2cRead(uint16 Id_u16, uint8* Data_pu8, uint16 Size_u16)`
 - SPI 收发：`Std_ReturnType FC_CalloutSpiTransceive(uint16 Id_u16, uint16* TxData_pu16, uint16* RxData_pu16, uint16 Size_u16)`
 - DIO 控制：`Std_ReturnType FC_CalloutDioWrite(uint16 Id_u16, uint8 Level_u8)`
+- DIO 读取：`Std_ReturnType FC_CalloutDioRead(uint16 Id_u16)`
 - 参数使用指针形式，不用数组声明式。Size 参数用 `uint16 Size_u16`。
 
 **Callout 文件载体判定**：存在任一 Callout → `FC_Callout.h` 和 `FC_Callout.c` 均为 Required。
@@ -259,6 +291,16 @@ description: "用于设计、评审、校验和整理嵌入式汽车 FC 软件�
 **DET 宏判定**：SRS 包含 DET/诊断需求或安全等级为 ASIL-B/D → 生成 `FC_CFG_DEV_ERROR_DETECT` 宏，默认 `STD_ON`。
 
 **FC_Reg.h 判定**：芯片架构视图 A4 显示存在寄存器地址/位掩码/命令字 → `FC_Reg.h` 标记为 Required。
+
+**Callout Pin ID 宏**（与 §9.4.2 联动）：§9.4.2 中每个归并到 DIO/I2C/SPI/PWM Callout 的引脚，必须同步生成一个 `Hardware Mapping` 类型配置宏：
+
+```text
+FC_CFG_DIO_ID_RESET     1   // RESET\ pin → DIO Write Callout Id
+FC_CFG_DIO_ID_INT       2   // INT\  pin → DIO Read  Callout Id
+FC_CFG_I2C_DEV_ADDR     0x74 // I2C 器件地址（A0=L,A1=L）
+```
+
+这些宏使引脚资源配置与 Callout 调用解耦：新增同类引脚只需加宏，不需新增 Callout 函数。
 
 #### 9.4.4 绑定项对象
 
@@ -533,7 +575,7 @@ Output/<FC>/Doc/ChipViews/<FC>_芯片架构输入.md
 | 芯片架构视图域        | 消费到的架构章节                           | 消费方式                                                                                                                                                                                                                  |
 | --------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **A1 模块身份**       | §1 FC总结介绍                             | 芯片型号、通信接口类型(I2C/SPI)、最大速率、安全等级 → 直接填充"FC功能介绍"和"AUTOSAR架构层级"。接口类型用于判定层级（I2C/SPI 外设 → IoExtDev）                                                                          |
-| **A2 引脚清单**       | §8 依赖接口设计                           | 逐引脚生成 Callout 候选：方向为 Input/Output 的非电源引脚按功能归并。SCL/SDA → I2C Callout；RESET\ → DIO Callout；INT\ → DIO Callout；A0/A1 → 配置项（非 Callout）。"内部上下拉"和"是否必须连接"写入 Callout 约束备注 |
+| **A2 引脚清单**       | §8 依赖接口设计                           | **按依赖类型归并，不是逐引脚生成独立接口。** 从 A2 中提取所有非电源引脚，按硬件访问方式分为以下依赖类型，每类只生成一个参数化 Callout：<br><br>**DIO 输出控制类**：所有需要 FC 主动拉高/拉低的引脚（如 RESET\、EN、STB、nSLEEP）→ **一个** `FC_CalloutDioWrite(uint16 Id_u8, uint8 Level_u8)`，每个引脚分配一个 `FC_CFG_DIO_ID_<PIN>` 配置宏<br><br>**DIO 输入读取类**：所有需要 FC 读取电平的引脚（如 INT\、nFAULT、RDY）→ **一个** `FC_CalloutDioRead(uint16 Id_u8)`，每个引脚分配一个 `FC_CFG_DIO_ID_<PIN>` 配置宏<br><br>**I2C 通信类**：SCL/SDA → `FC_CalloutI2cWrite` + `FC_CalloutI2cRead`（协议级，已参数化）<br><br>**SPI 通信类**：SCK/MOSI/MISO/CS → `FC_CalloutSpiTransceive`（协议级，已参数化）<br><br>**地址/strap 引脚**：A0/A1 等 → 配置宏（非 Callout），如 `FC_CFG_I2C_DEV_ADDR`<br><br>**归并判定原则**：同类硬件访问方式 → 同一个参数化 Callout；引脚身份通过 `Id` 参数 + 配置宏区分，不进入函数名。"内部上下拉"和"是否必须连接"写入 Callout 约束备注 |
 | **A3 工作模式**       | §1 FC总结介绍, §5 全局变量与运行态策略   | 硬件模式列表写入 §1 的芯片背景描述。模式进入/退出条件直接映射到 §5 Runtime State 表的状态机设计。**重点：Standby 等 SRS 容易遗漏的硬件自动模式，芯片架构视图可补漏**                                                    |
 | **A4 寄存器空间概览** | §6 内存分配宏定义, §9 文件列表           | 寄存器分类统计直接决定`FC_Reg.h` 是否需要以及结构划分。"控制/状态/配置/数据/身份"各类数量 → §6 REG CONST 段的划分依据。如有寄存器地址则标记 FC_Reg.h 为 Required                                                        |
 | **A5 I2C/SPI 帧协议** | §8 依赖接口设计                           | 帧结构(命令字节、地址位宽)和 Burst 行为(交替/自增)写入对应 Callout 的 Description 和 Basic Constraints。**这是 SRS 通常不会描述的硬件协议细节，芯片架构视图是唯一来源**                                                   |
@@ -542,7 +584,7 @@ Output/<FC>/Doc/ChipViews/<FC>_芯片架构输入.md
 
 **消费后的校验**（同 §9.6）：
 
-- A2 引脚中标记"必须连接"的，架构是否都有对应的 Callout 或配置项 → 无则报遗漏风险
+- A2 引脚"必须连接"项 → 对应的 Callout 类型是否已覆盖（DIO_OUT / DIO_IN / I2C / SPI）+ 是否分配了 `FC_CFG_<TYPE>_ID_<PIN>` 配置宏 → 缺 Callout 类型覆盖则报遗漏，缺 Id 宏则报配置缺失
 - A3 工作模式中列出的硬件模式，SRS 状态机是否全部覆盖 → 无则报模式遗漏
 - A4 寄存器中标记"R/W"的，架构是否提供了写路径 → 无则报接口缺失
 - A6 中断源，架构是否提供了中断处理 Callout 或查询 API → 无则报中断遗漏

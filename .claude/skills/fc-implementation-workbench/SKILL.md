@@ -249,6 +249,30 @@ D1~D8 消费完成后，反查详细设计输出的覆盖完整性：
 5. 用规则和校验器检查设计完整性与可编码性
 6. 输出详细设计、评审结论或编码脚手架计划
 
+### 9.1 依赖接口设计硬规则
+
+**Callout 归并规则**（继承架构 skill 的设计决策，在详细设计中展开为可编码设计）：
+
+架构阶段已经将引脚按硬件访问方式归并为参数化 Callout（如 `FC_CalloutDioWrite(Id, Level)`），详细设计阶段**严禁将参数化 Callout 重新拆分为逐引脚专用函数**。
+
+详细设计中的 Callout 展开方式：
+
+| 架构 Callout | 详细设计 §6.3 展开内容 | 引脚区分方式 |
+|-------------|---------------------|-------------|
+| `FC_CalloutDioWrite` | 写入调用约束、Id 参数取值表、时序要求 | `FC_CFG_DIO_ID_<PIN>` 配置宏 |
+| `FC_CalloutDioRead` | 读取调用约束、Id 参数取值表、电平判断逻辑 | `FC_CFG_DIO_ID_<PIN>` 配置宏 |
+| `FC_CalloutI2cWrite` | 器件地址参数、命令字节序列、Burst 行为约束 | `FC_CFG_I2C_DEV_ADDR` 配置宏 |
+| `FC_CalloutI2cRead` | 器件地址参数、读帧序列、ACK/NACK 处理 | `FC_CFG_I2C_DEV_ADDR` 配置宏 |
+| `FC_CalloutSpiTransceive` | SPI 模式、帧位宽、CS 控制时序 | `FC_CFG_SPI_DEV_ID` 配置宏 |
+
+**反例（详细设计中不允许）**：
+- 对外部接口的执行步骤中写"调用 `FC_CalloutNResetDioWrite(LOW)`"——RESET 的身份不应进入函数名
+- 正确写法："调用 `FC_CalloutDioWrite(FC_CFG_DIO_ID_RESET, STD_LOW)`"——引脚身份在宏中，函数保持通用
+
+**新增引脚的处理**：
+- 同类型新引脚 → 只需新增 `FC_CFG_DIO_ID_<NEW_PIN>` 宏 + 在配置类型 `DioChannelIdType` 中增加枚举成员
+- 不需要新增 Callout 函数、不需要修改 Callout.h/c
+
 ## 10. 输出物
 
 ### 10.0 模板与输出模式
