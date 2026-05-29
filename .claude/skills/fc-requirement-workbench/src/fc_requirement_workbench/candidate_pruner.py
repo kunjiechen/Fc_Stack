@@ -209,24 +209,53 @@ def _behavior_family(candidate: RequirementCandidate) -> str:
 
 
 def _family_from_text(text: str) -> str:
-    if "invalid" in text or "reserved" in text or "unsupported" in text or "rejection" in text:
-        return "invalid_rejection"
-    if "interrupt" in text or "diagnostic" in text:
-        return "interrupt_diagnostic"
-    if "reset" in text or "power-on" in text:
+    """Derive behavior family from content semantics (bilingual CN/EN).
+
+    Mode/state lifecycle keywords are checked BEFORE output_control to avoid
+    misclassifying subfunctions like "器件启停与模式控制" or "模式切换控制"
+    as output control (they contain "控制" but are semantically about device
+    lifecycle, not output signal driving).
+    """
+    if any(kw in text for kw in ("invalid", "reserved", "unsupported",
+                                   "prohibited", "rejection", "非法", "拒绝")):
+        return "boundary_exception"
+    if any(kw in text for kw in ("interrupt", "diagnostic", "fault",
+                                   "error flag", "status flag",
+                                   "故障", "诊断", "中断")):
+        return "fault_diagnostic"
+    if any(kw in text for kw in ("reset", "power-on", "power on",
+                                   "default state", "复位")):
         return "reset_default"
-    if "timing" in text or "timeout" in text or "wait" in text:
+    if any(kw in text for kw in ("timing", "timeout", "wait", "delay",
+                                   "frequency", "khz", "mhz", "us", "ms",
+                                   "时序")):
         return "timing_guard"
-    if "polarity" in text or "inversion" in text:
-        return "gpio_polarity"
-    if "direction" in text or "configuration register" in text:
-        return "gpio_direction"
-    if "register" in text and ("read" in text or "write" in text or "address" in text):
+    # Mode/state lifecycle — check before output_control with specific keywords
+    if any(kw in text for kw in ("mode select", "mode transition", "state transition",
+                                   "operating mode", "device mode",
+                                   "sleep", "standby", "active mode",
+                                   "init", "生命周期",
+                                   "模式选择", "模式切换", "模式控制", "睡眠模式",
+                                   "器件启停", "工作模式", "活动模式")):
+        return "mode_state_control"
+    # configuration — check before output_control for VREF/threshold items
+    if any(kw in text for kw in ("configuration", "direction", "polarity",
+                                   "mode config", "reference",
+                                   "vref", "threshold", "配置", "参考", "阈值")):
+        return "configuration_control"
+    # output_control
+    if any(kw in text for kw in ("write", "输出", "set", "control",
+                                   "drive", "enable", "disable", "控制")):
+        return "output_control"
+    # register/bus
+    if any(kw in text for kw in ("register", "address", "bus", "i2c",
+                                   "spi", "transaction", "寄存器")):
         return "register_access"
-    if "output" in text and ("write" in text or "level" in text or "port" in text or "pin" in text):
-        return "gpio_output_write"
-    if "input" in text and ("read" in text or "port" in text or "pin" in text):
-        return "gpio_input_read"
+    # read/sense/monitor
+    if any(kw in text for kw in ("read", "input", "sample", "sense",
+                                   "measure", "monitor", "feedback",
+                                   "监测", "采集", "读取", "检测")):
+        return "input_acquisition"
     return ""
 
 
@@ -235,29 +264,58 @@ def _select_keepers(items: list[RequirementCandidate]) -> list[RequirementCandid
         return items
     candidate_type = items[0].candidate_type
     if "接口" in candidate_type:
-        aggregate = [
-            item
-            for item in items
-            if item.source_feature == "16-bit GPIO Port Capability"
-            or item.source_subfunction.lower().startswith("gpio ")
-        ]
-        return [_best_candidate(aggregate or items)]
+        # Keep one interface per distinct subfunction — never merge
+        # current-monitoring and fault-status into the same interface.
+        by_subfunc: dict[str, list[RequirementCandidate]] = {}
+        for c in items:
+            sf = c.source_subfunction or c.source_feature
+            by_subfunc.setdefault(sf, []).append(c)
+        keepers: list[RequirementCandidate] = []
+        for sf_items in by_subfunc.values():
+            concrete = sorted(
+                sf_items,
+                key=lambda c: (
+                    0 if c.target_requirement_fields.get("Inputs") else 1,
+                    0 if c.target_requirement_fields.get("Error Behavior") else 1,
+                    _priority(c),
+                )
+            )
+            keepers.append(concrete[0])
+        return keepers
     if "功能" in candidate_type:
-        parent = [
-            item
-            for item in items
-            if item.source_feature == "16-bit GPIO Port Capability"
-            or item.source_subfunction.lower().startswith("gpio ")
-        ]
-        return [_best_candidate(parent or items)]
+        general = sorted(
+            items,
+            key=lambda c: (
+                len(c.source_subfunction),
+                _priority(c),
+            )
+        )
+        return [general[0]]
     if "配置" in candidate_type:
-        parent = [
-            item
-            for item in items
-            if item.source_feature in {"16-bit GPIO Port Capability", "Register Map", "Reset and Default State"}
-        ]
-        return [_best_candidate(parent or items)]
-    return [_best_candidate(items)]
+        config_priority = sorted(
+            items,
+            key=lambda c: (
+                0 if c.target_requirement_fields.get("Default/Range") else 1,
+                _priority(c),
+            )
+        )
+        return [config_priority[0]]
+    best = _best_candidate(items)
+    # Merge FaultRows from dropped candidates into the keeper so that
+    # datasheet-extracted fault table data survives pruning.  This is
+    # essential for diagnostic requirements where multiple subfunctions
+    # contribute different fault information (e.g. "故障状态读取" carries
+    # fault rows while "故障恢复处理" carries recovery strategy).
+    existing_fr = best.target_requirement_fields.get("FaultRows", "")
+    for c in items:
+        if c.candidate_id == best.candidate_id:
+            continue
+        fr = c.target_requirement_fields.get("FaultRows", "")
+        if fr and fr not in existing_fr:
+            existing_fr = f"{existing_fr}\n{fr}".strip()
+    if existing_fr and existing_fr != best.target_requirement_fields.get("FaultRows", ""):
+        best.target_requirement_fields["FaultRows"] = existing_fr
+    return [best]
 
 
 def _best_candidate(items: list[RequirementCandidate]) -> RequirementCandidate:

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from html import escape
 from pathlib import Path
+import re
 from typing import Any
 
 from .builder import EngineeringRequirement
@@ -82,25 +83,24 @@ class MarkdownSrsRenderer:
         lines.append("")
         for heading, key in SECTION_ORDER[:4]:
             reqs = sections.get(key, [])
-            if not reqs:
-                continue
             lines.extend([f"### {heading}", ""])
+            if not reqs:
+                lines.append("无对应需求。")
+                lines.append("")
+                continue
             for req in reqs:
                 lines.extend(_requirement_markdown(req, safety_level))
 
         lines.extend(["## 6 非功能需求", ""])
-        nonfunctional_rendered = False
         for heading, key in SECTION_ORDER[4:]:
             reqs = sections.get(key, [])
-            if not reqs:
-                continue
-            nonfunctional_rendered = True
             lines.extend([f"### {heading}", ""])
+            if not reqs:
+                lines.append("无对应需求。")
+                lines.append("")
+                continue
             for req in reqs:
                 lines.extend(_requirement_markdown(req, safety_level))
-        if not nonfunctional_rendered:
-            lines.pop()  # remove the "## 6 非功能需求" heading
-            lines.pop()
 
         lines.extend(_risk_register_markdown(document))
         lines.extend(_sources_markdown(document.requirements))
@@ -459,7 +459,7 @@ def _driver_functions_markdown(document: SrsDocument, overview: dict[str, Any]) 
 
 
 def _pin_table_markdown(overview: dict[str, Any]) -> list[str]:
-    pin_rows = overview.get("pin_rows") or [("待确认", "待确认", "待提取")]
+    pin_rows = overview.get("pin_rows") or []
     normalized: list[tuple[str, str, str]] = []
     for row in pin_rows:
         if len(row) >= 3:
@@ -1009,7 +1009,7 @@ def _summarize_requirement_pending(
             f"{req.title} 缺少可追溯来源，当前不能作为稳定输入下传。",
             "补充 datasheet、项目需求或追溯依据，并重新评审该需求。",
         )
-    if "需项目输入确认" in text_blob or "需确认" in text_blob:
+    if any(kw in text_blob for kw in ("项目安全计划定义", "项目开发计划定义", "项目资源计划定义")):
         return (
             "项目输入待确认",
             f"{req.title} 仍依赖项目侧输入确认，边界尚未完全收敛。",
@@ -1135,21 +1135,30 @@ def _supporting_file_rows() -> list[tuple[str, str, str, str, str]]:
 def ensure_default_engineering_requirements(
     requirements: list[EngineeringRequirement],
     module: str,
-) -> list[EngineeringRequirement]:
+    safety_level: str = "QM",
+    *,
+    mainfunction_required: bool = True,
+) -> tuple[list[EngineeringRequirement], list[ValidationFinding]]:
     result = _with_default_diagnostic_requirements(requirements, module)
-    existing = {req.requirement_type for req in result}
     token = _normalize_doc_token(module)
+
+    # Ensure lifecycle interfaces (Init + MainFunction) for IoExtDev drivers.
+    # Respect the profile's mainfunction_required flag — some driver types
+    # (e.g. CAN/LIN transceivers) do not need a periodic MainFunction.
+    result = _with_default_lifecycle_requirements(result, module, token, mainfunction_required=mainfunction_required)
+
+    existing = {req.requirement_type for req in result}
     if "safety" not in existing:
         result.append(
             EngineeringRequirement(
                 requirement_id=f"SRS-{token}-SAFE-0001",
                 semantic_id=f"DEFAULT-{token}-SAFE-0001",
                 requirement_type="safety",
-                title="安全等级默认要求",
-                description="若项目未提供功能安全等级输入，软件需求默认按 QM 等级管理；若后续项目输入给出 ASIL/QM 要求，应按项目输入更新本需求。",
-                constraint="需确认：项目安全等级、ASIL 分配、诊断覆盖目标。",
-                verification="通过安全需求评审验证。",
-                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-SAFETY-QM", "evidence": "No project safety input; default QM requirement generated."}],
+                title="功能安全等级要求",
+                description=f"软件需求按 {safety_level} 等级管理。所有软件接口应具备参数有效性检查与开发错误检测能力；与安全目标相关的功能应满足 {safety_level} 的诊断覆盖要求；故障处理与恢复策略应符合 {safety_level} 等级的安全状态定义。",
+                constraint=f"{safety_level} 等级的 ASIL 分解、诊断覆盖目标、安全状态定义和验证策略由项目安全计划定义。",
+                verification="通过安全需求评审、故障注入测试和安全分析验证。",
+                source=[{"document": "Project Input", "chunk_id": "SAFETY-LEVEL", "evidence": f"Safety level specified as {safety_level}."}],
             )
         )
     if "coding" not in existing:
@@ -1159,8 +1168,8 @@ def ensure_default_engineering_requirements(
                 semantic_id=f"DEFAULT-{token}-CODE-0001",
                 requirement_type="coding",
                 title="编码规范符合性要求",
-                description="软件实现应遵循项目编码规范、命名规范、静态检查规则和评审要求；若项目提供具体编码规范，应按项目规范替换或细化本需求。",
-                constraint="需确认：项目编码规范版本、MISRA/静态检查规则、复杂度阈值。",
+                description=f"Gp_{_short_module(module)} 驱动编码应符合《FC 开发指南(C语言)》规范要求。",
+                constraint="项目编码规范版本、MISRA/静态检查规则、复杂度阈值由项目开发计划定义。",
                 verification="通过代码评审、静态分析和编码规范检查验证。",
                 source=[{"document": "SRS Template", "chunk_id": "DEFAULT-CODING-STANDARD", "evidence": "Default coding standard requirement generated from template."}],
             )
@@ -1171,14 +1180,92 @@ def ensure_default_engineering_requirements(
                 requirement_id=f"SRS-{token}-RES-0001",
                 semantic_id=f"DEFAULT-{token}-RES-0001",
                 requirement_type="resource",
-                title="资源消耗默认要求",
-                description="软件资源消耗应满足项目资源预算；若项目未提供预算，需在设计和集成阶段统计 ROM、RAM、栈、CPU、I/O 和总线访问占用并形成评审结论。",
-                constraint="需确认：ROM/RAM/栈/CPU/I/O/I2C 总线预算和测量方法。",
-                verification="通过资源统计、集成测试或评审验证。",
-                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-RESOURCE-BUDGET", "evidence": "No project resource budget input; default resource requirement generated."}],
+                title="资源消耗要求",
+                description=f"Gp_{_short_module(module)} 驱动应满足 ROM 消耗小于5KB, RAM 消耗小于2KB。",
+                constraint="ROM/RAM/栈/CPU 预算由项目资源计划定义，编译后通过 map 文件统计验证。",
+                verification="通过编译后资源统计（map 文件分析）和集成测试验证。",
+                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-RESOURCE-BUDGET", "evidence": "Default resource budget requirement — project must fill actual limits."}],
             )
         )
+
+    # ---- Interface dedup: remove duplicate function names, keep most complete ----
+    result, dedup_findings = dedup_interface_requirements(result, module)
+    return result, dedup_findings
+
+
+def _with_default_lifecycle_requirements(
+    requirements: list[EngineeringRequirement],
+    module: str,
+    token: str,
+    *,
+    mainfunction_required: bool = True,
+) -> list[EngineeringRequirement]:
+    """Ensure Init and MainFunction lifecycle interfaces exist for IoExtDev drivers.
+
+    Respects ``mainfunction_required`` — when False (e.g. CAN/LIN transceivers),
+    MainFunction is NOT injected even if absent.
+    """
+    result = list(requirements)
+    names = " ".join(
+        f"{req.title} {req.function_name} {req.description}".lower()
+        for req in requirements
+    )
+
+    # Only match Init as an end-of-name token, not Gp_ prefix in unrelated names
+    has_init = any(kw in names for kw in ("_init", "驱动初始化", "初始化接口"))
+    has_init = has_init or any(
+        req.function_name.endswith("Init") or req.function_name.endswith("_Init")
+        for req in requirements
+    )
+
+    if not has_init:
+        result.append(
+            EngineeringRequirement(
+                requirement_id=f"SRS-{token}-IF-9002",
+                semantic_id=f"DEFAULT-{token}-LIFECYCLE-INIT",
+                requirement_type="interface",
+                title="驱动初始化",
+                description="软件应提供初始化接口，用于加载项目配置，建立运行时上下文，执行芯片上电序列（包括模式锁存、外部元件稳定等待），并在配置非法或初始化失败时返回定义错误。",
+                pre_condition="芯片未初始化或处于复位/睡眠状态。",
+                output="初始化后的运行时上下文或错误码。",
+                exception="配置无效、底层访问失败、时序等待超时时返回对应错误，并保持芯片处于安全状态。",
+                constraint="初始化接口必须可重入；重复调用应在不破坏已有状态的前提下返回已初始化状态。",
+                verification="通过初始化测试验证：上电后调用初始化接口应返回成功，芯片应进入活动模式；非法配置应返回错误。",
+                function_name=f"Gp_{_short_module(module)}_Init",
+                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-LIFECYCLE-INIT", "evidence": "Init is a mandatory lifecycle interface for every IoExtDev driver."}],
+            )
+        )
+
+    has_mainfunction = any(
+        req.function_name.endswith("MainFunction") or req.function_name.endswith("_MainFunction")
+        for req in requirements
+    )
+    if not has_mainfunction and mainfunction_required:
+        result.append(
+            EngineeringRequirement(
+                requirement_id=f"SRS-{token}-IF-9003",
+                semantic_id=f"DEFAULT-{token}-LIFECYCLE-MAINFUNCTION",
+                requirement_type="interface",
+                title="周期主函数",
+                description="软件应提供 MainFunction 接口，用于周期推进运行时状态、刷新输出信号、采集诊断输入和更新故障状态。接口不得执行长时间阻塞操作。",
+                pre_condition="驱动已完成初始化。",
+                trigger="由上层周期调度器按固定周期调用。",
+                output="更新后的运行时状态、诊断状态和输出刷新结果。",
+                exception="底层访问失败时记录诊断事件并保持上次有效状态，不阻塞调度。",
+                constraint="MainFunction 必须满足项目实时性约束，单次调用最大耗时不应超过项目定义的调度周期预算。",
+                verification="通过周期调度测试验证：在定义周期内调用 MainFunction，应完成输入采集、状态推进和输出刷新。",
+                function_name=f"Gp_{_short_module(module)}_MainFunction",
+                source=[{"document": "SRS Template", "chunk_id": "DEFAULT-LIFECYCLE-MAINFUNCTION", "evidence": "MainFunction is a mandatory lifecycle interface for every IoExtDev driver."}],
+            )
+        )
+
     return result
+
+
+def _short_module(module: str) -> str:
+    """Strip Gp_ prefix if present for consistent ID generation."""
+    name = module.replace("Gp_", "").replace("GP_", "")
+    return name or module
 
 
 def _with_default_diagnostic_requirements(
@@ -1192,10 +1279,15 @@ def _with_default_diagnostic_requirements(
         for req in requirements
     )
 
-    if "det" not in names and "development error" not in names and "开发错误" not in names:
+    # DET check: only skip if a *dedicated* DET requirement exists, not just mentions
+    has_det_requirement = any(
+        "开发错误检测" in (getattr(req, "title", "") + getattr(req, "description", ""))
+        for req in requirements
+    )
+    if not has_det_requirement:
         result.append(
             EngineeringRequirement(
-                requirement_id=f"SRS-{token}-DIAG-0001",
+                requirement_id=f"SRS-{token}-DIAG-9001",
                 semantic_id=f"DEFAULT-{token}-DIAG-DET",
                 requirement_type="diagnostic",
                 title="开发错误检测",
@@ -1230,6 +1322,79 @@ def _with_default_diagnostic_requirements(
         )
 
     return result
+
+
+def dedup_interface_requirements(
+    requirements: list[EngineeringRequirement],
+    module: str,
+) -> tuple[list[EngineeringRequirement], list[ValidationFinding]]:
+    """Deduplicate interface requirements by function name.
+
+    Rules:
+    1. Interfaces without a ``Gp_xxx_xxx`` function name → validation warning.
+    2. Duplicate function names → keep the most complete one (most non-empty
+       fields: description, input, output, exception, constraint, verification).
+    3. Profile-injected interfaces (semantic_id starts with DEFAULT-) lose
+       to datasheet-produced interfaces when both have the same function name.
+    """
+    findings: list[ValidationFinding] = []
+    by_fn: dict[str, list[EngineeringRequirement]] = {}
+    for req in requirements:
+        if req.requirement_type != "interface":
+            continue
+        fn = req.function_name.strip()
+        if not fn:
+            findings.append(ValidationFinding(
+                severity="warning", rule="interface-naming",
+                rule_group="naming", status="failed",
+                requirement_ids=[req.requirement_id],
+                message=f"接口需求 {req.requirement_id}（{req.title}）缺少 function_name",
+                recommendation="补充 function_name，格式: Gp_{module}_Xxx",
+            ))
+            continue
+        if not re.match(r"^Gp_[A-Za-z0-9]+_[A-Za-z0-9]+$", fn):
+            findings.append(ValidationFinding(
+                severity="warning", rule="interface-naming",
+                rule_group="naming", status="failed",
+                requirement_ids=[req.requirement_id],
+                message=f"接口 {req.requirement_id}（{req.title}）function_name 格式不符合 Gp_xxx_xxx: {fn}",
+                recommendation="修正 function_name 为 Gp_{module}_Xxx 格式",
+            ))
+        by_fn.setdefault(fn, []).append(req)
+
+    # Score: higher = more complete.  Default-injected gets penalty.
+    def _score(r: EngineeringRequirement) -> int:
+        s = 0
+        for field in (r.description, r.input, r.output, r.exception,
+                      r.constraint, r.verification, r.pre_condition, r.trigger):
+            if field and field.strip():
+                s += 1
+        if r.semantic_id.startswith("DEFAULT-"):
+            s -= 5  # Heavy penalty — profile/datasheet items preferred
+        return s
+
+    remove_ids: set[str] = set()
+    for fn, reqs in by_fn.items():
+        if len(reqs) <= 1:
+            continue
+        reqs_sorted = sorted(reqs, key=_score, reverse=True)
+        best = reqs_sorted[0]
+        for r in reqs_sorted[1:]:
+            remove_ids.add(r.requirement_id)
+            findings.append(ValidationFinding(
+                severity="info", rule="interface-dedup",
+                rule_group="consistency", status="failed",
+                requirement_ids=[r.requirement_id],
+                message=(
+                    f"接口 {r.requirement_id}（{r.title}）与 {best.requirement_id}（{best.title}）"
+                    f" 共享 function_name {fn}，已去重保留后者"
+                ),
+                recommendation="无操作；自动去重已处理",
+            ))
+
+    if remove_ids:
+        requirements = [r for r in requirements if r.requirement_id not in remove_ids]
+    return requirements, findings
 
 
 def _constraints_markdown(findings: list[ValidationFinding]) -> list[str]:

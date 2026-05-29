@@ -211,6 +211,22 @@ Example: If a requirement is missing source, use `needs_source` rather than "TBD
 
 Applicability: 全部
 
+## Rule 22: Derive Config Items From Function Signal Chain
+
+Rule Name: `config_derivation_from_signal_chain`
+
+Description: Do not rely on a static checklist to decide what config items a function needs. Instead, trace the full signal chain from chip pin to software result, identify every conversion/transformation node where a parameter could differ across hardware, chip revision, or project, and generate a config item for each. The core principle: **功能接口 → 信号链路还原 → 可变参数分解 → 配置项生成**.
+
+Example: `GetLoadCurrentSig` traces `I_LOAD → current mirror (A_IPROPI) → sense resistor (R_IPROPI) → ADC sampling → software calculation`. Two configurable parameters emerge: A_IPROPI (dynamic, chip-internal gain with manufacturing variance ±4~7.5%) and R_IPROPI (hardware, PCB resistor). Hardcoding A_IPROPI=1000 while only configuring R_IPROPI leaves a systematic current reading error that cannot be corrected without recompilation.
+
+Check method: For each function interface that involves signal conversion:
+1. Restore the signal chain from physical quantity to software result
+2. Enumerate every variable parameter along the chain
+3. Classify each as static (compile-time project choice), dynamic (runtime configurable, calibratable), or hardware (PCB-fixed, documented as constraint)
+4. Confirm each has a config item; gap → configuration omission
+
+Applicability: 配置 / 接口 / 诊断
+
 ## Rule 21: Avoid Head-Heavy Documents
 
 Rule Name: `avoid_head_heavy_document`

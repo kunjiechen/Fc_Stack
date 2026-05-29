@@ -48,12 +48,14 @@ class GateChecker:
         has_raw_requirements: bool = False,
         has_datasheet: bool = False,
         has_project_constraints: bool = False,
+        datasheet_has_fault_sections: bool = False,
     ) -> None:
         self.module = module
         self.source_count = source_count
         self.has_raw_requirements = has_raw_requirements
         self.has_datasheet = has_datasheet
         self.has_project_constraints = has_project_constraints
+        self.datasheet_has_fault_sections = datasheet_has_fault_sections
 
     def check_all(
         self,
@@ -261,6 +263,38 @@ class GateChecker:
             detail=f"异常处理均已覆盖" if not no_exception
             else f"{len(no_exception)} 条需求缺少异常处理",
             affected_ids=[req.requirement_id for req in no_exception],
+        ))
+
+        # G3-06: Hardware fault diagnostic content.
+        # When the datasheet contains fault/flag/diagnostic sections, the SRS
+        # MUST include at least one diagnostic requirement with a hardware
+        # fault table.  Missing this is a common pipeline gap (pruner merging,
+        # header-parsing failures, or keyword mismatches) that silently drops
+        # datasheet evidence.  This check makes the gap visible.
+        diag_reqs = [req for req in reqs if req.requirement_type == "diagnostic"]
+        has_hw_fault_table = any(
+            "hardware_chip" in req.description for req in diag_reqs
+        )
+        if self.datasheet_has_fault_sections and not has_hw_fault_table:
+            g306_result: GateResult = "Fail"
+            g306_detail = (
+                "数据手册含故障/标志/诊断章节，但生成的诊断需求中缺少硬件故障表。"
+                "建议：清除缓存后重新生成，或检查 _extract_diagnostics 的 chunk 匹配。"
+            )
+        elif not has_hw_fault_table:
+            g306_result = "Conditional"
+            g306_detail = (
+                "未检测到硬件故障表。若数据手册确实无故障/诊断相关内容则正常；"
+                "否则需检查故障提取链路。"
+            )
+        else:
+            g306_result = "Pass"
+            g306_detail = f"已生成 {sum(1 for r in diag_reqs if 'hardware_chip' in r.description)} 条含硬件故障表的诊断需求"
+        items.append(GateCheckItem(
+            check_id="G3-06",
+            description="诊断需求是否包含硬件故障表（数据手册有故障章节时必选）",
+            result=g306_result,
+            detail=g306_detail,
         ))
 
         return GateReport(

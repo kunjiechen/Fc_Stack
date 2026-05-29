@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -309,37 +310,15 @@ def _feature_summary(feature: Any) -> str:
 
 
 def _feature_name_cn(name: str) -> str:
-    mapping = {
-        "16-bit GPIO Port Capability": "16-bit GPIO 端口能力",
-        "Input Port Function": "输入端口读取功能",
-        "Output Port Function": "输出端口写入功能",
-        "Polarity Inversion Function": "输入极性反转配置功能",
-        "Direction Configuration Function": "GPIO 方向配置功能",
-        "I2C Control Interface": "I2C 控制接口",
-        "Register Map": "寄存器映射",
-        "Interrupt and Diagnostic Signaling": "中断与诊断指示",
-        "Reset and Default State": "复位与默认状态",
-        "Timing Constraints": "时序约束",
-        "Prohibited and Boundary Behavior": "禁止项与边界行为",
-    }
-    return mapping.get(name, name)
+    # Data-driven: return the name as-is since feature group names are now
+    # generated from actual data rather than from a hardcoded template.
+    return name
 
 
 def _summary_cn(summary: str) -> str:
-    replacements = {
-        "The device exposes GPIO pins that can be organized into port-level input, output, polarity, and direction behaviors through the register map.": "芯片通过寄存器映射提供端口级输入、输出、极性和方向控制能力。",
-        "Input port registers provide the software-visible state of GPIO pins configured or used as inputs.": "输入端口寄存器提供 GPIO 输入状态的软件可见视图。",
-        "Output port registers define the commanded output level for GPIO pins used as outputs.": "输出端口寄存器定义作为输出使用的 GPIO 输出命令值。",
-        "Polarity inversion registers define whether input values are logically inverted before software interpretation.": "极性反转寄存器定义输入值在软件解释前是否进行逻辑反转。",
-        "Configuration registers define whether each GPIO bit behaves as input or output.": "配置寄存器定义每个 GPIO bit 的输入/输出方向。",
-        "The device is accessed through an I2C control interface using bus pins, address selection, and register read/write transactions.": "芯片通过 I2C 总线、地址选择和寄存器读写事务进行访问。",
-        "The register map provides the data model for input sampling, output control, polarity inversion, and direction configuration.": "寄存器映射为输入采样、输出控制、极性反转和方向配置提供数据模型。",
-        "Diagnostic or interrupt-related signals provide software-observable status only when the project connects and uses the relevant pins or flags.": "只有项目连接并使用相关引脚或标志时，中断/诊断信号才形成软件可观测状态。",
-        "Power-on or reset behavior defines default register and pin state that the driver may need to account for during initialization.": "上电或复位行为定义驱动初始化时需要考虑的默认寄存器和引脚状态。",
-        "Timing values constrain bus access, reset handling, signal stabilization, or verification timing.": "时序值约束总线访问、复位处理、信号稳定或验证时机。",
-        "Reserved, invalid, unsupported, or cautionary statements define boundaries that may require rejection behavior or project exclusions.": "保留、非法、不支持或警示类描述定义边界行为；只有存在软件输入路径时才生成拒绝或异常处理需求。",
-    }
-    return replacements.get(summary, summary)
+    # Data-driven: return the summary as-is since feature group summaries are
+    # now generated from actual extracted data.
+    return summary
 
 
 def _pin_row(pin: Any) -> tuple[str, str, str]:
@@ -348,11 +327,26 @@ def _pin_row(pin: Any) -> tuple[str, str, str]:
     direction = "待确认"
     function = content
     lowered = content.lower()
+
+    # Try exact prefix match first (e.g. "Input: ..." or "Output — ...").
     for candidate in ("input", "output", "bidirectional"):
         if lowered.startswith(candidate):
             direction = {"input": "输入", "output": "输出", "bidirectional": "双向"}[candidate]
             function = content.split(".", 1)[1].strip() if "." in content else content
             break
+
+    # Fallback: many datasheets embed direction in prose descriptions
+    # like "transmit data input" or "receive data output".  Check for
+    # direction keywords anywhere in the content, preferring the most
+    # specific match.
+    if direction == "待确认":
+        if re.search(r"\binput\b", lowered):
+            direction = "输入"
+        elif re.search(r"\boutput\b", lowered):
+            direction = "输出"
+        elif re.search(r"\b(bidirectional|i/o|input/output)\b", lowered):
+            direction = "双向"
+
     if direction == "待确认":
         direction = _pin_direction(name)
     function = _pin_function_cn(function)
@@ -360,14 +354,37 @@ def _pin_row(pin: Any) -> tuple[str, str, str]:
 
 
 def _pin_direction(name: str) -> str:
-    upper = name.upper()
-    if upper == "INT":
+    """Infer pin direction from the pin symbol using common naming conventions.
+
+    This is a best-effort fallback when the datasheet table does not have
+    a dedicated direction/type column and the description text does not
+    contain explicit direction keywords.
+    """
+    upper = name.upper().replace("_", "").replace("-", "").replace(" ", "")
+    # Input signals: chip receives from MCU
+    if re.search(r"(TXD|TX|MOSI|SCK|CS|NCS|SS|EN|STB|IN|SEL|RE|WE)$", upper):
+        return "输入"
+    # Output signals: chip drives to MCU
+    if re.search(r"(RXD|RX|MISO|INT|ERR|FAULT|INH|RDY|SO|DOUT)$", upper):
         return "输出"
-    if upper in {"A0", "A1", "RESET"}:
-        return "输入"
-    if upper == "SCL":
-        return "输入"
-    if upper == "SDA" or upper.startswith("P"):
+    # Bidirectional
+    if re.search(r"(SDA|SDI|SDO|IO\d*)$", upper):
+        return "双向"
+    # Power / ground — these are not MCU-facing signals
+    if re.search(r"^(V|VBAT|VCC|VDD|VSS|VIO|GND|BAT)", upper):
+        return "供电"
+    # Known specific pins
+    hardcoded = {
+        "A0": "输入", "A1": "输入", "A2": "输入",
+        "RESET": "输入", "RESETN": "输入",
+        "SCL": "输入", "SCLK": "输入",
+        "WAKE": "输入",
+        "SPLIT": "输出",
+    }
+    if upper in hardcoded:
+        return hardcoded[upper]
+    # Px style GPIO pins: bidirectional
+    if re.match(r"^P\d+$", upper):
         return "双向"
     return "项目确认"
 

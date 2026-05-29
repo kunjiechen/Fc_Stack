@@ -202,6 +202,15 @@ Vague words include:
 - 必要时
 - 支持相关功能
 
+**Forbidden placeholder words** (must never appear in requirement descriptions, constraints, exceptions, inputs, outputs, or verification fields):
+
+- 待确认
+- 需确认
+- 需项目确认
+- 待填写
+- TBD
+- TBC
+
 Replacement guidance:
 
 | Vague Expression | Preferred Form |

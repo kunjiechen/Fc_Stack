@@ -1,10 +1,20 @@
-.DS_Store
+# Ignore everything by default
+/*
+/*/
 
-# Python cache / packaging metadata
+# Except .gitignore itself
+!.gitignore
+
+# Except .claude/skills directory tree
+!.claude/
+/.claude/*
+!/.claude/skills/
+/.claude/skills/*
+!/.claude/skills/**
+
+# Universal ignores (apply everywhere, including unignored dirs)
+.DS_Store
 __pycache__/
 *.py[cod]
 *.egg-info/
-
-# Local skill cache artifacts
 .cache/
-.claude/skills/**/.cache/

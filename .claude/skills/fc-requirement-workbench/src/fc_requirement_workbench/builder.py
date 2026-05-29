@@ -11,7 +11,10 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 import re
-from typing import Any, Literal
+from typing import Any, Literal, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .normative_rules import DriverTypeProfile, NormativeRules
 
 from .rules import ValidationFinding
 from .schema import RequirementObject
@@ -83,6 +86,19 @@ class RequirementIdEngine:
         return requirement_id
 
 
+def _normative_function_name(
+    rules: "NormativeRules",
+    profile: "DriverTypeProfile",
+    module: str,
+    semantic: str,
+    layer: str,
+) -> str:
+    """Resolve function name using normative rules with driver-type overrides."""
+    suffix = rules.function_suffix(layer, semantic, profile)
+    clean = _strip_gp_prefix(module)
+    return f"Gp_{clean}_{suffix}"
+
+
 # ---------------------------------------------------------------------------
 # Naming classification: semantic category -> correct C function name suffix
 # per AUTOSAR layer.  Mirrors aurix2g-normative-patterns 1.1 + 6.1.
@@ -117,47 +133,80 @@ _LAYER_NAMING_TABLE: dict[str, dict[str, str]] = {
         "input_read": "GetXxxSig",
         "output_write": "SetXxxSig",
     },
+    "*": {
+        "init": "Init",
+        "mainfunction": "MainFunction",
+        "fault": "GetDevFaultSig",
+        "diag": "GetDevFaultSig",
+        "input_read": "GetInSig",
+        "output_write": "SetOutSig",
+        "direction": "SetDirSig",
+        "polarity": "SetPolSig",
+        "mode_set": "SetDevModeOutSig",
+        "mode_get": "GetDevModeInSig",
+        "reset": "ResetChip",
+    },
 }
 
 
 def _classify_interface_semantic(interface_name: str, description: str, direction: str) -> str:
-    """Classify an interface's semantic category from its Chinese name or description."""
+    """Classify an interface's semantic category from its content (data-driven)."""
     text = f"{interface_name} {description}".lower()
 
-    # Lifecycle interfaces are independent of direction
-    if any(kw in text for kw in ("mainfunction", "周期调度", "周期性驱动", "轮询", "main function")):
+    # Lifecycle
+    if any(kw in text for kw in ("mainfunction", "周期调度", "周期性驱动", "轮询",
+                                   "main function", "周期主函数")):
         return "mainfunction"
     if any(kw in text for kw in ("init", "初始化")):
         return "init"
 
-    # Fault/diagnostic detection — check before direction-based classification
-    if any(kw in text for kw in ("故障", "诊断", "fault", "diag", "devfaultsig", "getdevfault")):
+    # Fault/diagnostic — check before generic read/write
+    if any(kw in text for kw in ("故障", "诊断", "fault", "diag", "error", "nfault", "status flag")):
         return "fault"
 
-    # Reading semantics should win over generic set/output hints when both appear
-    if any(kw in text for kw in ("输入读取", "状态读取", "read", "读取", "get", "input", "insig")):
+    # Reset
+    if any(kw in text for kw in ("复位", "reset", "restart", "reboot")):
+        return "reset"
+
+    # Mode/state control — check before generic control
+    if any(kw in text for kw in ("模式设置", "模式控制", "模式切换", "mode set",
+                                   "mode control", "enable", "disable", "sleep",
+                                   "wake", "standby", "模式与状态")):
+        return "mode_set"
+    if any(kw in text for kw in ("模式读取", "mode get", "模式状态", "状态读取",
+                                   "模式获取", "模式观测")):
+        return "mode_get"
+
+    # Direction/polarity
+    if any(kw in text for kw in ("方向", "direction", "dir")):
+        return "direction"
+    if any(kw in text for kw in ("极性", "polarity", "pol", "inversion")):
+        return "polarity"
+
+    # H-bridge / motor output — check before generic read/write
+    if any(kw in text for kw in ("h桥", "h-bridge", "hb", "半桥", "half-bridge",
+                                   "电机输出", "motor output", "h 桥", "功率输出")):
+        return "hb_output"
+
+    # Current sense — check before generic read
+    if any(kw in text for kw in ("电流", "current sense", "current monitor", "ipropi")):
+        return "current_sense"
+
+    # Read/sense/monitor/input — check before write/control
+    if any(kw in text for kw in ("读取", "read", "获取", "get", "采样", "采集",
+                                   "sample", "sense", "measure", "monitor", "检测",
+                                   "监测", "输入状态", "反馈")):
         return "input_read"
 
-    if direction == "output":
-        if any(kw in text for kw in ("输入", "读取", "read", "input", "get", "in")):
-            return "input_read"
-        if any(kw in text for kw in ("模式", "状态", "mode", "state")):
-            return "mode_get"
-        return "input_read"
-    if direction == "input":
-        if any(kw in text for kw in ("复位", "reset")):
-            return "reset"
-        if any(kw in text for kw in ("输出", "写入", "write", "output", "set", "out")):
-            return "output_write"
-        if any(kw in text for kw in ("方向", "dir")):
-            return "direction"
-        if any(kw in text for kw in ("极性", "pol")):
-            return "polarity"
-        if any(kw in text for kw in ("模式", "mode")):
-            return "mode_set"
-        if any(kw in text for kw in ("读取", "read", "get", "输入", "in")):
-            return "input_read"
+    # Write/control/output
+    if any(kw in text for kw in ("写入", "write", "设置", "set", "输出控制",
+                                   "output", "控制", "control", "drive", "驱动")):
         return "output_write"
+
+    # Config — neutral fallback
+    if any(kw in text for kw in ("配置", "config", "参数", "阈值")):
+        return "mode_set"
+
     return "output_write"
 
 
@@ -172,7 +221,7 @@ def _resolve_interface_name(
     Returns the full function name like ``Gp_NCA9539_GetDevFaultSig``.
     Falls back to ``Gp_{module}_{interface_name}`` when no rule matches.
     """
-    table = _LAYER_NAMING_TABLE.get(layer, {})
+    table = _LAYER_NAMING_TABLE.get(layer, _LAYER_NAMING_TABLE.get("*", {}))
     suffix = table.get(semantic)
     clean = _strip_gp_prefix(module)
     if suffix:
@@ -198,12 +247,25 @@ def _extract_function_name_hint(module: str, interface_name: str, description: s
 
 
 class RequirementBuilder:
-    """Map semantic requirement objects to engineering requirement instances."""
+    """Map semantic requirement objects to engineering requirement instances.
 
-    def __init__(self, module: str = "FC", layer: str = "IoExtDev") -> None:
+    When a normative driver profile is provided, interface naming uses
+    domain-specific suffixes (e.g. SetHbOutSig for motor drivers) rather
+    than generic fallbacks.
+    """
+
+    def __init__(
+        self,
+        module: str = "FC",
+        layer: str = "IoExtDev",
+        profile: "DriverTypeProfile | None" = None,
+        rules: "NormativeRules | None" = None,
+    ) -> None:
         self.module = module
         self.layer = layer
         self.id_engine = RequirementIdEngine(module)
+        self.profile = profile
+        self.rules = rules
 
     def build(
         self,
@@ -288,13 +350,19 @@ class RequirementBuilder:
         interface = item.get("interface_name") or "Interface"
         direction = item.get("direction") or "unknown"
 
-        # Resolve the correct C function name
+        # Resolve the correct C function name — normative rules take priority
         function_name = item.get("function_name", "")
         if not function_name:
             function_name = _extract_function_name_hint(self.module, interface, item.get("dependency", ""))
         if not function_name:
             semantic = _classify_interface_semantic(interface, item.get("dependency", ""), direction)
-            function_name = _resolve_interface_name(self.module, semantic, self.layer, interface)
+            # Use normative naming table when available
+            if self.rules and self.profile:
+                function_name = _normative_function_name(
+                    self.rules, self.profile, self.module, semantic, self.layer
+                )
+            if not function_name:
+                function_name = _resolve_interface_name(self.module, semantic, self.layer, interface)
 
         description = self._resolve_interface_description(interface, function_name)
         return self._base(
@@ -312,9 +380,9 @@ class RequirementBuilder:
     def _resolve_interface_description(self, interface: str, function_name: str) -> str:
         """Generate a description for an interface based on its resolved function name."""
         if "Init" in function_name and "init" not in interface.lower():
-            return "软件应提供初始化接口，用于加载项目配置、建立运行时上下文并初始化所依赖的底层访问资源，在配置非法或初始化失败时返回定义错误。"
+            return f"软件应提供 `{function_name}` 接口，用于加载项目配置、建立运行时上下文并初始化所依赖的底层访问资源，在配置非法或初始化失败时返回定义错误。"
         if "MainFunction" in function_name and "mainfunction" not in interface.lower():
-            return "软件应提供 MainFunction 接口，用于周期推进运行时状态、输出刷新和诊断处理，接口不得执行长时间阻塞操作。"
+            return f"软件应提供 `{function_name}` 接口，用于周期推进运行时状态、输出刷新和诊断处理，接口不得执行长时间阻塞操作。"
         if "SetHbOutSig" in function_name:
             return f"软件应提供 `{function_name}` 接口，基于目标 H 桥通道设置周期、占空比和方向输出，并在参数非法或底层访问失败时返回定义错误。"
         if "GetDevModeInSig" in function_name:
@@ -322,29 +390,50 @@ class RequirementBuilder:
         if "SetDevModeOutSig" in function_name:
             return f"软件应提供 `{function_name}` 接口，设置指定芯片实例的目标工作模式，并在模式值非法或底层访问失败时返回定义错误。"
         if "GetDevFaultSig" in function_name:
-            return f"软件应提供 `{function_name}` 接口，返回指定芯片实例的诊断状态位掩码（uint32），包括参数合法性错误、未初始化访问和设备故障状态信息。"
-        if "GetHBVOUT" in function_name:
-            return f"软件应提供 `{function_name}` 接口，读取指定芯片实例的 HBVOUT 寄存器值，并在参数非法或底层访问失败时返回定义错误。"
+            return f"软件应提供 `{function_name}` 接口，返回指定芯片实例的诊断状态信息，包括参数合法性错误、未初始化访问和设备故障状态。"
+        if "GetLoadCurrentSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，通过 ADC 采样 IPROPI 引脚电压，返回与负载电流成正比的电流值，并在 ADC 未配置或采样失败时返回定义错误。"
+        if "GetDevModeInSig" in function_name:
+            return f"软件应提供 `{function_name}` 接口，读取指定芯片实例的当前设备模式，并在未初始化、非法参数或底层访问失败时返回定义错误。"
         if "GetInSig" in function_name:
-            return f"软件应提供 `{function_name}` 接口，通过 uint16 Id 解析目标 chip/port/pin 并返回 GPIO 输入状态，对非法 Id 或 I2C 读失败返回错误。"
+            return f"软件应提供 `{function_name}` 接口，读取指定芯片实例的输入信号状态，对非法参数或底层访问失败返回错误。"
         if "SetOutSig" in function_name:
-            return f"软件应提供 `{function_name}` 接口，通过 uint16 Id 解析目标 chip/port/pin 并设置 GPIO 输出电平，写入单个 pin 时保持同 port 其他 bit 不变。"
+            return f"软件应提供 `{function_name}` 接口，设置指定芯片实例的输出信号状态，对非法参数或底层访问失败返回错误。"
         if "SetDirSig" in function_name:
-            return f"软件应提供 `{function_name}` 接口，配置指定 pin 的 GPIO 方向，运行时方向变更策略须项目确认。"
+            return f"软件应提供 `{function_name}` 接口，配置指定引脚的输入/输出方向，运行时方向变更策略须项目确认。"
         if "SetPolSig" in function_name:
-            return f"软件应提供 `{function_name}` 接口，配置指定 pin 的极性反转策略。"
+            return f"软件应提供 `{function_name}` 接口，配置指定引脚的信号极性/反转策略。"
         if "ResetChip" in function_name:
-            return f"软件应提供 `{function_name}` 接口，对指定芯片实例执行硬件复位。仅当 RESET 引脚归属本驱动时适用。"
+            return f"软件应提供 `{function_name}` 接口，对指定芯片实例执行硬件复位，仅当复位引脚归属本驱动时适用。"
         return _interface_description(interface)
 
     def _build_configuration(
         self, item: dict[str, Any], findings: list[ValidationFinding]
     ) -> EngineeringRequirement:
         config = item.get("config_name") or "Configuration"
+        # Profile-injected config: dependency carries the table rows
+        if config == "驱动配置项":
+            dep = item.get("dependency", "")
+            # Build markdown table from dep text which has pipe-delimited rows
+            header = "| 配置项 | 类型 | 可选值 | 默认值 | 说明 | 影响接口 |"
+            sep = "|---|---|---|---|---|---|"
+            rows = [line for line in dep.split("\n") if line.startswith("|")]
+            table = "\n".join([header, sep] + rows) if rows else dep
+            return self._base(
+                item, findings,
+                title="驱动配置项",
+                description=(
+                    f"软件应支持以下配置项。static 类型在 cfg.h 中预编译固化，"
+                    f"不同项目可选择不同值；dynamic 类型在 cfg.c 中运行时加载，"
+                    f"同一二进制可适配不同硬件；hardware 类型为 PCB 固定，"
+                    f"作为设计约束记录。\n\n{table}"
+                ),
+                constraint="配置项默认值在 Init 中加载；dynamic 类型可通过 Pre-Compile 或校准工具修改；超范围或冲突配置应拒绝生效。",
+                verification="通过配置评审和边界测试验证每项配置的默认值加载和非法值拒绝。",
+            )
         description = f"软件应支持 `{config}`，并定义默认值、取值范围和非法值处理规则。"
         return self._base(
-            item,
-            findings,
+            item, findings,
             title=_append_suffix(config, "配置"),
             description=description,
             constraint=f"范围：{_project_value(item.get('range', ''))}；默认值：{_project_value(item.get('default', ''))}",
@@ -356,6 +445,40 @@ class RequirementBuilder:
         self, item: dict[str, Any], findings: list[ValidationFinding]
     ) -> EngineeringRequirement:
         name = item.get("name") or item.get("interface_name") or "Diagnostic Behavior"
+        # Profile-injected fault enumeration: table data embedded in description
+        if name == "故障枚举与恢复策略":
+            dep = item.get("description", "")
+            header = "| 故障名称 | 分类 | 触发条件 | 检测方式 | 确认策略 | 芯片行为 | 恢复类型 | 软件动作 |"
+            sep = "|---|---|---|---|---|---|---|---|"
+            all_rows = [line for line in dep.split("\n") if line.startswith("|")]
+            # Skip first row if it's a duplicate header (planner embeds one)
+            rows = all_rows[1:] if all_rows and "故障名称" in all_rows[0] else all_rows
+            # Final dedup: keep only the first occurrence of each fault name.
+            # Upstream dedup may be defeated by overlapping chunks or pruner
+            # merging, so this is the safety net.
+            seen_faults: set[str] = set()
+            unique_rows: list[str] = []
+            for row in rows:
+                parts = row.split("|")
+                if len(parts) >= 2:
+                    fname = parts[1].strip().lower()
+                    if fname and fname not in seen_faults:
+                        seen_faults.add(fname)
+                        unique_rows.append(row)
+            table = "\n".join([header, sep] + unique_rows) if unique_rows else dep
+            return self._base(
+                item, findings,
+                title="故障枚举与恢复策略",
+                description=(
+                    f"软件应检测、确认并处理以下故障。恢复类型定义："
+                    f"auto=芯片自动恢复无需软件介入；"
+                    f"manual_reset=需软件执行芯片复位序列；"
+                    f"manual_clear=需软件清除故障标志；"
+                    f"fatal=不可恢复需系统级处理。\n\n{table}"
+                ),
+                constraint="故障检测在 MainFunction 中周期执行；故障恢复不得破坏已建立的运行时上下文；锁存型故障应提供故障清除接口。",
+                verification="通过故障注入逐项验证检测、确认、上报和恢复行为。",
+            )
         description = item.get("description") or f"软件应支持{name}相关的诊断、故障观测或错误处理行为。"
         if not description.lower().startswith("the ") and not description.startswith("软件"):
             description = f"软件应支持{description.rstrip('。.')}。"
@@ -363,8 +486,7 @@ class RequirementBuilder:
         if isinstance(dependency, list):
             dependency = ", ".join(str(value) for value in dependency if value)
         return self._base(
-            item,
-            findings,
+            item, findings,
             title=name,
             description=description,
             input=", ".join(item.get("inputs", [])) if isinstance(item.get("inputs"), list) else "",
@@ -459,7 +581,7 @@ def _timing_description(constraint: str, minimum: str, maximum: str) -> str:
 
 def _project_value(value: str) -> str:
     if not value or value == "Project input required":
-        return "需项目输入确认"
+        return ""
     return value
 
 
@@ -469,27 +591,27 @@ def _append_suffix(value: str, suffix: str) -> str:
 
 def _interface_description(interface: str) -> str:
     if "初始化" in interface or "Init" in interface:
-        return "软件应提供初始化接口，用于加载项目配置、建立 I2C 访问上下文、配置 GPIO 默认状态，并在配置非法或初始化失败时返回错误。"
+        return "软件应提供初始化接口，用于加载项目配置、建立底层访问上下文、配置默认状态，并在配置非法或初始化失败时返回错误。"
     if "MainFunction" in interface or "周期调度" in interface:
         return "软件应提供 MainFunction 接口，用于周期推进异步请求、处理超时、刷新运行时状态和执行诊断轮询，接口不得执行长时间阻塞操作。"
     if "输入读取" in interface:
-        return "软件应提供 GPIO 输入读取接口，用于按项目定义的 pin 或 port 粒度返回 GPIO 输入状态，并对非法参数或方向不匹配返回错误。"
+        return "软件应提供输入读取接口，用于按项目定义的方式返回输入信号状态，并对非法参数或底层访问失败返回错误。"
     if "输出写入" in interface:
-        return "软件应提供 GPIO 输出写入接口，用于按项目定义的 pin 或 port 粒度设置 GPIO 输出电平，并对非法参数、方向不匹配或写入失败返回错误。"
+        return "软件应提供输出写入接口，用于按项目定义的方式设置输出信号状态，并对非法参数或底层访问失败返回错误。"
     if "配置" in interface:
-        return "软件应提供 GPIO 配置接口，用于设置项目允许的方向和极性配置，并拒绝未授权的运行时配置变更。"
+        return "软件应提供配置接口，用于设置项目允许的配置参数，并拒绝未授权的运行时配置变更。"
     return f"软件应提供 `{interface}`，并定义输入参数、输出结果、返回值和错误处理。"
 
 
 def _planned_verification(name: str, req_type: str) -> str:
     if "初始化" in name or "Init" in name:
-        return "通过初始化接口测试验证：在加载默认配置时应完成上下文建立和默认状态设置；注入非法配置、I2C 初始化失败和重复初始化场景时，应返回定义错误，且已建立状态不得被部分破坏。"
+        return "通过初始化接口测试验证：在加载默认配置时应完成上下文建立和默认状态设置；注入非法配置、底层初始化失败和重复初始化场景时，应返回定义错误，且已建立状态不得被部分破坏。"
     if "MainFunction" in name or "周期调度" in name:
         return "通过周期调度和集成测试验证：周期调用 MainFunction 时应推进异步请求、处理超时并刷新运行时状态；当无待处理任务时不得产生额外状态变化；注入超时和诊断轮询场景时应得到定义结果。"
     if "输入" in name and req_type in {"functional", "interface"}:
-        return "通过功能测试和边界测试验证：模拟输入寄存器值和极性配置后，接口应返回与目标 pin/port 一致的输入状态；非法参数、方向不匹配或底层访问失败时，应返回定义错误并保持缓存状态一致。"
+        return "通过功能测试和边界测试验证：模拟输入信号和配置后，接口应返回与目标一致的输入状态；非法参数或底层访问失败时，应返回定义错误并保持状态一致。"
     if "输出" in name and req_type in {"functional", "interface"}:
-        return "通过功能测试和集成测试验证：对目标 pin/port 执行输出写入后，应仅改变目标 bit 的可观测输出结果；读改写过程中其他 bit 不得被破坏；非法方向、非法参数或 I2C 写失败时，应返回定义错误并保持原输出状态。"
+        return "通过功能测试和集成测试验证：对目标执行输出写入后，应产生正确的可观测输出结果；操作过程中无关状态不得被破坏；非法参数或底层访问失败时，应返回定义错误并保持原状态。"
     if "极性" in name:
         return "通过配置测试和边界测试验证：加载默认极性后应得到期望读写语义；切换反转极性时应只影响定义范围内的输入解释结果；未授权运行时修改或非法组合时应被拒绝并保留原配置。"
     if "I2C" in name or "寄存器" in name:

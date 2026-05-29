@@ -31,14 +31,6 @@ FeatureType = Literal[
     "feature_group",
 ]
 
-ChipType = Literal[
-    "gpio_expander",
-    "spi_device",
-    "transceiver",
-    "pwm_adc",
-    "generic",
-]
-
 
 @dataclass(frozen=True)
 class SubfunctionRecord:
@@ -57,6 +49,10 @@ class SubfunctionRecord:
     candidate_requirement_types: list[str] = field(default_factory=list)
     missing_inputs: list[str] = field(default_factory=list)
     can_generate_requirement: str = "Needs Review"
+    # Structured fault rows extracted from datasheet protection/fault summary tables.
+    # Each row is a pipe-delimited string matching the builder's fault table format:
+    #   | 故障名称 | 分类 | 触发条件 | 检测方式 | 确认策略 | 芯片行为 | 恢复类型 | 软件动作 |
+    fault_rows: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -89,6 +85,8 @@ class FeatureRecord:
     evidence_level: str = ""
     software_actions: list[str] = field(default_factory=list)
     ready_conditions: list[str] = field(default_factory=list)
+    # Structured fault rows flowing from datasheet fault summary tables.
+    fault_rows: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -119,6 +117,8 @@ class _Candidate:
     evidence_level: str = ""
     software_actions: tuple[str, ...] = ()
     ready_conditions: tuple[str, ...] = ()
+    # Structured fault rows from datasheet fault summary tables.
+    fault_rows: tuple[str, ...] = ()
 
 
 class FeatureExtractor:
@@ -134,20 +134,6 @@ class FeatureExtractor:
 
     def extract(self, parsed: ParsedDocument) -> list[FeatureRecord]:
         chunks = [chunk for chunk in parsed.chunks if not _skip_chunk(chunk)]
-        extractors = self._select_extractors(parsed, chunks)
-        with ThreadPoolExecutor(max_workers=min(8, len(extractors))) as executor:
-            batches = list(executor.map(lambda fn: fn(parsed, chunks), extractors))
-
-        candidates = [candidate for batch in batches for candidate in batch]
-        raw_records = self._materialize(_dedupe_candidates(candidates))
-        grouped_records = self._build_feature_groups(raw_records)
-        return _dedupe_records([*grouped_records, *raw_records])
-
-    def _select_extractors(
-        self,
-        parsed: ParsedDocument,
-        chunks: list[DocumentChunk],
-    ) -> tuple[Any, ...]:
         all_extractors = (
             self._extract_identity,
             self._extract_capabilities,
@@ -162,92 +148,13 @@ class FeatureExtractor:
             self._extract_constraints,
             self._extract_project_mapping,
         )
-        chip_type = self._chip_type(parsed, chunks)
-        extractor_map: dict[ChipType, tuple[Any, ...]] = {
-            "gpio_expander": (
-                self._extract_identity,
-                self._extract_capabilities,
-                self._extract_pins,
-                self._extract_interfaces,
-                self._extract_registers,
-                self._extract_bitfields,
-                self._extract_diagnostics,
-                self._extract_timing,
-                self._extract_constraints,
-                self._extract_project_mapping,
-            ),
-            "spi_device": (
-                self._extract_identity,
-                self._extract_capabilities,
-                self._extract_pins,
-                self._extract_interfaces,
-                self._extract_registers,
-                self._extract_bitfields,
-                self._extract_diagnostics,
-                self._extract_timing,
-                self._extract_constraints,
-                self._extract_project_mapping,
-            ),
-            "transceiver": (
-                self._extract_identity,
-                self._extract_capabilities,
-                self._extract_interfaces,
-                self._extract_registers,
-                self._extract_bitfields,
-                self._extract_states,
-                self._extract_diagnostics,
-                self._extract_timing,
-                self._extract_electrical,
-                self._extract_constraints,
-                self._extract_project_mapping,
-            ),
-            "pwm_adc": (
-                self._extract_identity,
-                self._extract_capabilities,
-                self._extract_pins,
-                self._extract_interfaces,
-                self._extract_registers,
-                self._extract_diagnostics,
-                self._extract_timing,
-                self._extract_constraints,
-                self._extract_project_mapping,
-            ),
-            "generic": all_extractors,
-        }
-        return extractor_map.get(chip_type, all_extractors)
+        with ThreadPoolExecutor(max_workers=min(8, len(all_extractors))) as executor:
+            batches = list(executor.map(lambda fn: fn(parsed, chunks), all_extractors))
 
-    def _chip_type(
-        self,
-        parsed: ParsedDocument,
-        chunks: list[DocumentChunk],
-    ) -> ChipType:
-        text = " ".join(chunk.text.lower() for chunk in chunks[:20])
-        headings = " ".join(" ".join(chunk.heading_path).lower() for chunk in chunks[:20])
-        module_upper = self.module.upper()
-
-        if any(token in module_upper for token in ("NCA9539", "NCA95", "PCF857", "TCA95")):
-            return "gpio_expander"
-        if _contains_any(text + " " + headings, ("gpio expander", "i/o expander", "io expander")):
-            return "gpio_expander"
-        if ("gpio" in text or "port" in text or "quasi-bidirectional" in text) and "i2c" in text:
-            return "gpio_expander"
-
-        if any(token in module_upper for token in ("TLE62", "MC339", "DRV8", "EEPROM", "FLASH")):
-            return "spi_device"
-        if "spi" in text or "spi" in headings:
-            return "spi_device"
-
-        if _contains_any(module_upper, ("TJA", "TCAN", "ATA6", "SBC")):
-            return "transceiver"
-        if _contains_any(text + " " + headings, ("transceiver", "can fd", "lin bus", "physical layer", "bus wake", "bus sleep")):
-            return "transceiver"
-
-        if _contains_any(module_upper, ("ADC", "PWM", "SENSOR", "MONITOR")):
-            return "pwm_adc"
-        if _contains_any(text + " " + headings, ("adc", "analog-to-digital", "pwm", "duty cycle", "sensor", "monitor")):
-            return "pwm_adc"
-
-        return "generic"
+        candidates = [candidate for batch in batches for candidate in batch]
+        raw_records = self._materialize(_dedupe_candidates(candidates))
+        grouped_records = self._build_feature_groups(raw_records)
+        return _dedupe_records([*grouped_records, *raw_records])
 
     def _materialize(self, candidates: list[_Candidate]) -> list[FeatureRecord]:
         counters: Counter[str] = Counter()
@@ -297,6 +204,7 @@ class FeatureExtractor:
                         list(candidate.missing_inputs),
                         candidate.can_generate_requirement,
                     ),
+                    fault_rows=list(candidate.fault_rows),
                 )
             )
         return records
@@ -351,461 +259,896 @@ class FeatureExtractor:
             ready_conditions=_ready_conditions(missing_inputs, can_generate_requirement),
         )
 
+    # ------------------------------------------------------------------
+    # Data-driven feature group builder
+    # ------------------------------------------------------------------
+
     def _build_feature_groups(self, records: list[FeatureRecord]) -> list[FeatureRecord]:
+        """Build feature groups from extracted records using data-driven clustering.
+
+        Discovers patterns from whatever record types are actually present rather
+        than checking against hardcoded GPIO/I2C/register templates.
+        """
         counters: Counter[str] = Counter()
         groups: list[FeatureRecord] = []
-        pins = {record.name.upper(): record for record in records if record.type == "pin"}
-        registers = [record for record in records if record.type in {"register", "configuration"}]
-        interfaces = [record for record in records if record.type == "interface"]
-        states = [record for record in records if record.type == "state_machine"]
-        diagnostics = [record for record in records if record.type == "diagnostic"]
-        timing = [record for record in records if record.type == "timing"]
-        constraints = [record for record in records if record.type in {"constraint", "prohibited"}]
-        capabilities = [record for record in records if record.type == "capability"]
 
-        gpio_pins = sorted(pin for pin in pins if re.fullmatch(r"P[0-1][0-7]", pin))
-        gpio_registers = [
-            record
-            for record in registers
-            if re.search(r"\b(input|output|polarity|configuration)\b", record.name + " " + record.content, re.I)
-        ]
-        gpio_evidence = [pins[pin] for pin in gpio_pins] + gpio_registers + capabilities
-        if gpio_pins or gpio_registers or _has_text(records, "gpio", "i/o port", "io port"):
-            groups.append(
-                self._group_record(
-                    counters,
-                    "16-bit GPIO Port Capability",
-                    "The device exposes GPIO pins that can be organized into port-level input, output, polarity, and direction behaviors through the register map.",
-                    gpio_evidence,
-                    "Capability / GPIO",
-                    "open_issue",
-                    ["功能需求", "接口需求", "配置需求"],
-                    "The driver may expose pin-level and port-level APIs for reading input state, writing output state, and configuring direction or polarity through I2C register access. Project inputs must confirm which pins are used, default states, and whether runtime reconfiguration is allowed.",
-                    [
-                        "确认项目使用哪些 GPIO pin/port。",
-                        "确认默认方向、默认输出电平和默认极性。",
-                        "确认是否支持 pin 级、port 级或两者都支持。",
-                        "确认运行时方向/极性是否允许变更。",
-                    ],
-                    [
-                        SubfunctionRecord(
-                            name="GPIO Input Read",
-                            summary="Read pin or port input state from input registers.",
-                            trigger="ReadPin / ReadPort candidate API or periodic sampling.",
-                            inputs="Pin/port identifier; input register value.",
-                            outputs="Logical input level or port bitmap.",
-                            boundary="Invalid pin/port ID, uninitialized driver, I2C read failure.",
-                            related_pins=gpio_pins,
-                            related_registers=["Input Port Register"],
-                            application_scheme="Use this subfunction when software needs to sample external digital inputs connected to NCA9539 ports. Project must define pin mapping and returned logical polarity.",
-                            candidate_requirement_types=["功能需求", "接口需求"],
-                            missing_inputs=["API 命名", "Pin 映射", "错误返回语义"],
-                        ),
-                        SubfunctionRecord(
-                            name="GPIO Output Write",
-                            summary="Write output level to output registers for configured output pins.",
-                            trigger="WritePin / WritePort candidate API.",
-                            inputs="Pin/port identifier; requested level or bitmap.",
-                            outputs="Updated output register or cached output state.",
-                            boundary="Pin configured as input, invalid ID, I2C write failure.",
-                            related_pins=gpio_pins,
-                            related_registers=["Output Port Register"],
-                            application_scheme="Use this subfunction for software-controlled digital outputs. Project must decide whether write-back cache, readback verification, or output-only pin filtering is required.",
-                            candidate_requirement_types=["功能需求", "接口需求", "诊断需求"],
-                            missing_inputs=["默认输出", "缓存策略", "写失败处理"],
-                        ),
-                        SubfunctionRecord(
-                            name="GPIO Direction Configuration",
-                            summary="Configure each GPIO bit as input or output through configuration registers.",
-                            trigger="Initialization or runtime configuration API.",
-                            inputs="Pin/port identifier; direction value.",
-                            outputs="Updated configuration register.",
-                            boundary="Unsupported runtime change, invalid direction value, I2C write failure.",
-                            related_pins=gpio_pins,
-                            related_registers=["Configuration Register"],
-                            application_scheme="Use this subfunction during initialization to enforce project pin direction. Runtime direction change should be generated only if project requirements explicitly allow it.",
-                            candidate_requirement_types=["配置需求", "接口需求"],
-                            missing_inputs=["默认方向", "运行时配置策略"],
-                        ),
-                        SubfunctionRecord(
-                            name="GPIO Polarity Configuration",
-                            summary="Configure whether input polarity is inverted before software interpretation.",
-                            trigger="Initialization or polarity configuration API.",
-                            inputs="Pin/port identifier; polarity setting.",
-                            outputs="Updated polarity inversion register.",
-                            boundary="Invalid polarity value, unsupported pin, I2C write failure.",
-                            related_pins=gpio_pins,
-                            related_registers=["Polarity Inversion Register"],
-                            application_scheme="Use this subfunction if project wiring or signal semantics require logical inversion. If the project does not expose polarity control, keep it as initialization configuration only.",
-                            candidate_requirement_types=["配置需求", "功能需求"],
-                            missing_inputs=["项目是否需要极性反转", "默认极性"],
-                        ),
-                    ],
-                    related_pins=gpio_pins,
-                    related_registers=_unique(record.name for record in gpio_registers),
-                )
+        # ---- Step 1: Index by type ----
+        by_type = self._index_by_type(records)
+        pins = by_type["pin"]
+        registers = by_type["register"] + by_type["configuration"]
+        interfaces = by_type["interface"]
+        states = by_type["state_machine"]
+        diagnostics = by_type["diagnostic"]
+        timing = by_type["timing"]
+        constraints = by_type["constraint"] + by_type["prohibited"]
+        capabilities = by_type["capability"]
+        pin_map = {r.name.upper(): r for r in pins}
+
+        # ---- Step 2: Discover pin clusters ----
+        pin_clusters = self._discover_pin_clusters(pins)
+
+        # ---- Step 3: Build pin-centric feature groups (skip hardware-only) ----
+        _HW_ONLY_CLUSTERS = {"电源与接地引脚", "电荷泵引脚", "散热引脚"}
+        for cluster_name, cluster_pins in pin_clusters.items():
+            if cluster_name in _HW_ONLY_CLUSTERS:
+                continue
+            group = self._build_pin_cluster_group(
+                counters, cluster_name, cluster_pins, by_type,
             )
+            if group:
+                groups.append(group)
 
-        input_registers = _records_matching(registers, r"\binput\b")
-        if input_registers:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "Input Port Function",
-                    "Input port registers provide the software-visible state of GPIO pins configured or used as inputs.",
-                    input_registers + [pins[pin] for pin in gpio_pins[:4] if pin in pins],
-                    "Subfunction / GPIO Input",
-                    "software_constraint",
-                    ["功能需求", "接口需求"],
-                    "The driver may provide pin-level or port-level read APIs that translate register values into logical input states. Project inputs must confirm pin mapping, polarity interpretation, and whether input reads are direct register reads or cached values.",
-                    ["确认输入 pin 使用范围。", "确认读取接口粒度。", "确认极性转换是否在读接口中体现。"],
-                    [
-                        SubfunctionRecord(
-                            name="Read Input Port",
-                            summary="Read a full input port bitmap from the input register group.",
-                            inputs="Port identifier.",
-                            outputs="Port input bitmap or error status.",
-                            boundary="Invalid port, I2C read failure, uninitialized driver.",
-                            related_registers=_unique(record.name for record in input_registers),
-                            application_scheme="Use for efficient bulk sampling when the project consumes multiple inputs on the same port.",
-                            candidate_requirement_types=["功能需求", "接口需求"],
-                            missing_inputs=["Port 编号规则", "错误返回语义"],
-                        ),
-                        SubfunctionRecord(
-                            name="Read Input Pin",
-                            summary="Read one GPIO input value by masking the corresponding input register bit.",
-                            inputs="Pin identifier.",
-                            outputs="Logical pin level or error status.",
-                            boundary="Invalid pin, pin not configured/used as input, I2C read failure.",
-                            related_pins=gpio_pins,
-                            related_registers=_unique(record.name for record in input_registers),
-                            application_scheme="Use for application-facing single signal reads. Project must define pin mapping and logical polarity.",
-                            candidate_requirement_types=["功能需求", "接口需求"],
-                            missing_inputs=["Pin 映射", "是否检查方向"],
-                        ),
-                    ],
-                    related_pins=gpio_pins,
-                    related_registers=_unique(record.name for record in input_registers),
-                )
+        # ---- Step 4: Build register groups (if registers exist) ----
+        reg_clusters = self._discover_register_clusters(registers)
+        for cluster_name, cluster_regs in reg_clusters.items():
+            group = self._build_register_cluster_group(
+                counters, cluster_name, cluster_regs,
             )
+            if group:
+                groups.append(group)
 
-        output_registers = _records_matching(registers, r"\boutput\b")
-        if output_registers:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "Output Port Function",
-                    "Output port registers define the commanded output level for GPIO pins used as outputs.",
-                    output_registers + [pins[pin] for pin in gpio_pins[:4] if pin in pins],
-                    "Subfunction / GPIO Output",
-                    "software_constraint",
-                    ["功能需求", "接口需求", "诊断需求"],
-                    "The driver may provide pin-level or port-level write APIs. Project inputs must confirm default output level, whether output state is cached, and how write failures are reported.",
-                    ["确认输出 pin 使用范围。", "确认默认输出电平。", "确认写后读回/缓存策略。"],
-                    [
-                        SubfunctionRecord(
-                            name="Write Output Port",
-                            summary="Write a full output port bitmap to the output register group.",
-                            inputs="Port identifier; output bitmap.",
-                            outputs="Write result status.",
-                            boundary="Invalid port, I2C write failure, reserved bits if any.",
-                            related_registers=_unique(record.name for record in output_registers),
-                            application_scheme="Use when the project needs deterministic update of multiple outputs on the same port.",
-                            candidate_requirement_types=["功能需求", "接口需求"],
-                            missing_inputs=["Port 写入范围", "写失败处理"],
-                        ),
-                        SubfunctionRecord(
-                            name="Write Output Pin",
-                            summary="Modify one output bit while preserving other bits in the same output register.",
-                            inputs="Pin identifier; output level.",
-                            outputs="Updated output register value or error status.",
-                            boundary="Invalid pin, pin configured as input, cache mismatch, I2C write failure.",
-                            related_pins=gpio_pins,
-                            related_registers=_unique(record.name for record in output_registers),
-                            application_scheme="Use for application-facing single output control. Project must decide whether read-modify-write uses cache or register readback.",
-                            candidate_requirement_types=["功能需求", "接口需求", "诊断需求"],
-                            missing_inputs=["方向检查策略", "缓存/读改写策略"],
-                        ),
-                    ],
-                    related_pins=gpio_pins,
-                    related_registers=_unique(record.name for record in output_registers),
-                )
-            )
+        # ---- Step 5: Build interface group ----
+        if interfaces:
+            group = self._build_interface_group(counters, interfaces, pin_map)
+            if group:
+                groups.append(group)
 
-        polarity_registers = _records_matching(registers, r"\bpolarity\b")
-        if polarity_registers:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "Polarity Inversion Function",
-                    "Polarity inversion registers define whether input values are logically inverted before software interpretation.",
-                    polarity_registers,
-                    "Subfunction / GPIO Polarity",
-                    "software_constraint",
-                    ["配置需求", "功能需求"],
-                    "The driver may configure input polarity during initialization or expose it as a project configuration item. Project inputs must confirm whether polarity inversion is supported at runtime or fixed by configuration.",
-                    ["确认是否使用极性反转。", "确认默认极性。", "确认是否允许运行时修改。"],
-                    [
-                        SubfunctionRecord(
-                            name="Configure Input Polarity",
-                            summary="Set polarity inversion bits for selected pins or ports.",
-                            inputs="Pin/port identifier; polarity setting.",
-                            outputs="Updated polarity inversion register.",
-                            boundary="Invalid polarity value, unsupported runtime change, I2C write failure.",
-                            related_registers=_unique(record.name for record in polarity_registers),
-                            application_scheme="Use when physical signal active level differs from software logical level. Keep as configuration-only if project does not need runtime control.",
-                            candidate_requirement_types=["配置需求", "接口需求"],
-                            missing_inputs=["默认极性", "运行时修改策略"],
-                        )
-                    ],
-                    related_pins=gpio_pins,
-                    related_registers=_unique(record.name for record in polarity_registers),
-                )
-            )
+        # ---- Step 6: Build state group ----
+        if states:
+            group = self._build_state_group(counters, states)
+            if group:
+                groups.append(group)
 
-        direction_registers = _records_matching(registers, r"\bconfiguration\b")
-        if direction_registers:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "Direction Configuration Function",
-                    "Configuration registers define whether each GPIO bit behaves as input or output.",
-                    direction_registers,
-                    "Subfunction / GPIO Direction",
-                    "software_constraint",
-                    ["配置需求", "接口需求", "状态需求"],
-                    "The driver may apply direction settings during initialization and optionally expose runtime direction changes. Project inputs must confirm default direction, allowed changes, and invalid transition handling.",
-                    ["确认每个 pin 默认方向。", "确认是否允许运行时方向切换。", "确认方向与读写接口的约束关系。"],
-                    [
-                        SubfunctionRecord(
-                            name="Apply Direction Configuration",
-                            summary="Configure GPIO direction bits according to project configuration.",
-                            inputs="Project pin configuration; direction values.",
-                            outputs="Updated configuration registers.",
-                            boundary="Invalid pin, invalid direction, I2C write failure.",
-                            related_registers=_unique(record.name for record in direction_registers),
-                            application_scheme="Use in initialization to put all used pins into project-defined direction before application access.",
-                            candidate_requirement_types=["配置需求", "状态需求"],
-                            missing_inputs=["Pin 默认方向表", "初始化顺序"],
-                        ),
-                        SubfunctionRecord(
-                            name="Runtime Direction Change",
-                            summary="Change GPIO direction after initialization only if the project explicitly permits it.",
-                            inputs="Pin identifier; requested direction.",
-                            outputs="Updated configuration register or rejection status.",
-                            boundary="Runtime change not supported, invalid transition, output state undefined.",
-                            related_registers=_unique(record.name for record in direction_registers),
-                            application_scheme="Generate as a rejection requirement when runtime changes are not supported; generate as an interface requirement only if explicitly required.",
-                            candidate_requirement_types=["接口需求", "配置需求"],
-                            missing_inputs=["是否支持运行时方向切换", "拒绝返回值"],
-                        ),
-                    ],
-                    related_pins=gpio_pins,
-                    related_registers=_unique(record.name for record in direction_registers),
-                )
-            )
-
-        i2c_evidence = [
-            record
-            for record in interfaces + list(pins.values()) + capabilities
-            if re.search(r"\b(i2c|i2c-bus|scl|sda|address|command byte)\b", record.name + " " + record.content, re.I)
-        ]
-        if i2c_evidence:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "I2C Control Interface",
-                    "The device is accessed through an I2C control interface using bus pins, address selection, and register read/write transactions.",
-                    i2c_evidence,
-                    "Interface / Communication",
-                    "software_constraint",
-                    ["接口需求", "时序需求", "诊断需求"],
-                    "The driver may wrap I2C read/write transactions behind register-level APIs. Project architecture must define whether this module directly owns I2C access or calls a lower-level I2C service.",
-                    [
-                        "确认 I2C 访问归属和底层依赖。",
-                        "确认设备地址配置来源。",
-                        "确认 NACK、超时、总线错误的返回语义。",
-                    ],
-                    [
-                        SubfunctionRecord(
-                            name="Register Read Transaction",
-                            summary="Read one or more registers through the I2C interface.",
-                            inputs="Device address; register address; length.",
-                            outputs="Read data or error status.",
-                            boundary="NACK, timeout, invalid register, bus busy.",
-                            related_pins=["SCL", "SDA"],
-                            related_registers=_unique(record.name for record in registers),
-                            application_scheme="Use for input sampling, configuration readback, and diagnostic confirmation. Return mapping must follow project error handling rules.",
-                            candidate_requirement_types=["接口需求", "诊断需求"],
-                            missing_inputs=["底层 I2C API", "错误码映射", "同步/异步策略"],
-                        ),
-                        SubfunctionRecord(
-                            name="Register Write Transaction",
-                            summary="Write register values through the I2C interface.",
-                            inputs="Device address; register address; write data.",
-                            outputs="Write result status.",
-                            boundary="NACK, timeout, invalid register, write-protected or reserved field.",
-                            related_pins=["SCL", "SDA"],
-                            related_registers=_unique(record.name for record in registers),
-                            application_scheme="Use for output control, direction configuration, and polarity configuration. Project must decide whether readback verification is required.",
-                            candidate_requirement_types=["接口需求", "功能需求"],
-                            missing_inputs=["写后验证策略", "错误恢复策略"],
-                        ),
-                    ],
-                    related_pins=_unique(record.name for record in i2c_evidence if record.type == "pin"),
-                    related_registers=_unique(record.name for record in registers),
-                )
-            )
-
-        if registers:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "Register Map",
-                    "The register map provides the data model for input sampling, output control, polarity inversion, and direction configuration.",
-                    registers,
-                    "Register / Data Model",
-                    "software_constraint",
-                    ["接口需求", "配置需求", "功能需求"],
-                    "The driver should model register addresses, default values, and valid bit behavior as the basis for register access and validation. Project inputs must define which register groups are exposed through public APIs.",
-                    [
-                        "确认寄存器默认值是否作为初始化验收准则。",
-                        "确认保留位和非法地址处理策略。",
-                        "确认是否需要寄存器缓存。",
-                    ],
-                    [
-                        SubfunctionRecord(
-                            name="Register Address Mapping",
-                            summary="Map functional operations to register addresses and port indexes.",
-                            inputs="Operation type; port index; register group.",
-                            outputs="Register address used by I2C transaction.",
-                            boundary="Invalid port index, unsupported register group.",
-                            related_registers=_unique(record.name for record in registers),
-                            application_scheme="Use as the internal contract between high-level GPIO operations and low-level I2C transactions. Keep generated SRS at behavior level, not implementation table level unless project requires traceable register mapping.",
-                            candidate_requirement_types=["接口需求", "配置需求"],
-                            missing_inputs=["公开接口是否暴露寄存器级访问", "非法寄存器处理"],
-                        )
-                    ],
-                    related_registers=_unique(record.name for record in registers),
-                )
-            )
-
+        # ---- Step 7: Build diagnostic group ----
         if diagnostics:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "Interrupt and Diagnostic Signaling",
-                    "Diagnostic or interrupt-related signals provide software-observable status only when the project connects and uses the relevant pins or flags.",
-                    diagnostics + [pins[name] for name in pins if name in {"INT", "ERR_N"}],
-                    "Diagnostic / Status",
-                    "open_issue",
-                    ["诊断需求", "状态需求", "接口需求"],
-                    "The driver may expose interrupt/status handling only if the hardware connection and project ownership are confirmed. Otherwise this feature remains a chip capability note.",
-                    ["确认 INT/诊断 pin 是否连接到 MCU。", "确认中断清除条件和软件响应策略。"],
-                    [
-                        SubfunctionRecord(
-                            name="Interrupt Status Handling",
-                            summary="Observe interrupt/status indication and map it to software status.",
-                            inputs="Interrupt pin or status evidence.",
-                            outputs="Software status or callback trigger.",
-                            boundary="Pin not connected, ownership outside driver, unclear clear condition.",
-                            related_pins=["INT", "ERR_N"],
-                            application_scheme="Use when project hardware routes the diagnostic/interrupt signal to software. Do not generate Ready requirements from datasheet-only interrupt capability.",
-                            candidate_requirement_types=["诊断需求", "状态需求"],
-                            missing_inputs=["硬件连接", "回调/轮询策略", "清除条件"],
-                        )
-                    ],
-                )
-            )
+            group = self._build_diagnostic_group(counters, diagnostics, pin_map)
+            if group:
+                groups.append(group)
 
-        reset_evidence = [
-            record
-            for record in states + list(pins.values())
-            if re.search(r"\b(reset|por|power-on)\b", record.name + " " + record.content, re.I)
-        ]
-        if reset_evidence:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "Reset and Default State",
-                    "Power-on or reset behavior defines default register and pin state that the driver may need to account for during initialization.",
-                    reset_evidence,
-                    "State / Initialization",
-                    "software_constraint",
-                    ["状态需求", "配置需求", "时序需求"],
-                    "The driver may use reset/default facts to define initialization expectations and post-reset reconfiguration behavior. Project must confirm whether software controls RESET and whether reinitialization is required after reset.",
-                    ["确认 RESET pin 是否由软件控制。", "确认复位后是否自动重新初始化。", "确认默认状态验收准则。"],
-                    [
-                        SubfunctionRecord(
-                            name="Post-reset Reinitialization",
-                            summary="Recover default chip state into project runtime configuration after reset.",
-                            trigger="Power-on reset, external reset, or detected device reset.",
-                            inputs="Project configuration; reset indication.",
-                            outputs="Configured runtime register state.",
-                            boundary="RESET not controlled by software, I2C unavailable, default values unknown.",
-                            application_scheme="Use if project requires robust recovery after power-on or external reset. If reset is hardware-only, record as a constraint and confirmation item.",
-                            candidate_requirement_types=["状态需求", "配置需求"],
-                            missing_inputs=["RESET 所有权", "复位检测方式", "重初始化策略"],
-                        )
-                    ],
-                )
-            )
-
+        # ---- Step 8: Build timing group ----
         if timing:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "Timing Constraints",
-                    "Timing values constrain bus access, reset handling, signal stabilization, or verification timing.",
-                    timing,
-                    "Timing / Verification",
-                    "hardware_constraint",
-                    ["时序需求", "非功能需求", "验证策略"],
-                    "Use timing values only when software must wait, timeout, poll, or verify behavior. Pure electrical timing remains evidence for review unless mapped to a software action.",
-                    ["确认哪些时序需要软件等待或超时处理。", "确认验证环境是否可测量该时序。"],
-                    [
-                        SubfunctionRecord(
-                            name="Software Timing Guard",
-                            summary="Apply wait, timeout, or sampling guards around operations that depend on datasheet timing.",
-                            inputs="Operation trigger; timing value and unit.",
-                            outputs="Delayed read/write, timeout result, or verification criterion.",
-                            boundary="No software-observable trigger, no project timeout policy.",
-                            application_scheme="Generate timing requirements only where the driver owns the wait or timeout. Otherwise keep the value as verification evidence.",
-                            candidate_requirement_types=["时序需求", "诊断需求"],
-                            missing_inputs=["软件是否负责等待", "超时值策略", "测试测量点"],
-                        )
-                    ],
-                )
-            )
+            group = self._build_timing_group(counters, timing)
+            if group:
+                groups.append(group)
 
+        # ---- Step 9: Build constraint group ----
         if constraints:
-            groups.append(
-                self._group_record(
-                    counters,
-                    "Prohibited and Boundary Behavior",
-                    "Reserved, invalid, unsupported, or cautionary statements define boundaries that may require rejection behavior or project exclusions.",
-                    constraints,
-                    "Constraint / Boundary",
-                    "open_issue",
-                    ["接口需求", "配置需求", "约束"],
-                    "Generate rejection requirements only when software receives or configures the invalid value. Hardware-only cautions should remain constraints or review notes.",
-                    ["确认软件是否能接收该非法输入。", "确认非法值返回语义。"],
-                    [
-                        SubfunctionRecord(
-                            name="Invalid Input Rejection",
-                            summary="Reject or report unsupported values that enter through software interfaces.",
-                            inputs="API value, register address, configuration item.",
-                            outputs="Error status or Open Issue if behavior is undefined.",
-                            boundary="Datasheet-only limitation with no software input path.",
-                            application_scheme="Use when project APIs expose configurable values. If no software entry exists, mark NotApplicable or keep as constraint.",
-                            candidate_requirement_types=["接口需求", "配置需求", "诊断需求"],
-                            missing_inputs=["软件输入路径", "错误码", "是否需要诊断上报"],
-                        )
-                    ],
-                )
-            )
+            group = self._build_constraint_group(counters, constraints)
+            if group:
+                groups.append(group)
+
+        # ---- Step 10: Remaining capabilities (skip catch-all, they don't map to specific requirements) ----
 
         return groups
+
+    # ------------------------------------------------------------------
+    # Indexing & clustering helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _index_by_type(records: list[FeatureRecord]) -> dict[str, list[FeatureRecord]]:
+        indexed: dict[str, list[FeatureRecord]] = {
+            "pin": [], "register": [], "configuration": [], "interface": [],
+            "state_machine": [], "diagnostic": [], "timing": [],
+            "constraint": [], "prohibited": [], "capability": [],
+            "identity": [], "electrical": [], "bitfield": [],
+            "project_mapping": [], "resource": [],
+        }
+        for r in records:
+            bucket = indexed.get(r.type)
+            if bucket is not None:
+                bucket.append(r)
+        return indexed
+
+    def _discover_pin_clusters(
+        self, pins: list[FeatureRecord],
+    ) -> dict[str, list[FeatureRecord]]:
+        """Cluster pins by their functional role inferred from descriptions."""
+        if not pins:
+            return {}
+
+        clusters: dict[str, list[FeatureRecord]] = {}
+        for pin in pins:
+            func = self._pin_functional_signature(pin)
+            clusters.setdefault(func, []).append(pin)
+
+        merged: dict[str, list[FeatureRecord]] = {}
+        others: list[FeatureRecord] = []
+        for name, cluster in clusters.items():
+            if len(cluster) == 1 and len(clusters) > 3:
+                others.extend(cluster)
+            else:
+                merged[name] = cluster
+        if others:
+            merged["其他设备引脚"] = others
+
+        return merged
+
+    @staticmethod
+    def _pin_functional_signature(pin: FeatureRecord) -> str:
+        """Derive a Chinese functional category name from a pin's description."""
+        text = f"{pin.name} {pin.content}".lower()
+
+        if _contains_any(text, ("i2c", "scl", "sda", "serial clock", "serial data")):
+            return "I2C 总线引脚"
+        if _contains_any(text, ("spi", "sck", "mosi", "miso", "cs", "chip select", "sdi", "sdo")):
+            return "SPI 总线引脚"
+
+        if _contains_any(text, ("enable", "disable", "sleep", "wake", "shutdown",
+                                  "nsleep", "standby", "mode select", "control input",
+                                  "启用", "禁用", "睡眠", "唤醒", "控制输入", "模式选择")):
+            return "控制输入引脚"
+
+        if _contains_any(text, ("fault", "error", "diagnostic", "nfault", "alert",
+                                  "warning", "status flag", "open-drain output",
+                                  "interrupt output", "故障", "诊断", "错误")):
+            return "故障诊断输出引脚"
+
+        if _contains_any(text, ("current sense", "current monitor", "sense output",
+                                  "proportional", "ipropi", "current feedback",
+                                  "analog current", "电流检测", "电流监测")):
+            return "电流检测输出引脚"
+
+        if _contains_any(text, ("h-bridge", "half-bridge", "motor output",
+                                  "driver output", "high-side", "low-side",
+                                  "switch output", "out1", "out2",
+                                  "h 桥", "电机输出", "功率输出")):
+            return "功率输出引脚"
+
+        if _contains_any(text, ("reference", "vref", "analog input",
+                                  "comparator", "adc", "基准电压", "参考电压")):
+            return "模拟参考引脚"
+
+        if _contains_any(text, ("reset", "por", "power-on reset", "复位")):
+            return "复位引脚"
+
+        if _contains_any(text, ("gpio", "general purpose", "i/o", "bidirectional")):
+            return "通用 I/O 引脚"
+
+        if _contains_any(text, ("power supply", "vm", "vdd", "vcc", "ground",
+                                  "gnd", "pgnd", "vss", "电源", "接地", "功率地")):
+            return "电源与接地引脚"
+
+        if _contains_any(text, ("charge pump", "vcp", "cph", "cpl", "bootstrap", "电荷泵")):
+            return "电荷泵引脚"
+
+        if _contains_any(text, ("thermal", "heat", "pad", "exposed", "散热")):
+            return "散热引脚"
+
+        return "其他设备引脚"
+
+    @staticmethod
+    def _discover_register_clusters(
+        registers: list[FeatureRecord],
+    ) -> dict[str, list[FeatureRecord]]:
+        """Group registers by functional keywords in their names/content."""
+        if not registers:
+            return {}
+        clusters: dict[str, list[FeatureRecord]] = {}
+        for reg in registers:
+            text = f"{reg.name} {reg.content}".lower()
+            if _contains_any(text, ("input", "read", "status", "flag")):
+                key = "Input/Status Registers"
+            elif _contains_any(text, ("output", "write", "control", "command")):
+                key = "Output/Control Registers"
+            elif _contains_any(text, ("configuration", "direction", "polarity", "mode")):
+                key = "Configuration Registers"
+            elif _contains_any(text, ("fault", "diagnostic", "interrupt", "error")):
+                key = "Diagnostic Registers"
+            elif _contains_any(text, ("identification", "id", "version", "device")):
+                key = "Identification Registers"
+            else:
+                key = "General Registers"
+            clusters.setdefault(key, []).append(reg)
+        return clusters
+
+    @staticmethod
+    def _discover_capability_groups(
+        capabilities: list[FeatureRecord],
+        pin_clusters: dict[str, list[FeatureRecord]],
+        reg_clusters: dict[str, list[FeatureRecord]],
+    ) -> dict[str, list[FeatureRecord]]:
+        """Group capabilities not already covered by pin/register clusters."""
+        if not capabilities:
+            return {}
+        covered_terms: set[str] = set()
+        for name in pin_clusters:
+            covered_terms.update(name.lower().replace(" pins", "").split())
+        for name in reg_clusters:
+            covered_terms.update(name.lower().replace(" registers", "").split())
+
+        unmatched: dict[str, list[FeatureRecord]] = {}
+        for cap in capabilities:
+            text = f"{cap.name} {cap.content}".lower()
+            # Check if already covered by a pin/register cluster
+            if any(term in text for term in covered_terms if len(term) > 3):
+                continue
+            unmatched.setdefault("其他芯片能力", []).append(cap)
+        return unmatched
+
+    # ------------------------------------------------------------------
+    # Group builders (data-driven)
+    # ------------------------------------------------------------------
+
+    def _build_pin_cluster_group(
+        self, counters: Counter[str], cluster_name: str,
+        cluster_pins: list[FeatureRecord],
+        by_type: dict[str, list[FeatureRecord]],
+    ) -> FeatureRecord | None:
+        """Build a feature group for a discovered pin cluster."""
+        if not cluster_pins:
+            return None
+
+        # Derive category and responsibility from the pin cluster
+        sw_relations = [r.software_responsibility for r in cluster_pins]
+        responsibility = max(set(sw_relations), key=sw_relations.count)
+
+        # Infer requirement types from pin roles
+        req_types = self._infer_requirement_types(cluster_name, cluster_pins)
+
+        # Build subfunctions from the pins' actual functions
+        subfuncs = self._build_pin_subfunctions(cluster_name, cluster_pins)
+
+        # Collect related registers and capabilities
+        pin_names = {p.name.upper() for p in cluster_pins}
+        related_regs = [
+            r for r in by_type.get("register", []) + by_type.get("configuration", [])
+            if any(pn.lower() in (r.name + " " + r.content).lower() for pn in pin_names)
+        ]
+        related_caps = [
+            c for c in by_type.get("capability", [])
+            if any(pn.lower() in c.content.lower() for pn in pin_names)
+        ]
+
+        evidence = list(cluster_pins) + related_regs + related_caps
+
+        return self._group_record(
+            counters,
+            cluster_name,
+            self._generate_group_summary(cluster_name, cluster_pins),
+            evidence if evidence else list(cluster_pins),
+            f"Pin Group / {cluster_name}",
+            responsibility,
+            req_types,
+            self._generate_application_scheme(cluster_name, cluster_pins),
+            self._generate_missing_inputs(cluster_name, cluster_pins),
+            subfuncs,
+            related_pins=[p.name for p in cluster_pins],
+            related_registers=_unique(r.name for r in related_regs),
+        )
+
+    def _build_register_cluster_group(
+        self, counters: Counter[str], cluster_name: str,
+        cluster_regs: list[FeatureRecord],
+    ) -> FeatureRecord | None:
+        """Build a feature group for a discovered register cluster."""
+        if not cluster_regs:
+            return None
+
+        sw_relations = [r.software_responsibility for r in cluster_regs]
+        responsibility = max(set(sw_relations), key=sw_relations.count)
+
+        reg_names = [r.name for r in cluster_regs]
+        subfunc = SubfunctionRecord(
+            name=f"{cluster_name} Access",
+            summary=f"Access and manage {cluster_name.lower()}.",
+            inputs="Register address; access parameters.",
+            outputs="Register data or error status.",
+            boundary="Invalid register, access failure.",
+            related_registers=reg_names,
+            application_scheme=f"Use for accessing the {cluster_name.lower()} group.",
+            candidate_requirement_types=["接口需求", "配置需求"],
+            missing_inputs=["寄存器地址映射", "访问权限"],
+        )
+
+        return self._group_record(
+            counters,
+            cluster_name,
+            f"提供 {cluster_name} 功能的寄存器组。",
+            list(cluster_regs),
+            f"Register Group / {cluster_name}",
+            responsibility,
+            ["接口需求", "配置需求"],
+            f"Define register access patterns for {cluster_name.lower()}.",
+            ["确认寄存器默认值", "确认保留位处理"],
+            [subfunc],
+            related_registers=reg_names,
+        )
+
+    def _build_interface_group(
+        self, counters: Counter[str], interfaces: list[FeatureRecord],
+        pin_map: dict[str, FeatureRecord],
+    ) -> FeatureRecord | None:
+        """Build a communication interface group from extracted interface records."""
+        if not interfaces:
+            return None
+
+        # Detect bus types
+        bus_types: set[str] = set()
+        for iface in interfaces:
+            text = f"{iface.name} {iface.content}".lower()
+            if _contains_any(text, ("i2c", "scl", "sda")):
+                bus_types.add("I2C")
+            if _contains_any(text, ("spi", "sck", "mosi", "miso")):
+                bus_types.add("SPI")
+            if _contains_any(text, ("pwm", "duty cycle", "frequency")):
+                bus_types.add("PWM")
+            if _contains_any(text, ("analog", "adc", "voltage", "current sense")):
+                bus_types.add("Analog")
+
+        if not bus_types:
+            # No recognised bus.  The chip is either pin-controlled (CAN
+            # transceiver, GPIO expander) or uses an interface the extractor
+            # does not yet recognise.  Skip the generic "Control Interface"
+            # group — pin-controlled chips get their semantics from mode,
+            # diagnostic, and configuration groups instead.
+            return None
+
+        bus_label = "/".join(sorted(bus_types))
+
+        # Find related bus pins
+        bus_pins: list[str] = []
+        for name, pin in pin_map.items():
+            text = f"{name} {pin.content}".lower()
+            if any(bt.lower() in text for bt in bus_types):
+                bus_pins.append(pin.name)
+            elif _contains_any(text, ("scl", "sda", "sck", "mosi", "miso", "cs")):
+                bus_pins.append(pin.name)
+
+        subfuncs: list[SubfunctionRecord] = []
+        if "I2C" in bus_types or "SPI" in bus_types:
+            subfuncs.append(SubfunctionRecord(
+                name="Register Read Transaction",
+                summary=f"Read data through the {bus_label} interface.",
+                inputs="Device address; register address; length.",
+                outputs="Read data or error status.",
+                boundary="NACK, timeout, invalid register, bus busy.",
+                related_pins=bus_pins,
+                application_scheme=f"Use for reading device state and configuration via {bus_label}.",
+                candidate_requirement_types=["接口需求", "诊断需求"],
+                missing_inputs=["底层总线 API", "错误码映射"],
+            ))
+            subfuncs.append(SubfunctionRecord(
+                name="Register Write Transaction",
+                summary=f"Write data through the {bus_label} interface.",
+                inputs="Device address; register address; write data.",
+                outputs="Write result status.",
+                boundary="NACK, timeout, invalid register, write-protected field.",
+                related_pins=bus_pins,
+                application_scheme=f"Use for configuring device and controlling outputs via {bus_label}.",
+                candidate_requirement_types=["接口需求", "功能需求"],
+                missing_inputs=["写后验证策略", "错误恢复策略"],
+            ))
+        elif "PWM" in bus_types:
+            subfuncs.append(SubfunctionRecord(
+                name="PWM Signal Control",
+                summary="Control PWM duty cycle and frequency for output signals.",
+                inputs="Channel identifier; duty cycle; frequency.",
+                outputs="Updated PWM signal parameters or error.",
+                boundary="Invalid duty cycle, frequency out of range.",
+                related_pins=bus_pins,
+                application_scheme="Use for software-controlled PWM outputs.",
+                candidate_requirement_types=["接口需求", "功能需求"],
+                missing_inputs=["PWM 分辨率", "频率范围"],
+            ))
+        elif "Analog" in bus_types:
+            subfuncs.append(SubfunctionRecord(
+                name="Analog Signal Acquisition",
+                summary="Sample analog feedback signals for current/voltage monitoring.",
+                inputs="Channel identifier; sampling parameters.",
+                outputs="Sampled analog value or error.",
+                boundary="Invalid channel, ADC failure.",
+                related_pins=bus_pins,
+                application_scheme="Use for monitoring analog feedback like current sense or voltage reference.",
+                candidate_requirement_types=["接口需求", "诊断需求"],
+                missing_inputs=["ADC 分辨率", "采样率"],
+            ))
+        return self._group_record(
+            counters,
+            f"{bus_label} Control Interface",
+            f"器件通过 {bus_label} 接口进行控制和状态反馈。",
+            interfaces + [pin_map[p] for p in bus_pins if p in pin_map],
+            f"Interface / {bus_label}",
+            "software_constraint",
+            ["接口需求", "功能需求"],
+            f"Define {bus_label.lower()} access patterns and error handling.",
+            ["确认总线访问归属", "确认错误恢复策略"],
+            subfuncs,
+            related_pins=bus_pins,
+        )
+
+    def _build_state_group(
+        self, counters: Counter[str], states: list[FeatureRecord],
+    ) -> FeatureRecord | None:
+        """Build a mode/state management group from extracted state records."""
+        if not states:
+            return None
+
+        # Normalise and dedup state names.  Raw regex extraction produces
+        # duplicates (e.g. "Normal" and "Normal mode", "sleep" and "Sleep mode")
+        # and false positives ("Reset", "Active") that must be cleaned before
+        # they reach the SRS overview section.
+        _mode_blocklist = {"reset", "por", "active"}  # too broad, not device modes
+        _seen: set[str] = set()
+        _clean: list[str] = []
+        for raw in sorted({s.name.strip() for s in states}):
+            key = raw.lower().rstrip(" mode")
+            if key in _mode_blocklist or key in _seen:
+                continue
+            # Prefer the capitalised form for display
+            if key == "normal mode":
+                _clean.append("Normal mode")
+            elif key == "standby mode":
+                _clean.append("Standby mode")
+            elif key == "sleep mode":
+                _clean.append("Sleep mode")
+            else:
+                _clean.append(raw)
+            _seen.add(key)
+        state_list = ", ".join(_clean) if _clean else "待数据手册补充"
+
+        subfuncs = [
+            SubfunctionRecord(
+                name="模式切换控制",
+                summary=f"Control transitions between device modes: {state_list}.",
+                trigger="API call or hardware condition.",
+                inputs="Target mode identifier.",
+                outputs="Updated mode or error status.",
+                boundary="Invalid mode, transition not allowed, device not ready.",
+                application_scheme="Use for managing device operating modes based on system requirements.",
+                candidate_requirement_types=["功能需求", "状态需求", "接口需求"],
+                missing_inputs=["模式切换策略", "过渡时间约束"],
+            ),
+            SubfunctionRecord(
+                name="当前模式观测",
+                summary=f"Read the current operating mode from available states: {state_list}.",
+                inputs="Observation request.",
+                outputs="Current mode identifier.",
+                boundary="Device not accessible, mode ambiguous.",
+                application_scheme="Use for monitoring device state during operation and fault recovery.",
+                candidate_requirement_types=["状态需求", "诊断需求"],
+                missing_inputs=["模式读取方式", "模式确认策略"],
+            ),
+        ]
+
+        return self._group_record(
+            counters,
+            "器件工作模式",
+            f"器件定义了以下工作模式：{state_list}。",
+            list(states),
+            "状态 / 模式管理",
+            "software_action",
+            ["功能需求", "状态需求", "接口需求"],
+            "Define mode transition control and observation interfaces based on project requirements.",
+            ["确认项目使用哪些模式。", "确认模式切换触发条件。"],
+            subfuncs,
+        )
+
+    def _build_diagnostic_group(
+        self, counters: Counter[str], diagnostics: list[FeatureRecord],
+        pin_map: dict[str, FeatureRecord],
+    ) -> FeatureRecord | None:
+        """Build a diagnostic/fault handling group from extracted diagnostic records."""
+        if not diagnostics:
+            return None
+
+        # Find fault-related pins
+        fault_pins: list[str] = []
+        for name, pin in pin_map.items():
+            text = f"{name} {pin.content}".lower()
+            if _contains_any(text, ("fault", "error", "diagnostic", "nfault",
+                                      "alert", "warning", "interrupt", "status flag")):
+                fault_pins.append(pin.name)
+
+        diag_content = " ".join(d.name + " " + d.content for d in diagnostics).lower()
+
+        # Collect structured fault rows from datasheet fault summary tables.
+        # Dedup by fault name (first |...| field) because overlapping chunks
+        # may produce identical rows from the same source table.
+        all_fault_rows: list[str] = []
+        seen_faults: set[str] = set()
+        for d in diagnostics:
+            for row in d.fault_rows:
+                parts = row.split("|")
+                if len(parts) >= 2:
+                    fname = parts[1].strip().lower()
+                    if fname in seen_faults:
+                        continue
+                    seen_faults.add(fname)
+                all_fault_rows.append(row)
+
+        subfuncs: list[SubfunctionRecord] = []
+        if _contains_any(diag_content, ("fault", "error", "overcurrent", "ocp",
+                                          "thermal", "tsd", "undervoltage", "uvlo",
+                                          "cpuv", "charge pump")):
+            subfuncs.append(SubfunctionRecord(
+                name="故障状态读取",
+                summary="Read fault status to detect device-level fault conditions.",
+                inputs="Fault query request.",
+                outputs="Fault status bitmask or individual fault flags.",
+                boundary="Fault pin not connected, device not accessible.",
+                related_pins=fault_pins,
+                application_scheme="Use for detecting and categorizing device fault conditions in operation.",
+                candidate_requirement_types=["诊断需求", "接口需求"],
+                missing_inputs=["故障清除条件", "故障恢复策略"],
+                fault_rows=list(all_fault_rows),
+            ))
+            subfuncs.append(SubfunctionRecord(
+                name="故障恢复处理",
+                summary="Execute recovery actions after fault conditions are detected.",
+                trigger="Fault detection or status change.",
+                inputs="Fault type; recovery parameters.",
+                outputs="Recovery result or reinitialization status.",
+                boundary="Persistent fault, recovery not supported.",
+                related_pins=fault_pins,
+                application_scheme="Use for automatic or controlled recovery from device fault states.",
+                candidate_requirement_types=["诊断需求", "功能需求"],
+                missing_inputs=["自动/手动恢复策略", "重试次数"],
+            ))
+        else:
+            subfuncs.append(SubfunctionRecord(
+                name="Diagnostic Status Observation",
+                summary="Observe diagnostic indicators and map to software status.",
+                inputs="Diagnostic query or pin state.",
+                outputs="Software status or event.",
+                boundary="Diagnostic signal not connected or not applicable.",
+                related_pins=fault_pins,
+                application_scheme="Use when diagnostic signals are connected to the MCU.",
+                candidate_requirement_types=["诊断需求", "状态需求"],
+                missing_inputs=["硬件连接确认", "轮询/中断策略"],
+            ))
+
+        return self._group_record(
+            counters,
+            "故障与诊断处理",
+            "诊断与故障信号提供软件可观测的器件状态。",
+            diagnostics + [pin_map[p] for p in fault_pins if p in pin_map],
+            "Diagnostic / Fault",
+            "open_issue",
+            ["诊断需求", "接口需求", "状态需求"],
+            "Define fault detection, reporting, and recovery based on project hardware connections.",
+            ["确认故障 pin 是否连接 MCU。", "确认故障恢复策略。"],
+            subfuncs,
+            related_pins=fault_pins,
+        )
+
+    def _build_timing_group(
+        self, counters: Counter[str], timing: list[FeatureRecord],
+    ) -> FeatureRecord | None:
+        """Build a timing constraints group from extracted timing records."""
+        if not timing:
+            return None
+
+        # Group timings by category
+        by_category: dict[str, list[FeatureRecord]] = {}
+        for t in timing:
+            cat = _timing_name(t.content)
+            by_category.setdefault(cat, []).append(t)
+
+        subfuncs: list[SubfunctionRecord] = []
+        for cat_name, cat_records in by_category.items():
+            # Collect actual timing values from child records so they survive
+            # through the pipeline into the final requirement description.
+            timing_values: list[str] = []
+            for cr in cat_records:
+                if cr.content:
+                    timing_values.append(cr.content[:200])
+            timing_text = "; ".join(timing_values[:8]) if timing_values else ""
+            subfuncs.append(SubfunctionRecord(
+                name=f"{cat_name} Guard",
+                summary=f"Apply timing constraints for {cat_name.lower()} operations.",
+                inputs="Operation trigger; timing parameter.",
+                outputs="Timed operation result or timeout indication.",
+                boundary="No software trigger, no timeout policy.",
+                timing=timing_text,
+                application_scheme=f"Use when software must observe {cat_name.lower()} timing constraints.",
+                candidate_requirement_types=["时序需求", "诊断需求"],
+                missing_inputs=["软件是否负责等待", "超时值"],
+            ))
+
+        return self._group_record(
+            counters,
+            "时序约束",
+            "数据手册中约束软件操作的时序参数。",
+            list(timing),
+            "Timing / Verification",
+            "hardware_constraint",
+            ["时序需求", "验证策略"],
+            "Apply software timing guards only where the driver owns the wait or timeout.",
+            ["确认哪些时序需要软件处理。", "确认验证测量点。"],
+            subfuncs,
+        )
+
+    def _build_constraint_group(
+        self, counters: Counter[str], constraints: list[FeatureRecord],
+    ) -> FeatureRecord | None:
+        """Build a boundary/constraint group from extracted constraint records."""
+        if not constraints:
+            return None
+
+        # Build subfunctions from actual constraint records, not from a
+        # hard-coded generic placeholder.  Each constraint gets its own
+        # subfunction named after the source datasheet heading so that
+        # requirements carry concrete, traceable names instead of
+        # nonsensical labels like "非法输入拒绝".
+        subfuncs: list[SubfunctionRecord] = []
+        seen_names: set[str] = set()
+        for c in constraints:
+            cname = (c.name or "").strip()
+            if not cname or cname in seen_names:
+                continue
+            seen_names.add(cname)
+            subfuncs.append(
+                SubfunctionRecord(
+                    name=f"{cname}约束",
+                    summary=f"Validate and enforce documented constraints for {cname.lower()}.",
+                    inputs="Configuration item, API parameter.",
+                    outputs="Validation result or error status.",
+                    boundary="Constraint not reachable through software input path.",
+                    application_scheme="Use when software accepts or configures values subject to this constraint.",
+                    candidate_requirement_types=["配置需求", "约束"],
+                    missing_inputs=["软件输入路径", "错误返回语义"],
+                ),
+            )
+        if not subfuncs:
+            subfuncs.append(
+                SubfunctionRecord(
+                    name="数据手册约束校验",
+                    summary="Validate and enforce documented datasheet constraints.",
+                    inputs="Configuration item, API parameter.",
+                    outputs="Validation result or error status.",
+                    boundary="Constraint not reachable through software input path.",
+                    application_scheme="Use when software must enforce datasheet boundary conditions.",
+                    candidate_requirement_types=["配置需求", "约束"],
+                    missing_inputs=["具体约束项清单", "错误返回语义"],
+                ),
+            )
+
+        return self._group_record(
+            counters,
+            "边界与约束行为",
+            "数据手册约束项定义有效操作的边界条件。",
+            list(constraints),
+            "Constraint / Boundary",
+            "open_issue",
+            ["接口需求", "配置需求", "约束"],
+            "Generate rejection requirements only for constraints reachable through software.",
+            ["确认软件是否能触发该约束条件。", "确认非法值返回语义。"],
+            subfuncs,
+        )
+
+    def _build_capability_group(
+        self, counters: Counter[str], cluster_name: str,
+        capabilities: list[FeatureRecord],
+    ) -> FeatureRecord | None:
+        """Build a group for remaining capabilities not covered by other groups."""
+        if not capabilities:
+            return None
+
+        cap_text = " ".join(c.name + " " + c.content for c in capabilities)
+
+        subfuncs = [
+            SubfunctionRecord(
+                name=f"{cluster_name} Support",
+                summary=f"Enable and manage {cluster_name.lower()}.",
+                inputs="Project configuration; capability parameters.",
+                outputs="Operational capability or error status.",
+                boundary="Capability not supported by hardware connection.",
+                application_scheme="Use when the project requires this capability.",
+                candidate_requirement_types=["功能需求", "接口需求"],
+                missing_inputs=["项目是否使用该能力", "参数范围"],
+            ),
+        ]
+
+        return self._group_record(
+            counters,
+            cluster_name,
+            f"其他器件能力：{_summary(cap_text, 200)}",
+            list(capabilities),
+            f"Capability / {cluster_name}",
+            "open_issue",
+            ["功能需求"],
+            "Confirm project scope and usage of this capability.",
+            ["确认项目是否使用该能力。"],
+            subfuncs,
+        )
+
+    # ------------------------------------------------------------------
+    # Subfunction & metadata helpers
+    # ------------------------------------------------------------------
+
+    def _build_pin_subfunctions(
+        self, cluster_name: str, cluster_pins: list[FeatureRecord],
+    ) -> list[SubfunctionRecord]:
+        """Build subfunction records from a pin cluster's actual functions."""
+        subfuncs: list[SubfunctionRecord] = []
+        pin_names = [p.name for p in cluster_pins]
+
+        text_all = " ".join(p.name + " " + p.content for p in cluster_pins).lower()
+
+        # Control/input pins → set/configure subfunctions
+        if _contains_any(text_all, ("enable", "disable", "sleep", "wake", "control",
+                                      "mode select", "nsleep")):
+            subfuncs.append(SubfunctionRecord(
+                name="器件启停与模式控制",
+                summary="控制器件使能状态和工作模式选择。",
+                trigger="API call or system state change.",
+                inputs="Enable signal; mode selection parameters.",
+                outputs="Updated device state.",
+                boundary="Invalid mode, device not ready, transition timeout.",
+                related_pins=pin_names,
+                application_scheme="Use for enabling/disabling the device and selecting operating modes.",
+                candidate_requirement_types=["功能需求", "接口需求", "状态需求"],
+                missing_inputs=["模式切换策略", "默认状态"],
+            ))
+
+        # Power output pins → output control subfunctions
+        if _contains_any(text_all, ("h-bridge", "half-bridge", "motor output",
+                                      "driver output", "switch output", "out1", "out2")):
+            subfuncs.append(SubfunctionRecord(
+                name="输出状态控制",
+                summary="控制功率输出引脚的电平、方向和 PWM 占空比。",
+                trigger="Output control API call.",
+                inputs="Output channel; target state (forward/reverse/brake/coast).",
+                outputs="Updated output state.",
+                boundary="Invalid output state, overcurrent, thermal shutdown.",
+                related_pins=pin_names,
+                application_scheme="Use for controlling motor direction, speed, and braking.",
+                candidate_requirement_types=["功能需求", "接口需求"],
+                missing_inputs=["输出状态映射", "PWM 配置"],
+            ))
+
+        # Current sense pins → read/monitor subfunctions
+        if _contains_any(text_all, ("current sense", "current monitor", "proportional",
+                                      "ipropi", "current feedback")):
+            subfuncs.append(SubfunctionRecord(
+                name="负载电流监测",
+                summary="读取并解析电流检测反馈，用于负载监测和堵转检测。",
+                trigger="周期采样或按需读取。",
+                inputs="ADC 通道；采样参数。",
+                outputs="负载电流值或过载指示。",
+                boundary="ADC 未配置、检测电阻未焊接。",
+                related_pins=pin_names,
+                application_scheme="用于监测电机负载电流、堵转检测和过载保护。",
+                candidate_requirement_types=["接口需求", "诊断需求", "功能需求"],
+                missing_inputs=["电流采样率", "过流阈值"],
+            ))
+
+        # Analog reference pins → configuration subfunctions
+        if _contains_any(text_all, ("reference", "vref", "comparator", "threshold")):
+            subfuncs.append(SubfunctionRecord(
+                name="参考电压与阈值配置",
+                summary="配置基准电压以设置电流调节的斩波阈值。",
+                trigger="初始化或运行时配置。",
+                inputs="基准电压值或来源。",
+                outputs="配置后的调节阈值。",
+                boundary="电压超出有效范围、调节功能禁用。",
+                related_pins=pin_names,
+                application_scheme="用于通过 VREF 设置电流调节跳变点。",
+                candidate_requirement_types=["配置需求", "功能需求"],
+                missing_inputs=["VREF 电压范围", "默认阈值"],
+            ))
+
+        # Fault pins → diagnostic subfunctions
+        if _contains_any(text_all, ("fault", "error", "nfault", "diagnostic", "alert")):
+            subfuncs.append(SubfunctionRecord(
+                name="故障信号监测",
+                summary="监测故障指示信号以获取器件保护状态。",
+                trigger="GPIO 中断或周期轮询。",
+                inputs="故障引脚状态。",
+                outputs="故障状态分类。",
+                boundary="故障引脚未连接、GPIO 未配置。",
+                related_pins=pin_names,
+                application_scheme="用于实时故障检测与响应。",
+                candidate_requirement_types=["诊断需求", "接口需求"],
+                missing_inputs=["中断/轮询策略", "故障响应时间"],
+            ))
+
+        # If no specific subfunctions matched, create a generic one
+        if not subfuncs:
+            subfuncs.append(SubfunctionRecord(
+                name=f"{cluster_name}处理",
+                summary=f"Manage {cluster_name.lower()} according to project requirements.",
+                inputs="Project-defined parameters.",
+                outputs="Expected behavior or status.",
+                boundary="Hardware connection not confirmed.",
+                related_pins=pin_names,
+                application_scheme="Use according to project hardware configuration.",
+                candidate_requirement_types=["功能需求"],
+                missing_inputs=["项目使用方式", "接口定义"],
+            ))
+
+        return subfuncs
+
+    @staticmethod
+    def _infer_requirement_types(
+        cluster_name: str, cluster_pins: list[FeatureRecord],
+    ) -> list[str]:
+        """Infer applicable requirement types from pin functional roles."""
+        req_types: list[str] = []
+        text_all = " ".join(p.name + " " + p.content for p in cluster_pins).lower()
+
+        if _contains_any(text_all, ("control", "enable", "disable", "output", "drive",
+                                      "set", "write", "mode select")):
+            if "接口需求" not in req_types:
+                req_types.append("接口需求")
+            if "功能需求" not in req_types:
+                req_types.append("功能需求")
+        if _contains_any(text_all, ("sense", "read", "monitor", "input", "feedback",
+                                      "measure", "sample", "fault", "status", "nfault")):
+            if "接口需求" not in req_types:
+                req_types.append("接口需求")
+            if "诊断需求" not in req_types:
+                req_types.append("诊断需求")
+        if _contains_any(text_all, ("reference", "vref", "configure", "mode",
+                                      "current regulation", "threshold")):
+            if "配置需求" not in req_types:
+                req_types.append("配置需求")
+        if _contains_any(text_all, ("sleep", "wake", "standby", "mode", "state",
+                                      "transition")):
+            if "状态需求" not in req_types:
+                req_types.append("状态需求")
+        if not req_types:
+            req_types = ["功能需求"]
+        return req_types
+
+    @staticmethod
+    def _generate_group_summary(cluster_name: str, cluster_pins: list[FeatureRecord]) -> str:
+        """Generate a Chinese one-line summary from the pin cluster."""
+        funcs = sorted({p.content[:80] for p in cluster_pins if p.content})
+        pin_list = "、".join(p.name for p in cluster_pins[:5])
+        if len(cluster_pins) > 5:
+            pin_list += f"等{len(cluster_pins)}个引脚"
+        if funcs:
+            return f"器件提供 {cluster_name}（{pin_list}）：{'；'.join(funcs[:2])}"
+        return f"器件提供 {cluster_name}（{pin_list}）。"
+
+    @staticmethod
+    def _generate_application_scheme(cluster_name: str, cluster_pins: list[FeatureRecord]) -> str:
+        """Generate an application scheme description."""
+        pin_list = ", ".join(p.name for p in cluster_pins[:6])
+        if len(cluster_pins) > 6:
+            pin_list += f" (+{len(cluster_pins) - 6} more)"
+        return (
+            f"Use the {cluster_name.lower()} ({pin_list}) according to project hardware "
+            "configuration. Project inputs must confirm which pins are connected and their "
+            "software ownership."
+        )
+
+    @staticmethod
+    def _generate_missing_inputs(cluster_name: str, cluster_pins: list[FeatureRecord]) -> list[str]:
+        """Generate missing-input hints from pin roles."""
+        hints = ["确认项目硬件连接和 pin 使用范围。"]
+        text_all = " ".join(p.content for p in cluster_pins).lower()
+        if _contains_any(text_all, ("control", "enable", "disable", "mode")):
+            hints.append("确认默认控制状态和模式。")
+        if _contains_any(text_all, ("output", "drive", "motor")):
+            hints.append("确认输出驱动配置和默认电平。")
+        if _contains_any(text_all, ("sense", "monitor", "feedback", "adc")):
+            hints.append("确认采样率和阈值配置。")
+        if _contains_any(text_all, ("fault", "diagnostic", "interrupt")):
+            hints.append("确认故障响应策略和恢复机制。")
+        return hints
 
     def _extract_identity(self, parsed: ParsedDocument, chunks: list[DocumentChunk]) -> list[_Candidate]:
         if not chunks:
@@ -835,9 +1178,7 @@ class FeatureExtractor:
         for chunk in chunks:
             heading = " ".join(chunk.heading_path).lower()
             text = _plain_text(chunk.text)
-            if not re.search(r"\b(feature|overview|general description|description|function)\b", heading, re.I):
-                continue
-            if not re.search(r"\b(gpio|i/o|io|port|interrupt|reset|register|i2c|i2c-bus|input|output)\b", text, re.I):
+            if not re.search(r"\b(feature|overview|general description|description|function|特性|概述|说明|功能|描述|应用)\b", heading, re.I):
                 continue
             records.append(
                 _Candidate(
@@ -862,23 +1203,39 @@ class FeatureExtractor:
     def _extract_pins(self, parsed: ParsedDocument, chunks: list[DocumentChunk]) -> list[_Candidate]:
         records: list[_Candidate] = []
         for chunk in chunks:
-            for rows in _table_rows(chunk):
-                if not rows:
-                    continue
-                header = [cell.strip().lower() for cell in rows[0]]
-                if not (("symbol" in header and "function" in header) or ("pin" in header and "description" in header)):
-                    continue
-                symbol_index = header.index("symbol") if "symbol" in header else header.index("pin")
-                function_index = header.index("function") if "function" in header else header.index("description")
-                direction_index = header.index("direction") if "direction" in header else -1
-                for row in rows[1:]:
-                    if symbol_index >= len(row) or function_index >= len(row):
+            # Skip chunks that have table headings about external components
+            heading = " ".join(chunk.heading_path).lower()
+            text = _plain_text(chunk.text)
+            if _contains_any(heading, ("外部组件", "外部元件", "external component", "recommended")):
+                continue
+
+            rows_from_tables = list(_table_rows(chunk))
+            if rows_from_tables:
+                # Process structured table rows
+                for rows in rows_from_tables:
+                    if not rows:
                         continue
-                    symbol = _clean_symbol(row[symbol_index])
-                    if not symbol or symbol in {"VDD", "VSS", "VCC", "GND"}:
+                    header = [cell.strip().lower() for cell in rows[0]]
+                    header_joined = " ".join(header)
+                    en_match = (("symbol" in header and "function" in header)
+                                or ("pin" in header and "description" in header))
+                    cn_match = any(kw in header_joined for kw in ("名称", "引脚", "端子"))
+                    if not (en_match or cn_match):
                         continue
-                    direction = row[direction_index].strip() if direction_index >= 0 and direction_index < len(row) else ""
-                    function = row[function_index].strip()
+                    symbol_index = self._resolve_symbol_index(header)
+                    function_index = self._resolve_function_index(header)
+                    direction_index = (header.index("direction") if "direction" in header
+                                       else header.index("类型") if "类型" in header
+                                       else -1)
+                    for row in rows[1:]:
+                        rec = self._make_pin_candidate(row, symbol_index, function_index, direction_index, chunk)
+                        if rec:
+                            records.append(rec)
+            elif _contains_any(heading, ("引脚功能", "pin function", "pin configur", "引脚配置")):
+                # Fallback: parse pin table from raw markdown text when structured parsing fails
+                # Use chunk.text directly (not _plain_text which collapses newlines)
+                raw_pins = self._parse_pin_table_raw(chunk.text)
+                for symbol, function, direction in raw_pins:
                     relation = _pin_software_relation(symbol, function)
                     records.append(
                         _Candidate(
@@ -901,6 +1258,89 @@ class FeatureExtractor:
                         )
                     )
         return records
+
+    @staticmethod
+    def _resolve_symbol_index(header: list[str]) -> int:
+        for kw in ("名称", "symbol", "pin", "端子"):
+            if kw in header:
+                return header.index(kw)
+        return next((i for i, h in enumerate(header) if h and h not in ("", "引脚", "类型", "说明", "功能", "方向")), 0)
+
+    @staticmethod
+    def _resolve_function_index(header: list[str]) -> int:
+        for kw in ("说明", "功能", "function", "description"):
+            if kw in header:
+                return header.index(kw)
+        return len(header) - 1
+
+    @staticmethod
+    def _make_pin_candidate(row: list[str], symbol_index: int, function_index: int,
+                            direction_index: int, chunk: DocumentChunk) -> Any:
+        if symbol_index >= len(row) or function_index >= len(row):
+            return None
+        symbol = _clean_symbol(row[symbol_index])
+        if not symbol or symbol in {"VDD", "VSS", "VCC", "GND", "PGND", "NC", "PAD", "EP"}:
+            return None
+        direction = row[direction_index].strip() if 0 <= direction_index < len(row) else ""
+        function = row[function_index].strip()
+        relation = _pin_software_relation(symbol, function)
+        return _Candidate(
+            type="pin", name=symbol,
+            content=f"{direction + '. ' if direction else ''}{function}",
+            chunk=chunk, software_responsibility=relation,
+            status="Open Issue", can_generate_requirement="Needs Review",
+            gap="Project software ownership is not confirmed.",
+            extractor="pin_extractor", feature_category="Pin",
+            functional_summary=f"Pin {symbol} provides a hardware connection point.",
+            related_pins=(symbol,),
+            candidate_requirement_types=("接口需求", "配置需求", "资源需求"),
+            application_scheme="Use pin facts to build interface/resource mapping.",
+            missing_inputs=("Pin 所有权", "硬件连接", "软件是否控制/采样"),
+        )
+
+    @staticmethod
+    def _parse_pin_table_raw(text: str) -> list[tuple[str, str, str]]:
+        """Fallback: parse pin definitions from raw markdown table text.
+
+        Handles tables that the structured parser can't process (e.g., multi-row
+        headers, empty columns, Chinese table formats).
+        """
+        results: list[tuple[str, str, str]] = []
+        # Match rows like: | CPH | 11 | 13 | PWR | charge pump... |
+        # or Chinese: | EN/IN1 | 15 | 1 | I | H桥控制输入... |
+        lines = text.split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line.startswith("|") or not line.endswith("|"):
+                continue
+            if "---" in line:  # skip separator rows
+                continue
+            cells = [c.strip() for c in line.split("|")[1:-1]]
+            if len(cells) < 3:
+                continue
+            # First non-empty cell is the pin name
+            first_cell = cells[0] if cells[0] else ""
+            if not first_cell or len(first_cell) > 15:
+                continue
+            # Skip header rows (cells contain structural keywords)
+            first_lower = first_cell.lower()
+            if first_lower in ("名称", "引脚", "端子", "pin", "symbol", "name", "组件"):
+                continue
+            # Skip rows that look like component descriptions
+            if any(kw in " ".join(cells[:3]).lower() for kw in ("电容", "电阻", "µf", "nf", "kω", "mω")):
+                continue
+            # The last non-empty cell is usually the function description
+            func_parts = [c for c in cells[2:] if c and len(c) > 3]
+            function = func_parts[-1] if func_parts else " ".join(cells[1:])
+            # Extract direction/type from middle cells
+            direction = ""
+            for c in cells[1:]:
+                cu = c.upper()
+                if cu in ("I", "O", "IO", "PWR", "OD", "NC", "GND", "POWER", "INPUT", "OUTPUT"):
+                    direction = c
+                    break
+            results.append((_clean_symbol(first_cell), function, direction))
+        return results
 
     def _extract_interfaces(self, parsed: ParsedDocument, chunks: list[DocumentChunk]) -> list[_Candidate]:
         records: list[_Candidate] = []
@@ -1044,17 +1484,34 @@ class FeatureExtractor:
             for mode in sorted(
                 set(
                     re.findall(
-                        r"\b(?:Normal|Standby|Sleep|Power-On Reset|Power On Reset|POR|Reset|Operating mode)\b",
+                        # English mode names: require "mode" suffix for generic
+                        # terms (Normal/Standby/Sleep) to avoid matching section
+                        # headings and non-mode usages.  Standalone "POR" and
+                        # "Reset" are dropped — they fire in too many non-mode
+                        # contexts (e.g. "reset the timer").
+                        r"\b(?:Normal mode|Standby mode|Sleep mode|"
+                        r"Listen-only mode|Listen only mode|"
+                        r"Go-to-Sleep mode|Go to Sleep mode|"
+                        r"Power-On Reset|Power On Reset|"
+                        r"Operating mode|Active mode)\b"
+                        # Chinese mode names
+                        r"|(?:正常模式|待机模式|睡眠模式|活动模式|"
+                        r"只听模式|休眠模式|"
+                        r"上电复位|运行模式|工作模式)",
                         text,
                         flags=re.IGNORECASE,
                     )
                 )
             ):
+                content = _sentence_with(text, mode) or mode
+                # Skip if content is raw table markup (>30% pipes)
+                if content.count("|") > len(content) * 0.3:
+                    continue
                 records.append(
                     _Candidate(
                         type="state_machine",
                         name=mode,
-                        content=_sentence_with(text, mode) or mode,
+                        content=content,
                         chunk=chunk,
                         software_responsibility="hardware_capability",
                         status="Open Issue",
@@ -1072,13 +1529,51 @@ class FeatureExtractor:
 
     def _extract_diagnostics(self, parsed: ParsedDocument, chunks: list[DocumentChunk]) -> list[_Candidate]:
         records: list[_Candidate] = []
+        # Cross-chunk dedup: track fault names across ALL chunks so that
+        # split tables (e.g. Table 5 parts 1 & 2 in TJA1043) don't produce
+        # duplicate rows.
+        seen_fault_names: set[str] = set()
         for chunk in chunks:
             heading = " ".join(chunk.heading_path)
+            heading_lower = heading.lower()
+            # Skip chunks that are about electrical specs, packaging, or general descriptions
+            if _contains_any(heading_lower, ("绝对最大", "建议运行", "电气特性", "典型特性",
+                                               "热性能", "esd", "封装", "packag", "mechanical",
+                                               "tape and reel", "订购", "特性", "应用",
+                                               "引脚功能", "引脚配置", "外部元", "简化原理图")):
+                continue
             text = _plain_text(chunk.text)
-            diagnostic_heading = re.search(r"\b(interrupt|int\b|fault|error|status|flag|diagnostic)\b", heading, re.I)
-            diagnostic_text = re.search(r"\b(INT|ERR|fault|error|status flag|interrupt output|diagnostic)\b", text)
+            diagnostic_heading = re.search(r"\b(interrupts?|int\b|faults?|failures?|errors?|status|flags?|diagnostic|"
+                                           r"中断|故障|错误|状态|标志|诊断|保护)\b", heading, re.I)
+            diagnostic_text = re.search(r"\b(INT|ERR|faults?|failures?|errors?|status flag|interrupt output|diagnostic|"
+                                        r"中断|故障|错误|状态标志|诊断|保护|nFAULT|n?fault|flags?)\b", text)
             if not (diagnostic_heading or diagnostic_text):
                 continue
+
+            # ---- Fault summary table parsing ----
+            # Datasheets often have a structured fault summary table (e.g. §7.3.4.5).
+            # Parse each row into a pipe-delimited string matching the builder's
+            # fault table format so it flows through to the planner.
+            fault_rows: list[str] = []
+            for rows in _table_rows(chunk):
+                if not rows:
+                    continue
+                header = [cell.strip() for cell in rows[0]]
+                if not _is_fault_summary_header(header):
+                    continue
+                for row in rows[1:]:
+                    parsed_row = _parse_fault_summary_row(row, header)
+                    if not parsed_row:
+                        continue
+                    # Dedup by fault name (first |...| field) across chunks
+                    parts = parsed_row.split("|")
+                    if len(parts) >= 2:
+                        fname = parts[1].strip().lower()
+                        if fname in seen_fault_names:
+                            continue
+                        seen_fault_names.add(fname)
+                    fault_rows.append(parsed_row)
+
             records.append(
                 _Candidate(
                     type="diagnostic",
@@ -1095,6 +1590,7 @@ class FeatureExtractor:
                     candidate_requirement_types=("诊断需求", "状态需求", "接口需求"),
                     application_scheme="Use only if the signal/status is connected to software and project requires observation, reporting, or callback behavior.",
                     missing_inputs=("硬件连接", "清除条件", "诊断上报策略"),
+                    fault_rows=tuple(fault_rows),
                 )
             )
         return records
@@ -1102,11 +1598,41 @@ class FeatureExtractor:
     def _extract_timing(self, parsed: ParsedDocument, chunks: list[DocumentChunk]) -> list[_Candidate]:
         records: list[_Candidate] = []
         for chunk in chunks:
-            text = _plain_text(chunk.text)
-            if not re.search(r"\b(us|µs|μs|ms|s|khz|mhz|hz|ns)\b", text, flags=re.IGNORECASE):
+            heading = " ".join(chunk.heading_path).lower()
+            # Skip non-technical sections that may contain timing units in boilerplate.
+            # Also skip TOC, cross-reference, legal, and revision-history sections
+            # which frequently contain timing-unit strings in non-timing contexts.
+            if _contains_any(heading, ("packag", "mechanical", "tape and reel",
+                                         "legal", "disclaimer", "order", "revision",
+                                         "封装", "机械", "订购", "法律", "免责",
+                                         "content", "cross-reference", "trademark",
+                                         "revision history", "revision_history",
+                                         "附录", "附录a", "appendix", "contents",
+                                         "soldering", "焊接")):
                 continue
-            for sentence in re.split(r"(?<=[.!?。；;])\s+", text):
-                if re.search(r"\b(us|µs|μs|ms|s|khz|mhz|hz|ns)\b", sentence, flags=re.IGNORECASE):
+            text = _plain_text(chunk.text)
+            _has_timing_text = re.search(r"\b(us|µs|μs|ms|s|khz|mhz|hz|ns)\b", text, flags=re.IGNORECASE)
+            if _has_timing_text:
+                # Only extract sentences that contain BOTH a timing unit AND a
+                # timing-relevant keyword (parameter name, constraint, or behavior).
+                # This filters out boilerplate, TOC entries, legal text, and
+                # cross-references that happen to mention time units.
+                _timing_keywords = (
+                    r"\b(delay|timeout|time-out|time out|hold time|"
+                    r"wake-up|wake up|wakeup|detection time|recovery time|"
+                    r"bit time|bit width|propagation|rise time|fall time|"
+                    r"turn-on|turn-off|startup|power-up|settling|ramp|"
+                    r"deglitch|debounce|filter|blanking|"
+                    r"dominant.*time|recessive.*time|"
+                    r"undervoltage.*time|mode.*time|"
+                    r"switch.*time|transition.*time|"
+                    r"stabil|guard|min.*time|max.*time)\b"
+                )
+                for sentence in re.split(r"(?<=[.!?。；;])\s+", text):
+                    if not re.search(r"\b(us|µs|μs|ms|s|khz|mhz|hz|ns)\b", sentence, flags=re.IGNORECASE):
+                        continue
+                    if not re.search(_timing_keywords, sentence, re.I):
+                        continue
                     records.append(
                         _Candidate(
                             type="timing",
@@ -1127,6 +1653,55 @@ class FeatureExtractor:
                     )
                     if len([record for record in records if record.chunk == chunk]) >= 4:
                         break
+
+            # Also extract timing parameters from TABLE blocks (e.g. Dynamic
+            # characteristics tables).  Table rows carry structured parameter
+            # names with min/typ/max values and units that the sentence-based
+            # extraction above cannot reach.  This runs independently of the
+            # text-based extraction.
+            _timing_units_pat = re.compile(r"\b(us|µs|μs|ms|s|khz|mhz|hz|ns)\b", re.I)
+            for rows in _table_rows(chunk):
+                if not rows or len(rows) < 2:
+                    continue
+                hdr_text = " ".join(cell.strip().lower() for cell in rows[0])
+                has_param = any(kw in hdr_text for kw in ("parameter", "symbol", "参数", "timing", "time"))
+                has_unit = any(kw in hdr_text for kw in ("unit", "单位", "min", "max", "typ"))
+                if not (has_param or has_unit):
+                    continue
+                for row in rows[1:]:
+                    if len(row) < 2:
+                        continue
+                    row_text = " ".join(cell.strip() for cell in row)
+                    if not _timing_units_pat.search(row_text):
+                        continue
+                    param_name = row[1].strip() if len(row) > 1 and row[1].strip() else row[0].strip()
+                    symbol = row[0].strip() if len(row) > 0 else ""
+                    min_val = row[3].strip() if len(row) > 3 else ""
+                    typ_val = row[4].strip() if len(row) > 4 else ""
+                    max_val = row[5].strip() if len(row) > 5 else ""
+                    unit = row[6].strip() if len(row) > 6 else ""
+                    content = f"{symbol} — {param_name}: typ={typ_val}, min={min_val}, max={max_val} {unit}".strip()
+                    records.append(
+                        _Candidate(
+                            type="timing",
+                            name=_timing_name(param_name),
+                            content=content,
+                            chunk=chunk,
+                            software_responsibility="hardware_constraint",
+                            status="Open Issue",
+                            can_generate_requirement="Needs Review",
+                            gap="Project timing responsibility must be confirmed.",
+                            extractor="timing_extractor",
+                            feature_category="Timing",
+                            functional_summary="Captures measurable timing, frequency, or delay values.",
+                            candidate_requirement_types=("时序需求", "验证策略"),
+                            application_scheme="Use as timing requirement evidence only where software owns waiting, timeout, sampling, or verification behavior.",
+                            missing_inputs=("软件是否负责等待/超时", "测量点", "验证方式"),
+                        )
+                    )
+                # Limit per-table rows to avoid flooding
+                if len(records) > 60:
+                    break
         return records
 
     def _extract_electrical(self, parsed: ParsedDocument, chunks: list[DocumentChunk]) -> list[_Candidate]:
@@ -1451,19 +2026,87 @@ def _skip_chunk(chunk: DocumentChunk) -> bool:
 
 
 def _pin_software_relation(symbol: str, function: str) -> str:
+    """Determine software relationship from pin function description text.
+
+    Analyzes the function description for semantic categories rather than
+    matching against a hardcoded pin name list.  Supports both English and
+    Chinese datasheet descriptions.
+    """
+    text = f"{symbol} {function}".lower()
     upper = symbol.upper()
-    if upper in {"SCL", "SDA"}:
-        return "software_constraint"
-    if upper in {"INT", "RESET", "ERR_N", "WAKE"}:
-        return "open_issue"
-    if re.fullmatch(r"P[0-1][0-7]", upper):
-        return "open_issue"
-    if upper in {"A0", "A1", "A2"}:
+
+    # Power/ground/thermal/no-connect pins are hardware-only
+    if upper in {"VDD", "VSS", "VCC", "GND", "PGND", "NC", "EP", "PAD"}:
         return "hardware_constraint"
+
+    # Communication bus pins constrain software access
+    if _contains_any(text, ("clock", "data bus", "serial clock", "serial data",
+                              "scl", "sda", "sdi", "sdo", "sck", "miso", "mosi",
+                              "cs", "chip select", "bus")):
+        return "software_constraint"
+
+    # Address/configuration pins are typically hardware-tied
+    if _contains_any(text, ("address", "addr", "chip select config")):
+        return "hardware_constraint"
+
+    # ---------- Chinese + English combined matches ----------
+
+    # Fault/diagnostic output pins: software MUST read them to detect faults
+    if _contains_any(text, ("fault", "error", "diagnostic", "alert", "warning",
+                              "status", "flag", "open-drain output",
+                              "interrupt output", "nfault",
+                              "故障", "诊断", "报警", "警告", "状态指示")):
+        return "software_action"
+
+    # Control inputs: software MUST drive them
+    if _contains_any(text, ("enable", "disable", "reset input", "sleep", "wake",
+                              "mode select", "control input", "nsleep",
+                              "使能", "禁用", "睡眠", "唤醒", "复位",
+                              "控制输入", "控制模式", "模式选择",
+                              "三电平输入", "四电平输入")):
+        return "software_action"
+
+    # Sense/monitor outputs: software MUST sample them (ADC / GPIO input)
+    if _contains_any(text, ("current sense", "current monitor", "sense output",
+                              "proportional", "monitor", "feedback", "ipropi",
+                              "analog current output",
+                              "电流检测", "电流监测", "电流输出", "比例电流",
+                              "模拟电流", "反馈", "检测输出")):
+        return "software_action"
+
+    # Motor/power control outputs: software drives the H-bridge
+    if _contains_any(text, ("h-bridge", "half-bridge", "motor output", "driver output",
+                              "high-side", "low-side", "switch output",
+                              "h 桥", "半桥", "电机输出", "驱动输出",
+                              "功率输出", "开关输出")):
+        return "software_action"
+
+    # Analog reference inputs: software may set or sample
+    if _contains_any(text, ("reference", "vref", "analog input", "comparator",
+                              "基准电压", "参考电压", "模拟输入")):
+        return "software_action"
+
+    # Charge pump pins are hardware support
+    if _contains_any(text, ("charge pump", "vcp", "cph", "cpl", "bootstrap",
+                              "电荷泵")):
+        return "hardware_constraint"
+
+    # Generic I/O: need project confirmation for exact usage
+    if _contains_any(text, ("input", "output", "i/o", "io ", "bidirectional",
+                              "port", "gpio")):
+        return "open_issue"
+
     return "open_issue"
 
 
 def _clean_symbol(value: str) -> str:
+    # Preserve pin name semantics: keep / for dual-function pins, keep leading n/n prefix
+    result = re.sub(r"[^A-Za-z0-9_/]", "", value)
+    return result
+
+
+def _clean_symbol_upper(value: str) -> str:
+    """Aggressive cleaning for register names (upper-case, no special chars)."""
     return re.sub(r"[^A-Za-z0-9_]", "", value).upper()
 
 
@@ -1673,13 +2316,186 @@ def _escape_table(value: str) -> str:
 
 
 def _timing_name(sentence: str) -> str:
-    if re.search(r"\bi2c|scl|sda|clock|khz|mhz\b", sentence, re.I):
-        return "I2C Timing Value"
-    if re.search(r"\breset|por\b", sentence, re.I):
-        return "Reset Timing Value"
-    if re.search(r"\binterrupt|int\b", sentence, re.I):
-        return "Interrupt Timing Value"
-    return "Timing Value"
+    """Derive a timing category name from the surrounding context.
+
+    Checks common timing domains and builds a category name reflecting what
+    the constraint applies to, rather than hardcoding I2C/Reset/Interrupt.
+    """
+    text = sentence.lower()
+    categories = [
+        (r"\bi2c|scl|sda|i2s\b", "I2C"),
+        (r"\bspi|sck|mosi|miso|cs\b", "SPI"),
+        (r"\breset|por|power-on|power on", "复位"),
+        (r"\binterrupt|int|fault|n?fault", "中断/故障"),
+        (r"\bwake|sleep|standby|shutdown", "电源模式切换"),
+        (r"\bpwm|duty|period|frequency|khz|mhz|hz\b", "PWM/开关"),
+        (r"\bpropagation|rise time|fall time|turn-on|turn-off|delay\b", "信号传播"),
+        (r"\bstartup|power-up|power up|ramp|settling", "启动/稳定"),
+        (r"\bcharge pump|bootstrap|cpuv", "电荷泵"),
+        (r"\bovercurrent|over-current|ocp|thermal|tsd|protection", "保护响应"),
+        (r"\bdeglitch|debounce|filter|blanking", "信号调理"),
+    ]
+    for pattern, label in categories:
+        if re.search(pattern, text, re.I):
+            return f"{label}时序值"
+    return "时序值"
+
+
+def _is_fault_summary_header(header: list[str]) -> bool:
+    """Detect whether a table header row describes a fault/protection summary.
+
+    Datasheets often have tables like:
+      | 故障 | 条件 | 报告 | H桥 | 恢复 |
+      | Fault | Condition | Report | Recovery |
+    """
+    joined = " ".join(header).lower()
+    fault_cols = ("故障", "fault", "error", "错误", "protection", "保护", "flag", "failure", "fail")
+    cond_cols = ("条件", "condition", "触发", "trigger", "threshold")
+    recovery_cols = ("恢复", "recovery", "reset", "清除", "clear")
+    has_fault = any(kw in joined for kw in fault_cols)
+    has_cond = any(kw in joined for kw in cond_cols)
+    has_recovery = any(kw in joined for kw in recovery_cols)
+    # Need at least a fault/name column + one of condition or recovery
+    return has_fault and (has_cond or has_recovery)
+
+
+def _parse_fault_summary_row(row: list[str], header: list[str]) -> str:
+    """Parse one row of a fault summary table into a pipe-delimited fault string.
+
+    Returns a string matching the builder's fault table format:
+      | 故障名称 | hardware_chip | 触发条件 | 检测方式 | 确认策略 | 芯片行为 | 恢复类型 | 软件动作 |
+
+    Unlike the previous H-bridge-centric implementation, this version
+    infers detection, behavior, recovery, and software action from the
+    actual row and header content rather than hard-coding motor-driver
+    defaults.  This makes it work across CAN transceivers, SBCs, and
+    other chip types without producing misleading output.
+    """
+    if not row or all(not cell.strip() for cell in row):
+        return ""
+
+    # Filter out separator and boilerplate rows (e.g. "------------------")
+    first_cell = row[0].strip() if row else ""
+    if re.match(r"^[-=_]{3,}$", first_cell):
+        return ""
+    if first_cell.lower() in ("internal flag", "internal<br>flag"):
+        return ""  # repeated header row
+
+    def _col(keywords: tuple[str, ...], fallback_idx: int = -1) -> str:
+        for kw in keywords:
+            for i, h in enumerate(header):
+                if kw in h.lower():
+                    return row[i].strip() if i < len(row) else ""
+        if 0 <= fallback_idx < len(row):
+            return row[fallback_idx].strip()
+        return ""
+
+    name = _col(("故障", "fault", "名称", "name", "item", "flag", "internal"), 0)
+    if not name:
+        return ""
+
+    fault_class = "hardware_chip"
+
+    # ---- trigger ----
+    # Look for an explicit trigger/condition column.  Fallback to column 1
+    # only when the content looks like a real condition (not a boolean flag
+    # like "no" / "yes" that indicates pin availability).
+    trigger = _col(("条件", "condition", "触发", "trigger", "threshold"), -1)
+    if not trigger:
+        trigger = _col(("description", "说明", "detail"), 1)
+    trigger = trigger.replace("<br>", " ").replace("\n", " ").strip()
+    # If the fallback column is clearly NOT a trigger (short boolean, pin
+    # availability, or ERR_N indicator), produce a descriptive fallback
+    # instead of misleading content like "no".
+    if not trigger or trigger.lower() in ("no", "yes", "n/a", "-", "—"):
+        flag_desc = _col(("恢复", "recovery", "flag is cleared", "清除", "clear"), 2)
+        if flag_desc and len(flag_desc) > 10:
+            trigger = f"条件见数据手册（清除方式: {flag_desc[:120]}）"
+        else:
+            trigger = "详见数据手册对应章节"
+
+    # ---- detection: infer from the report / ERR_N / nFAULT column ----
+    report = _col(("报告", "report", "指示", "indicator", "nfa", "nfault",
+                    "err_n", "available on pin"), 2)
+    report_lower = report.lower()
+    if "err_n" in report_lower or "err" in report_lower:
+        detection = "轮询 ERR_N 引脚状态"
+    elif "rxnfx" in report_lower or "rxn" in report_lower:
+        detection = "轮询 RXD/ERR_N 引脚状态"
+    elif report and report != "no":
+        detection = f"读取 {report} 状态"
+    else:
+        # Flag not directly readable via a status pin — infer from mode changes
+        detection = "通过模式变化或关联标志间接反映"
+
+    # ---- confirmation ----
+    confirmation = "连续 2 次 MainFunction 周期确认"
+
+    # ---- chip behavior: use the recovery / clear column as behavior proxy ----
+    behavior_col = _col(("行为", "behavior", "action", "动作", "h桥", "h-bridge"), 3)
+    recovery_text = _col(("恢复", "recovery", "flag is cleared", "清除", "clear"), -1)
+    recovery_text = recovery_text or "".join(row[2:]) if len(row) > 2 else ""
+
+    # Derive chip behavior from recovery text instead of hard-coding H-bridge.
+    recovery_lower = recovery_text.lower()
+    if behavior_col:
+        chip_behavior = behavior_col.replace("<br>", " ").replace("\n", " ")
+    elif "sleep mode" in recovery_lower or "inh" in recovery_lower:
+        chip_behavior = "进入 Sleep 模式，INH 浮空，关闭外部稳压器"
+    elif "standby" in recovery_lower or "zero load" in recovery_lower:
+        chip_behavior = "进入 Standby 模式，总线零负载"
+    elif "transmitter" in recovery_lower or "disable" in recovery_lower:
+        chip_behavior = "禁用发送器"
+    else:
+        chip_behavior = "标志置位，通过 ERR_N 或 RXD 反映（详见数据手册）"
+
+    # ---- recovery type ----
+    if any(kw in recovery_lower for kw in ("锁存", "latch", "nsleep", "power-on reset")):
+        recovery = "manual_reset（需软件复位或重新上电）"
+    elif any(kw in recovery_lower for kw in ("enter normal mode", "entering normal",
+                                               "clear", "清除", "pwon", "wake flag")):
+        recovery = "manual_clear（需软件切换模式或清除标志）"
+    elif any(kw in recovery_lower for kw in ("自动", "auto", "retry", "重试",
+                                               "recover", "recessive")):
+        recovery = "auto（芯片自动恢复）"
+    elif "vbatt" in recovery_lower and "recover" in recovery_lower:
+        recovery = "auto（VBAT 恢复后自动清除）"
+    else:
+        recovery = "manual_clear（详见数据手册恢复条件）"
+
+    # ---- software action — inferred from name + recovery semantics ----
+    name_lower = name.lower()
+    if any(kw in name_lower for kw in ("uv", "uvnom", "uvbat", "undervoltage",
+                                         "欠压", "vcc", "vio", "vbat")):
+        if "uvbat" in name_lower or "vbat" in name_lower:
+            sw_action = "记录 VBAT 欠压事件；等待 VBAT 恢复后重新配置工作模式"
+        else:
+            sw_action = "记录供电欠压事件；等待供电恢复或 Wake 源触发后重新初始化"
+    elif any(kw in name_lower for kw in ("pwon", "power-on", "power on", "上电")):
+        sw_action = "在 Listen-only 模式轮询 ERR_N 确认冷启动；进入 Normal 模式清除标志"
+    elif any(kw in name_lower for kw in ("wake", "唤醒")):
+        sw_action = "读取 ERR_N/RXD 识别唤醒源；切换至 Normal 模式处理唤醒事件"
+    elif any(kw in name_lower for kw in ("bus failure", "总线故障", "short")):
+        sw_action = "记录总线故障事件；重新进入 Normal 模式或通过 Pwon 清除"
+    elif any(kw in name_lower for kw in ("local failure", "本地故障")):
+        sw_action = "在 Listen-only 模式轮询 ERR_N 获取故障类型；确认恢复后重新进入 Normal"
+    elif any(kw in name_lower for kw in ("overtemp", "thermal", "tsd", "过温", "热")):
+        sw_action = "记录过温事件；暂停高负载操作；等待降温后清除 Local failure 标志"
+    elif any(kw in name_lower for kw in ("txd", "dominant", "显性", "timeout", "超时")):
+        sw_action = "记录 TXD 异常事件；检查 MCU 端 GPIO 状态；清除 Local failure 标志恢复"
+    elif any(kw in name_lower for kw in ("ocp", "overcurrent", "过流")):
+        sw_action = "记录过流事件并累计次数；连续过流则上报；锁存模式需执行软件复位序列"
+    elif any(kw in name_lower for kw in ("cpuv", "charge pump", "电荷泵")):
+        sw_action = "记录故障事件；检查外部电容是否异常"
+    elif "indicator" in name_lower or "指示" in name_lower:
+        sw_action = "正常电流调节行为非故障；频繁触发则表明负载过大或堵转"
+    else:
+        sw_action = "记录故障事件；根据恢复类型执行对应清除或上报操作"
+
+    return (
+        f"| {name} | {fault_class} | {trigger} | {detection} | {confirmation} "
+        f"| {chip_behavior} | {recovery} | {sw_action} |"
+    )
 
 
 def _contains_any(text: str, needles: tuple[str, ...]) -> bool:

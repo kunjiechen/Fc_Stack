@@ -163,7 +163,7 @@ Current Document version **<Document_Version>** is **TBD**.
 
 ## Functional Requirement Sections
 
-Use the following section layout for functional requirements. Omit a subsection only when it is not applicable and the scope section clearly excludes it.
+Sections 5.1-5.4 are mandatory and must always be emitted. When a section has no requirement items, render the heading followed by "无对应需求。" as a placeholder paragraph. Do not omit any of these four subsections.
 
 ```markdown
 ## 5 功能需求
@@ -189,6 +189,8 @@ Use the following section layout for functional requirements. Omit a subsection 
 
 ## Non-Functional Requirement Sections
 
+Sections 5.1-5.4 and 6.1-6.4 are mandatory and must always be emitted. When a section has no requirement items, render the heading followed by "无对应需求。" as a placeholder paragraph.
+
 ```markdown
 ## 6 非功能需求
 
@@ -207,10 +209,6 @@ Use the following section layout for functional requirements. Omit a subsection 
 ### 6.4 资源消耗需求
 
 {resource_requirements}
-
-### 6.5 可追溯性需求
-
-{traceability_requirements}
 ```
 
 ## Requirement Item Template
@@ -247,11 +245,10 @@ Use these ID type codes by default:
 | Interface/API/pin access | `INTF` | 5.2 接口需求 |
 | Configuration and ownership | `CFG` | 5.3 配置需求 |
 | Diagnosis, status interpretation, errors | `DIAG` | 5.4 诊断需求 |
-| Timing/performance | `TIM` | 6.1 |
-| Safety level and safety boundary | `SAFE` | 6.2 |
-| Coding and implementation standard constraints | `CODE` | 6.3 |
-| ROM/RAM/Stack/CPU resources | `RES` | 6.4 |
-| Traceability/process quality | `COMP` | 6.5 |
+| Timing/performance | `TIM` | 6.1 时序需求 |
+| Safety level and safety boundary | `SAFE` | 6.2 安全等级需求 |
+| Coding and implementation standard constraints | `CODE` | 6.3 编码规范需求 |
+| ROM/RAM/Stack/CPU resources | `RES` | 6.4 资源消耗需求 |
 
 Requirement IDs should follow:
 

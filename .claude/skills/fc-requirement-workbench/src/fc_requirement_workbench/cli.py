@@ -24,26 +24,17 @@ from .candidate_pruner import CandidatePruningMarkdownRenderer, RequirementCandi
 from .chip_view_extractor import generate_chip_views
 from .emit_support import dispatch_final_emit, emit_text
 from .feature_extraction import FeatureExtractionMarkdownRenderer, FeatureExtractor
+from .normative_rules import DriverTypeProfile, NormativeRules
 from .filenames import (
     check_list_doc,
-    derivation_doc,
-    gate_report_doc,
-    next_step_message_doc,
-    open_items_doc,
-    operation_steps_doc,
-    post_generation_guide_doc,
     review_doc,
-    source_extract_doc,
-    source_index_doc,
     srs_doc,
     trace_matrix_doc,
 )
-from .gate_check import GateChecker, render_gate_check_markdown
-from .open_items import OpenItemsCollector, render_open_items_markdown
+from .gate_check import GateChecker
+from .open_items import OpenItemsCollector
 from .operation_checklist import (
     render_check_list_markdown,
-    render_operation_steps_markdown,
-    render_post_generation_guidance_markdown,
     render_post_generation_reply,
     render_review_record_markdown,
 )
@@ -60,10 +51,8 @@ from .raw_requirements import (
 from .requirement_planner import RequirementPlanner, RequirementPlanningMarkdownRenderer
 from .review_guide import ReviewGuideBuilder, render_review_guide_markdown
 from .rules import RequirementRuleEngine
-from .session_state import SessionStore, render_final_review_record
+from .session_state import SessionStore
 from .source_index import (
-    DerivationMatrixGenerator,
-    ExtractRecordGenerator,
     SourceIndexGenerator,
 )
 from .srs import (
@@ -225,12 +214,31 @@ def main() -> int:
         cache_key(args.input, args.module, "parsed", current_dependency_fingerprint),
         lambda: MarkdownStructureParser().parse_file(args.input), enabled=use_cache)
 
+    # ---- Load normative rules (mandatory) ----
+    refs_dir = _resolve_references_dir()
+    normative_rules = NormativeRules.from_references(refs_dir)
+
+    # Detect driver type from datasheet content (early, before feature extraction)
+    driver_profile = _detect_driver_profile(parsed, normative_rules)
+
     # Refine has_datasheet with content-based verification (both directions)
     if not has_datasheet:
         has_datasheet = _verify_datasheet_content(parsed)
     elif not _verify_datasheet_content(parsed):
         # Filename suggested datasheet but content doesn't match
         has_datasheet = False
+
+    # Detect whether the datasheet contains fault/flag/diagnostic sections.
+    # Used by G3-06 to verify that hardware fault diagnostic requirements
+    # are generated when the datasheet clearly describes them.
+    _fault_kw = ("flag", "fault", "failure", "diagnostic", "protection",
+                 "interrupt", "error", "undervoltage", "overtemperature",
+                 "thermal", "short-circuit", "标志", "故障", "诊断", "保护",
+                 "中断", "错误")
+    datasheet_has_fault_sections = any(
+        any(kw in " ".join(c.heading_path).lower() for kw in _fault_kw)
+        for c in parsed.chunks
+    ) if has_datasheet else False
 
     features = cached_stage(cache_dir, "features",
         cache_key(args.input, args.module, "features", current_dependency_fingerprint),
@@ -255,7 +263,7 @@ def main() -> int:
 
     planning = cached_stage(cache_dir, "planning",
         cache_key(args.input, args.module, "planning", current_dependency_fingerprint),
-        lambda: RequirementPlanner(module=args.module).plan(pruning), enabled=use_cache)
+        lambda: RequirementPlanner(module=args.module, profile=driver_profile).plan(pruning), enabled=use_cache)
 
     if args.emit == "planning-markdown":
         return emit_text(RequirementPlanningMarkdownRenderer().render(planning), args.output)
@@ -281,10 +289,18 @@ def main() -> int:
     findings = RequirementRuleEngine().validate(planned_requirements, constraints)
 
     builder_module = (raw_document.module_name if raw_document and raw_document.module_name else args.module)
-    safety_level = raw_document.safety_level if raw_document else "QM"
-    engineering = RequirementBuilder(module=builder_module).build(planned_requirements, findings)
+    safety_level = args.safety_level or (raw_document.safety_level if raw_document else "QM")
+    engineering = RequirementBuilder(module=builder_module, profile=driver_profile, rules=normative_rules).build(planned_requirements, findings)
+
+    # ---- Post-build validation: construction-rules + authoring-standard ----
+    findings = _validate_engineering_requirements(engineering, normative_rules, findings)
+
     engineering = enrich_engineering_requirements(engineering, module=builder_module, raw_document=raw_document)
-    engineering = ensure_default_engineering_requirements(engineering, builder_module)
+    engineering, default_findings = ensure_default_engineering_requirements(
+        engineering, builder_module, safety_level,
+        mainfunction_required=driver_profile.mainfunction_required,
+    )
+    findings.extend(default_findings)
 
     srs_document = SrsStructureGenerator().build_document(
         engineering, module=builder_module, findings=findings,
@@ -313,6 +329,7 @@ def main() -> int:
             has_raw_requirements=raw_document is not None,
             has_datasheet=has_datasheet,
             has_project_constraints=args.constraints is not None,
+            datasheet_has_fault_sections=datasheet_has_fault_sections,
         )
         open_item_dicts = [oi.__dict__ if hasattr(oi, '__dict__') else oi for oi in open_items]
         gate_reports = checker.check_all(engineering, findings, open_item_dicts)
@@ -374,7 +391,7 @@ def main() -> int:
         else:
             chip_view_status["skipped"] = "both files already exist"
 
-    # --- Phase 1: Source index + extract records ---
+    # --- Phase 1: Source entries (for gate check) ---
     datasheet_chapters = _collect_datasheet_chapters(parsed)
     source_gen = SourceIndexGenerator(module=module)
     source_entries = source_gen.generate(
@@ -383,28 +400,13 @@ def main() -> int:
         has_raw_requirements=has_raw,
         has_project_constraints=args.constraints is not None,
     )
-    (output_dir / source_index_doc(module)).write_text(
-        source_gen.render_markdown(source_entries, module), encoding="utf-8")
 
-    feature_dicts = [fg.to_dict() if hasattr(fg, 'to_dict') else fg for fg in features]
-    extract_gen = ExtractRecordGenerator()
-    extract_records = extract_gen.generate_from_features(feature_dicts, source_entries, module)
-    (output_dir / source_extract_doc(module)).write_text(
-        extract_gen.render_markdown(extract_records, module), encoding="utf-8")
-
-    # --- Phase 2: SRS + derivation + open items ---
+    # --- Phase 2: SRS ---
     srs_md = MarkdownSrsRenderer().render(srs_document)
     (output_dir / srs_doc(module)).write_text(srs_md, encoding="utf-8")
 
-    deriv_gen = DerivationMatrixGenerator()
-    deriv_records = deriv_gen.generate(extract_records, engineering, module)
-    (output_dir / derivation_doc(module)).write_text(
-        deriv_gen.render_markdown(deriv_records, module), encoding="utf-8")
-
     collector = OpenItemsCollector()
     open_items = collector.collect(engineering, findings, module)
-    (output_dir / open_items_doc(module)).write_text(
-        render_open_items_markdown(open_items, module), encoding="utf-8")
 
     # --- Phase 3: Gate check ---
     (output_dir / trace_matrix_doc(module)).write_text(
@@ -423,6 +425,7 @@ def main() -> int:
         has_raw_requirements=has_raw,
         has_datasheet=has_datasheet,
         has_project_constraints=args.constraints is not None,
+        datasheet_has_fault_sections=datasheet_has_fault_sections,
     )
     open_item_dicts = [oi.__dict__ if hasattr(oi, '__dict__') else oi for oi in open_items]
     gate_reports = checker.check_all(engineering, findings, open_item_dicts)
@@ -440,6 +443,7 @@ def main() -> int:
             has_raw_requirements=has_raw,
             has_datasheet=has_datasheet,
             has_project_constraints=args.constraints is not None,
+            datasheet_has_fault_sections=datasheet_has_fault_sections,
         )
         # Re-render SRS after modifications
         srs_document = SrsStructureGenerator().build_document(
@@ -448,16 +452,8 @@ def main() -> int:
         )
         srs_md = MarkdownSrsRenderer().render(srs_document)
         (output_dir / srs_doc(module)).write_text(srs_md, encoding="utf-8")
-        deriv_records = deriv_gen.generate(extract_records, engineering, module)
-        (output_dir / derivation_doc(module)).write_text(
-            deriv_gen.render_markdown(deriv_records, module), encoding="utf-8")
-        (output_dir / open_items_doc(module)).write_text(
-            render_open_items_markdown(open_items, module), encoding="utf-8")
 
     # --- Phase 4: Delivery ---
-    (output_dir / gate_report_doc(module)).write_text(
-        render_gate_check_markdown(gate_reports, module), encoding="utf-8")
-
     (output_dir / check_list_doc(module)).write_text(
         render_check_list_markdown(
             module=module, gate_reports=gate_reports, open_items=open_items
@@ -471,44 +467,12 @@ def main() -> int:
             operation_steps_generated=True, check_list_generated=True,
         ), encoding="utf-8")
 
-    (output_dir / operation_steps_doc(module)).write_text(
-        render_operation_steps_markdown(
-            module=module,
-            output_dir=str(output_dir),
-            input_file=str(args.input),
-            has_raw_requirements=has_raw,
-            has_datasheet=has_datasheet,
-            open_items=open_items,
-            loop_count=loop_count,
-            auto_fixes_applied=auto_fixes_applied,
-            requirement_count=len(engineering),
-        ), encoding="utf-8")
-
-    post_guide_path = output_dir / post_generation_guide_doc(module)
-    post_guide_path.write_text(
-        render_post_generation_guidance_markdown(
-            module=module,
-            srs_file=srs_doc(module),
-            has_raw_requirements=has_raw,
-            has_datasheet=has_datasheet,
-            has_project_constraints=args.constraints is not None,
-            gate_reports=gate_reports,
-            open_items=open_items,
-        ),
-        encoding="utf-8",
-    )
     next_step_message = render_post_generation_reply(
         module=module,
         srs_file=srs_doc(module),
         gate_reports=gate_reports,
         open_items=open_items,
     )
-    next_step_message_path = output_dir / next_step_message_doc(module)
-    next_step_message_path.write_text(next_step_message, encoding="utf-8")
-
-    if change_log:
-        (output_dir / f"Change_Log_{module}.md").write_text(
-            _render_change_log(change_log, module), encoding="utf-8")
 
     # --- Mode: review (generate + guided-review) ---
     review_guide_path: Path | None = None
@@ -581,8 +545,6 @@ def main() -> int:
         "open_items": len(open_items),
         "loop_count": loop_count,
         "chip_view": chip_view_status,
-        "post_generation_guide": str(post_guide_path),
-        "next_step_message_file": str(next_step_message_path),
         "next_actions": [
             "补原始需求",
             "补来源资料",
@@ -771,6 +733,7 @@ def _run_fix_loop(
     has_raw_requirements: bool = False,
     has_datasheet: bool = False,
     has_project_constraints: bool = False,
+    datasheet_has_fault_sections: bool = False,
 ) -> tuple[int, int, list[Any], list[Any], list[str], list[Any]]:
     """Run the fix-iterate loop until gates are clean or max_iterations reached.
 
@@ -827,6 +790,7 @@ def _run_fix_loop(
                 has_raw_requirements=has_raw_requirements,
                 has_datasheet=has_datasheet,
                 has_project_constraints=has_project_constraints,
+                datasheet_has_fault_sections=datasheet_has_fault_sections,
             ).check_all(engineering, findings, open_item_dicts)
 
         # 5. Check termination
@@ -860,23 +824,104 @@ def _write_intermediates(
         (output_dir / filename).write_text(content, encoding="utf-8")
 
 
-def _render_change_log(log: list[str], module: str) -> str:
-    from datetime import datetime
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    lines = [
-        f"# 修改记录 — {module}",
-        "",
-        f"**生成时间**: {now}",
-        "",
-    ]
-    for entry in log:
-        prefix = entry.split(":")[0] if ":" in entry else ""
-        if prefix in ("PATCH", "CLOSE", "SKIP", "FIX-LOOP"):
-            lines.append(f"- {entry}")
-        else:
-            lines.append(f"- {entry}")
-    lines.append("")
-    return "\n".join(lines)
+
+
+
+# ---------------------------------------------------------------------------
+# Normative rules support
+# ---------------------------------------------------------------------------
+
+
+def _resolve_references_dir() -> Path:
+    """Locate the references/ directory relative to this source file."""
+    this_file = Path(__file__).resolve()
+    # src/fc_requirement_workbench/cli.py → references/
+    refs_dir = this_file.parent.parent.parent / "references"
+    if not refs_dir.is_dir():
+        raise FileNotFoundError(
+            f"Normative references directory not found: {refs_dir}\n"
+            f"The pipeline requires reference documents to operate correctly."
+        )
+    return refs_dir
+
+
+def _validate_engineering_requirements(
+    engineering: list[Any],
+    rules: NormativeRules,
+    existing_findings: list[Any],
+) -> list[Any]:
+    """Post-build validation: check required fields + vague words per normative rules."""
+    findings = list(existing_findings)
+    from .rules import ValidationFinding
+
+    for req in engineering:
+        req_dict = req.to_dict() if hasattr(req, "to_dict") else req
+        req_type = req_dict.get("requirement_type", "")
+
+        # 1. Field completeness check (construction-rules)
+        missing = rules.validate_required_fields(req_type, req_dict)
+        if missing:
+            findings.append(
+                ValidationFinding(
+                    severity="warning",
+                    rule="construction-rules:required-fields",
+                    rule_group="construction-rules",
+                    status="failed",
+                    requirement_ids=[req_dict.get("requirement_id", "")],
+                    message=f"缺少必填字段: {', '.join(missing)}",
+                    recommendation="补充缺失字段或将状态设为 Draft",
+                )
+            )
+
+        # 2. Vague word + forbidden placeholder check (authoring-standard)
+        # Check ALL user-visible requirement fields — not just description.
+        text_to_check = " ".join([
+            req_dict.get("description", ""),
+            req_dict.get("constraint", ""),
+            req_dict.get("exception", ""),
+            req_dict.get("verification", ""),
+            req_dict.get("pre_condition", ""),
+            req_dict.get("trigger", ""),
+            req_dict.get("input", ""),
+            req_dict.get("output", ""),
+            req_dict.get("title", ""),
+        ])
+        vague = rules.find_vague_words(text_to_check)
+        if vague:
+            findings.append(
+                ValidationFinding(
+                    severity="info",
+                    rule="authoring-standard:vague-words",
+                    rule_group="authoring-standard",
+                    status="failed",
+                    requirement_ids=[req_dict.get("requirement_id", "")],
+                    message=f"包含禁用的占位或模糊词: {', '.join(vague)}",
+                    recommendation="替换为可度量的条件、边界或验收规则。若暂时无法确定具体值，标记为 Open Issue 状态而非填写占位符。",
+                )
+            )
+
+    return findings
+
+
+def _detect_driver_profile(parsed: Any, rules: NormativeRules) -> DriverTypeProfile:
+    """Detect the normative driver profile from parsed datasheet content."""
+    chip_description: list[str] = []
+    for chunk in parsed.chunks:
+        text = getattr(chunk, "text", "")
+        # Collect from identity-relevant sections: title, description, features
+        heading = " ".join(getattr(chunk, "heading_path", []))
+        if any(kw in heading.lower() for kw in (
+            "特性", "features", "说明", "description", "概述", "overview", "应用",
+        )):
+            chip_description.append(text[:500])
+        # Also check the first few chunks for chip title
+        if len(chip_description) < 3 and len(text) > 50:
+            chip_description.append(text[:300])
+        if len(chip_description) >= 5:
+            break
+
+    combined = " ".join(chip_description)
+    return rules.resolve_profile(combined)
 
 
 if __name__ == "__main__":

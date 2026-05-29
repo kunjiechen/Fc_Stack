@@ -45,11 +45,128 @@ description: "用于把芯片手册、项目需求、参考 SRS 与追溯材料�
 
 ## 4. 核心原则
 
+### 4.1 通用原则
+
 - 先抽取语义对象，再写 SRS 句子
 - 每条需求都要尽量具备来源、边界、状态和验证意图
 - 模糊词必须改写或标记为待澄清，例如“正常”“稳定”“快速”“多个”
 - 没有证据的内容必须降级为 `needs_source` 或 `open_issue`
 - SRS 只描述软件“应做什么”，不直接写实现方案
+
+### 4.2 配置需求原则
+
+- 配置不是”配置控制”一条笼统需求——必须逐项列出，区分：
+  - **static**（cfg.h 预编译）：不同项目选不同值，编译时固化
+  - **dynamic**（cfg.c 运行时）：同一二进制适配不同硬件，Init 时加载，可通过 Pre-Compile 或校准修改
+  - **hardware**（PCB 固定）：电阻分压、引脚 strap，作为设计约束记录
+- 除非功能完全由指令下发驱动（无需任何参数化），否则必有配置项
+- 同一接口可支持多种采样/驱动方案，通过配置切换，对上接口不变
+- 配置缺少默认值或范围 → `Draft`；缺少来源 → `needs_source`
+
+#### 4.2.1 配置需求推导链（功能→信号链路→参数分解→配置项）
+
+每条功能接口需要配置哪些参数，不是靠记忆或经验清单，而是沿信号链路逐段分解。推导规则如下：
+
+**推导步骤**：
+
+1. **功能接口识别**：确定该功能在软件中承担的计算/控制职责
+2. **信号链路还原**：从芯片引脚到软件结果，还原完整的信号转换路径
+3. **参数分解**：链路中每个转换节点提取出因硬件/项目而异的参数
+4. **配置项生成**：为每个可变参数指定配置类型（static/dynamic/hardware）
+
+**推导示例 1 — 负载电流监测（GetLoadCurrentSig）**：
+
+```
+功能接口：GetLoadCurrentSig → 软件需要返回负载电流值 (A)
+
+信号链路还原：
+  I_LOAD (电机电流)
+    → 芯片内部电流镜缩小 → I_PROPI = I_LOAD × A_IPROPI (比例因数, 典型 1000μA/A)
+    → 外部电阻转电压 → V_IPROPI = I_PROPI × R_IPROPI
+    → MCU ADC 采样 → ADC_Code = V_IPROPI / V_REF_ADC × 2^N
+    → 软件换算 → I_LOAD = (ADC_Code × V_REF_ADC / 2^N) / (R_IPROPI × A_IPROPI)
+
+参数分解（每个可变节点）：
+  1. A_IPROPI — 芯片内部电流镜比例因数，不同芯片有制造偏差(±4~7.5%)，不同家族成员典型值可能不同
+     → dynamic 配置，默认 1000μA/A，可通过 EOL 标定覆盖
+  2. R_IPROPI — PCB 焊接的检测电阻值，项目根据 ADC 量程和电流范围选择
+     → hardware 配置，焊接固定
+  3. V_REF_ADC — MCU ADC 基准电压（非本驱动控制，但影响量程计算）
+     → 作为设计约束记录或引用，不归入本驱动配置项
+
+生成配置项：A_IPROPI(dynamic) + R_IPROPI(hardware) = 2 项
+若只配了 R_IPROPI 而遗漏 A_IPROPI → 配置遗漏
+```
+
+**推导示例 2 — H 桥输出控制（SetHbOutSig）**：
+
+```
+功能接口：SetHbOutSig → 软件需要输出指定方向和占空比的 PWM
+
+信号链路还原：
+  软件请求 (方向, 占空比, 频率)
+    → PMODE 锁存决定 EN/IN1 & PH/IN2 引脚语义
+    → MCU PWM 外设生成波形 (频率 f_PWM, 占空比 D)
+    → H 桥 MOSFET 开关 → OUT1/OUT2 输出电压
+
+参数分解：
+  1. PMODE — 控制模式选择，决定输入引脚语义映射
+     → static 配置，不同项目根据上层控制策略选择
+  2. f_PWM — PWM 开关频率，芯片约束 0~100kHz，不同电机特性需要不同值
+     → static 配置
+  3. IMODE（间接相关）— 电流调节模式影响过流后 H 桥的行为
+     → static 配置
+
+生成配置项：PMODE(static) + f_PWM(static) + IMODE(static) = 3 项
+```
+
+**推导示例 3 — 芯片模式切换（SetDevModeOutSig）**：
+
+```
+功能接口：SetDevModeOutSig → 软件需要将芯片在 Sleep/Active 间切换
+
+信号链路还原：
+  软件请求目标模式
+    → nSLEEP 引脚控制 (H=Active, L=Sleep)
+    → 芯片内部上电序列 (t_WAKE ≤ 1ms) 或关断序列 (t_SLEEP ≤ 1ms)
+    → PMODE/IMODE 在唤醒时重新锁存
+
+参数分解：
+  1. t_WAKE — 上电等待时间，芯片约束 ≤1ms，软件需在连续操作间插入此等待
+     → 可配置为 static（默认 1ms，低速应用可放宽）
+  2. t_SLEEP — 关断等待时间，同上
+     → 同上
+
+生成配置项（若等待时间使用 datasheet 硬保证值则可省略）：通常 2 项或 0 项
+```
+
+**校验清单**（需求评审时逐接口过一遍）：
+
+| 功能接口 | 是否涉及信号转换？ | 转换链路中有几个可变参数？ | 每个参数是否已有配置项？ | 结论 |
+|----------|-------------------|--------------------------|------------------------|------|
+| GetLoadCurrentSig | 是 | 2 (A_IPROPI, R_IPROPI) | | |
+| SetHbOutSig | 是 | 3 (PMODE, f_PWM, IMODE) | | |
+| SetDevModeOutSig | 是 | 0~2 (t_WAKE, t_SLEEP 若需要可配) | | |
+| GetDevFaultSig | 否（纯状态读取，无信号转换） | 0 | — | 无需新增 |
+| Init | 否 | 0 | — | 无需新增 |
+| MainFunction | 否 | 0 | — | 无需新增 |
+
+### 4.3 诊断需求原则
+
+- 诊断 = 芯片硬件故障 + 驱动软件故障，缺一不可
+- 硬件故障：从数据手册提取每项故障的触发条件、检测方式、确认策略、芯片行为、恢复类型、软件动作
+- 软件故障：至少包含未初始化访问、非法参数、状态机非法转换；若有时序或通信依赖则加上超时/通信异常
+- 每项故障必须定义：
+  - 分类（hardware_chip / software_param / software_state / software_communication）
+  - 确认策略（防抖次数 / 重读次数 / 超时阈值）
+  - 恢复类型（auto / manual_reset / manual_clear / fatal）
+- `DET`（开发错误检测）是必选基线，为独立需求条目
+
+### 4.4 非功能需求原则
+
+- 时序需求不得出现“待确认”——有值写值，无值写“本项目无软件时序约束”
+- 资源需求至少给出测量方法（ROM/RAM/栈统计方式），预算缺失标注为 `open_issue`
+- 安全等级需求必须反映实际 ASIL 等级，不得出现“默认 QM”与实际等级矛盾的描述
 
 ## 5. 规则分工
 
@@ -101,26 +218,36 @@ description: "用于把芯片手册、项目需求、参考 SRS 与追溯材料�
   - 需求文档
 - 三者存一即可启动生成；输入越完整，生成质量越高
 
-## 7. 最小加载策略
+## 7. 规范经验加载（CLI 强制）
 
-默认按最小集合加载：
+CLI 启动时以 `references/aurix2g-normative-patterns.md` 为**唯一入口**，解析 markdown 链接发现平台子文件。同时加载写作规范文件。未找到任一文件时 CLI 拒绝启动。
 
-1. 用户当前提供的输入资料
-2. 本 `SKILL.md`
-3. `references/srs-output-template.md`
-4. 当前任务所需的规则文件
-5. 只有在需要稳定结构化对象时，再读取 `references/semantic-model.md`
+```
+aurix2g-normative-patterns.md           ← 入口索引
+  ├─ platform/interface-patterns.md        → 各层接口命名规范、MainFunction 规则
+  ├─ platform/driver-experience-library.md → 6 种驱动类型模板
+  └─ platform/architecture-patterns.md     → 已发现，待后续阶段消费
 
-当输入包含芯片手册且 chip view 文件缺失时，额外加载：
+construction-rules.md                   ← 每类需求必填字段 + 降级规则
+authoring-standard.md                   ← 模糊词禁止列表 + 写作规范
+```
 
-- `references/chip-view-extraction-rules.md`
+以上通过 `normative_rules.py` 解析为结构化规则，注入全链路：
 
-只有在需要判断 MainFunction、接口分类、多核/诊断/状态机等平台规范时，再读取：
+| 规则来源 | 注入目标 | 效果 |
+|---------|---------|------|
+| driver-experience-library | Planner | 强制注入必须接口（Init/MainFunction/SetHbOutSig/...） |
+| interface-patterns | Builder | 按规范命名（SetHbOutSig 而非 SetOutSig） |
+| construction-rules | CLI 后构建校验 | 必填字段缺失 → ValidationFinding |
+| authoring-standard | CLI 后构建校验 | 模糊词（正常/快速/多个...）→ ValidationFinding |
 
-- `references/aurix2g-normative-patterns.md`
-- `references/rule-engine.md`
-- `references/feature-extraction-design.md`
-- `references/extraction-rules.md`
+不加载的文件：
+
+| 文件 | 原因 |
+|------|------|
+| `calibration-rules.md` | 历史判断偏好，需 LLM 推理，无法机械执行 |
+| `srs-output-template.md` | 已硬编码在 `srs.py::MarkdownSrsRenderer` |
+| `semantic-model.md` | 已编码为 Python dataclass |
 
 ## 8. 执行步骤
 

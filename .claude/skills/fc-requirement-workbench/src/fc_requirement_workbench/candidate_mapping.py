@@ -254,6 +254,12 @@ def _target_fields(
         fields.update({"Configuration Item": subject, "Default/Range": "Project input required"})
     if "时序" in requirement_type:
         fields.update({"Timing": subfunction.timing if subfunction else "Project timing responsibility required"})
+    if "诊断" in requirement_type:
+        diag_fields = {"Diagnostic Signal": subject, "Signal Interpretation": boundary}
+        # Carry structured fault rows parsed from datasheet fault summary tables
+        if subfunction and subfunction.fault_rows:
+            diag_fields["FaultRows"] = "\n".join(subfunction.fault_rows)
+        fields.update(diag_fields)
     return fields
 
 
