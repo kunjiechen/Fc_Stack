@@ -1,5 +1,7 @@
 # Feature Extraction Design for SRS Generation
 
+本文件是 `extraction-rules.md` 的详细设计配套文档：`extraction-rules.md` 定义提取什么（字段、格式、规则、门禁），本文件定义多视角提取器的架构和运作方式（并行提取器、后处理器、聚合、子功能分析）。
+
 本文件定义 SRS 生成前的芯片信息特征提取方案。它不是最终 SRS 模板，而是用于把 Datasheet、项目需求、源码、配置和测试材料转换成可审查、可组合、可追溯的中间特征模型。
 
 核心目标：

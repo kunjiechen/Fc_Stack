@@ -1,6 +1,10 @@
 # FC Requirement Workbench Architecture Design
 
-本文档记录 `fc-requirement-workbench` 的整体架构、阶段方案、方案引入原因和维护要求。它是方案型设计文档：当工程中新增、替换或升级任何阶段方案时，必须同步更新本文档。
+本文档是 `fc-requirement-workbench` 的**唯一详细架构与方案参考**。
+
+- `SKILL.md` 提供高层概览、输入/输出边界和最小加载策略。本文档提供完整的阶段方案、引入原因和维护要求。
+- 当工程中新增、替换或升级任何阶段方案时，必须同步更新本文档。
+- Pipeline 顶层步骤与 SKILL.md 的 8 步流程对齐：解析→提取→映射→剪枝→规划→验证→构建→溯源。本文档的各阶段为这 8 步的子阶段实现。
 
 ## 1. 定位
 
@@ -48,17 +52,13 @@ Phase 3: Requirement Builder and SRS Rendering
 Phase 4: Requirement Traceability and Evidence
         ↓
 Outputs
-  ├─ SRS Markdown
-  ├─ Validation Report
-  ├─ Requirement Graph
-  ├─ Trace Matrix
-  ├─ Coverage Matrix
-  ├─ ASPICE Evidence Summary
-  └─ Optional Intermediate Markdown
-       ├─ Feature Extraction
-       ├─ Requirement Candidate Mapping
-       ├─ Pruned Candidate Decision
-       └─ Requirement Planning
+  ├─ <FC>_软件需求规范.md                  (SRS)
+  ├─ Review_<FC>_软件需求规范.md             (Review)
+  ├─ Check_<FC>_软件需求规范.md              (Check)
+  ├─ Trace_<FC>_软件需求规范.md              (Trace: Source→Req, Req→Verification, ASPICE Evidence)
+  └─ ChipViews/ (条件输出，有芯片手册时)
+       ├─ <FC>_芯片架构输入.md
+       └─ <FC>_芯片详细设计输入.md
 ```
 
 ## 3. 架构原则
@@ -69,10 +69,8 @@ Outputs
 | 先证据，后结论 | 所有候选需求必须有来源证据，且保留证据强度。 |
 | Datasheet 不等于项目需求 | Datasheet-only 内容默认 `Needs Review`，不得自动成为 `Ready`。 |
 | 软件动作门禁 | 没有软件动作的芯片能力只能进入概述、约束或资料来源。 |
-| 中间产物按需审查 | 默认只生成最终 SRS；需要评审提取/映射/规划质量时再显式输出中间 Markdown。 |
-| 规则显式化 | 重要判断不能只依赖模型理解，必须沉淀为规则或字段。 |
 | Markdown 优先 | 当前阶段默认产物为 Markdown，不优先处理 Word/DOCX。 |
-| 性能优先 | 默认关闭中间 Markdown 渲染和落盘，单阶段调试输出应提前返回，避免继续执行完整链路。 |
+| 无中间产物 | 需求生成阶段只输出 4 个标准产物（SRS/Review/Check/Trace），不输出中间 Markdown 和过程性产物。 |
 
 ## 4. 阶段方案总览
 
@@ -90,7 +88,6 @@ Outputs
 | 质量校验 | 需求缺字段、冲突、缺来源、缺验证方式 | Rule Engine、Validation Report、Requirement Graph | `rules.py`, `report.py`, `graph.py`, `rule-engine.md` |
 | 需求构建 | 语义对象需要稳定变成工程需求 | Requirement Builder、ID Engine、Construction Rules | `builder.py`, `construction-rules.md` |
 | SRS 输出 | 输出结构需要稳定、可读、可审查 | SRS Output Template、Markdown Renderer | `srs.py`, `srs-output-template.md` |
-| 流程性能 | 多阶段中间 Markdown 会增加渲染、IO 和上下文审阅成本 | 中间产物开关、按阶段 emit、默认只输出最终 SRS | `cli.py`, `SKILL.md` |
 | 写法校准 | 新 SRS 容易偏离当前约定格式和评审习惯 | Calibration Rules、Authoring Standard | `calibration-rules.md`, `authoring-standard.md` |
 | 追溯验证 | 需求来源和验证覆盖需要可检查 | Traceability Pipeline、Coverage、Evidence | `traceability.py`, `rendering-templates.md` |
 
@@ -359,22 +356,7 @@ SRS Draft
 - 缺少项目输入时不得提升为正式 Ready 需求。
 - Target Requirement Fields 只作为候选字段，不直接承诺最终 SRS。
 
-### 7.6 中间产物
-
-该阶段支持按需生成独立中间文件，默认不落盘：
-
-```text
-output/candidates/{MODULE} 需求候选映射中间文件.md
-```
-
-中间文件包含：
-
-- Strategy。
-- Summary。
-- Candidate Mapping Matrix。
-- Candidate Details。
-
-### 7.7 产物字段
+### 7.6 产物字段
 
 `RequirementCandidate` 字段包括：
 
@@ -438,7 +420,7 @@ Compressed Required Inputs
 Candidate Promotion
 ```
 
-该阶段不修改原始候选映射文件，而是生成独立裁剪中间产物。所有被合并的候选仍保留 candidate_id、cluster 和 retained_by，避免证据丢失。
+该阶段在内存中完成裁解决策。所有被合并的候选仍保留 candidate_id、cluster 和 retained_by，避免证据丢失。
 
 ### 8.3 裁剪策略
 
@@ -450,23 +432,7 @@ Candidate Promotion
 | Unsupported 类型 | 不硬塞进功能需求 | 由 unsupported 清单或默认非功能模板承接。 |
 | 缺失输入重复 | 按缺失项聚合 | 生成面向补料的 Required Inputs 表，而不是分散在每条候选里。 |
 
-### 8.4 中间产物
-
-该阶段支持按需生成独立中间文件，默认不落盘：
-
-```text
-output/candidates/{MODULE} 候选需求压缩中间文件.md
-```
-
-中间文件包含：
-
-- Strategy。
-- Summary。
-- Pruning Decision Matrix。
-- Retained Candidate Matrix。
-- Required Inputs for Ready SRS。
-
-### 8.5 维护要求
+### 8.4 维护要求
 
 当裁剪、合并或补料聚合规则变化时，必须同步更新：
 
@@ -525,22 +491,7 @@ Planned RequirementObject
 - 中断、复位与异常处理。
 - 时序与资源约束。
 
-### 9.4 中间产物
-
-该阶段支持按需生成独立中间文件，默认不落盘：
-
-```text
-output/planning/{MODULE} 需求规划中间文件.md
-```
-
-中间文件包含：
-
-- Strategy。
-- Planning Matrix。
-- Planned SRS Requirement Objects。
-- Required Inputs for Ready SRS。
-
-### 9.5 维护要求
+### 9.4 维护要求
 
 当需求规划或写作策略变化时，必须同步更新：
 
@@ -607,23 +558,7 @@ Validation / SRS Draft
 
 这些类型进入 Unsupported Candidate Type 清单，等待 schema 扩展。
 
-### 10.4 中间产物
-
-该阶段支持按需生成：
-
-```text
-output/promoted/{MODULE} 提升需求对象中间文件.md
-```
-
-中间文件包含：
-
-- Strategy
-- Summary
-- Promoted Requirement Objects
-- Unsupported Candidate Types
-- Promotion Trace
-
-### 10.5 维护要求
+### 10.4 维护要求
 
 当提升规则变化时，必须同步更新：
 
@@ -674,25 +609,12 @@ SrsStructureGenerator
 MarkdownSrsRenderer
 ```
 
-CLI 输出：
-
-```text
---emit promoted-srs-markdown
---emit planned-srs-markdown
-```
-
-推荐输出路径：
-
-```text
-output/srs/{MODULE} 软件需求规范-基于候选生成草稿.md
-```
-
 ### 12.3 规则
 
 - promoted requirements 全部作为 Draft SRS 输入。
 - Datasheet-only 需求不得自动 Ready。
 - Required Inputs 保留在约束、依赖或来源证据中。
-- Unsupported candidates 暂不进入正文需求，保留在 promotion 中间文件。
+- Unsupported candidates 暂不进入正文需求。
 - SRS 草稿默认消费 pruning 后的 retained candidates，避免已知同族重复直接进入正文。
 - 高质量 SRS 草稿应优先消费 planning 生成的 planned requirements，避免候选痕迹进入正文。
 
@@ -783,9 +705,7 @@ output/srs/{MODULE} 软件需求规范-基于候选生成草稿.md
 
 ### 11.3 产物
 
-- Validation Findings。
-- Requirement Graph。
-- Validation Report。
+- Validation Findings（内部校验对象，归入 Trace 追溯矩阵）。
 
 ### 11.4 维护要求
 
@@ -838,8 +758,7 @@ output/srs/{MODULE} 软件需求规范-基于候选生成草稿.md
 ### 12.3 产物
 
 - Engineering Requirement。
-- SRS Markdown。
-- SRS JSON/HTML/DOCX 支撑能力。
+- `<FC>_软件需求规范.md`（正式 SRS Markdown）。
 
 ### 12.4 维护要求
 
@@ -876,11 +795,7 @@ SRS 不是最终闭环，需求还需要说明：
 
 ### 13.3 产物
 
-- Trace Matrix。
-- Coverage Matrix。
-- Verification Matrix。
-- ASPICE Evidence Summary。
-- Change Impact Report。
+- `Trace_<FC>_软件需求规范.md`（包含 Source→Requirement、Requirement→Verification Intent、Coverage、ASPICE Evidence Summary）。
 
 ### 13.4 维护要求
 
@@ -914,7 +829,7 @@ SRS 不是最终闭环，需求还需要说明：
 | 原问题 | 为什么需要改 |
 | 新方案 | 引入了什么 |
 | 影响文件 | 哪些代码/规则/模板受影响 |
-| 输出变化 | 中间文件或 SRS 有什么变化 |
+| 输出变化 | SRS 有什么变化 |
 | 验证方式 | 如何确认方案生效 |
 
 ## 15. 当前方案状态
@@ -922,21 +837,22 @@ SRS 不是最终闭环，需求还需要说明：
 | 方案 | 状态 | 说明 |
 | --- | --- | --- |
 | Markdown 结构解析 | 已实现 | 支撑 md 输入。 |
-| 多视角并行特征提取 | 已实现 | 支撑 NCA9539 中间文件生成。 |
-| 特征聚合和子功能分析 | 已实现 | 已输出 11 个 NCA9539 特征组。 |
-| Evidence Level | 已实现 | 中间文件已输出 L3 Datasheet 等级。 |
-| Software Action Gate | 已实现 | 中间文件已输出软件动作和映射表。 |
-| Feature-to-Requirement Mapping | 已实现 | 中间文件已输出映射矩阵。 |
-| Required Inputs for Ready SRS | 已实现 | 中间文件已输出反向补料清单。 |
+| 多视角并行特征提取 | 已实现 | 支撑特征抽取。 |
+| 特征聚合和子功能分析 | 已实现 | 支撑 NCA9539 特征组。 |
+| Evidence Level | 已实现 | 支撑 L3 Datasheet 证据等级判定。 |
+| Software Action Gate | 已实现 | 支撑软件动作和映射判定。 |
+| Feature-to-Requirement Mapping | 已实现 | 支撑映射矩阵。 |
+| Required Inputs for Ready SRS | 已实现 | 支撑反向补料清单。 |
 | RequirementCandidate 映射中间层 | 已实现 | 支撑 Feature/Subfunction 到多类别候选需求映射。 |
 | Candidate Pruning 压缩中间层 | 已实现 | 支撑同族候选保留/合并决策和补料项聚合。 |
 | Requirement Planning 需求规划层 | 已实现 | 支撑按能力域规划需求条目、合并策略和验证策略。 |
-| Candidate Promotion 提升中间层 | 已实现 | 支撑候选需求到 Draft RequirementObject，unsupported 类型单独报告。 |
-| Planned SRS Bridge | 已实现 | 支撑新版特征/候选/规划链路生成更收敛的 SRS Markdown 草稿。 |
+| Candidate Promotion 提升中间层 | 已实现 | 支撑候选需求到 Draft RequirementObject。 |
+| Planned SRS Bridge | 已实现 | 支撑新版候选/规划链路生成 SRS Markdown。 |
 | Requirement Semantic Object | 已实现 | 支撑功能/接口/配置/时序/状态。 |
 | Rule Engine | 已实现 | 支撑基础质量校验。 |
-| SRS Markdown 输出 | 已实现 | 当前优先输出 md。 |
-| Traceability Pipeline | 已实现 | 支撑 trace/coverage/verification/evidence。 |
+| SRS Markdown 输出 | 已实现 | 输出 4 个标准产物（SRS/Review/Check/Trace）。 |
+| Traceability Pipeline | 已实现 | 支撑 trace/coverage/verification/evidence（归入 Trace 产物）。 |
+| 芯片视图提取 | 已实现 | 有芯片手册时条件输出 3 个 ChipView 文件。 |
 
 ## 16. 下一步候选升级
 

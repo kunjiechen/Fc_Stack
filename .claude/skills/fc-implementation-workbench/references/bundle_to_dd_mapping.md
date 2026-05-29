@@ -156,7 +156,7 @@ formal external interface 必须一一渲染。
 ### 5.2 `architecture.dependency_interfaces`
 
 - 主落点:
-  - `9. 依赖接口与Callout设计`
+  - `9. 依赖接口设计`
 - 次落点:
   - `18. 架构与详细设计覆盖表`
 
@@ -207,7 +207,7 @@ formal dependency interface 必须一一渲染。
 ### 6.3 `detailed_design.dependency_interfaces`
 
 - 主落点:
-  - `9. 依赖接口与Callout设计`
+  - `9. 依赖接口设计`
 
 ### 6.4 `relationship_links`
 
@@ -237,7 +237,7 @@ formal dependency interface 必须一一渲染。
 
 - 强化章节:
   - `4. 功能设计`
-  - `9. 依赖接口与Callout设计`
+  - `9. 依赖接口设计`
 
 ### 7.3 `chip_mainfunction_pattern`
 

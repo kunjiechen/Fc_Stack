@@ -127,6 +127,8 @@ modules:
     summary: references/grounding/modules/IoMcu/summary.md
     facts: references/grounding/modules/IoMcu/facts.yaml
 
+selection_rules: references/grounding/selection_rules.md
+
 patterns:
   - references/grounding/patterns/external_interface_pattern.md
   - references/grounding/patterns/dependency_interface_pattern.md
@@ -134,4 +136,3 @@ patterns:
   - references/grounding/patterns/config_conf_pattern.md
   - references/grounding/patterns/memmap_pattern.md
   - references/grounding/patterns/internal_function_granularity_pattern.md
-  - references/grounding/selection_rules.md

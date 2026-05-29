@@ -72,6 +72,8 @@ Optional files:
 - `FC_Desc_CfgData.h`
 - `FC_Desc_Types.h`
 
+> **Desc 文件组说明**：Desc 文件组仅用于非常复杂的多层 FC（多函数层、通信与寄存器抽象层分离、多核/多实例分解、配置簇独立拆分等场景）。常规架构生成管道（SKILL.md §9）默认不生成 Desc 文件组。仅当人工评审判定 FC 确实需要 Descriptor 层抽象时才手动启用。
+
 ## File Responsibilities
 
 ### `FC.c` and `FC.h`

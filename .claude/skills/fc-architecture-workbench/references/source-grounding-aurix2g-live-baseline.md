@@ -247,6 +247,8 @@ Observed example:
   - `Gp_TLE92104_Cfg.h`
   - `Gp_TLE92104_Reg.h`
 
+> **已知缺口**：当前 grounding 基线中 IoExtDev 族的活例 `Gp_TLE92104` 为 SPI 设备。尚无 I2C IoExtDev 的真实工程样例。I2C IoExtDev（如 Gp_NCA9539）的架构生成参考 `interface-selection.md` 中 I2C Callout 原型规范（`CalloutI2cWrite`/`CalloutI2cRead`），其余文件族、MemMap、DET 和多核策略复用 IoExtDev 族通用模式。
+
 Architecture implication:
 
 - if a driver owns register command words, bit masks, mode values, or protocol frame constants, add `FC_Reg.h`

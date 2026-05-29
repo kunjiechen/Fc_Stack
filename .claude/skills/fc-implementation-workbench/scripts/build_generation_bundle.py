@@ -727,7 +727,7 @@ def build_bundle(
 
     dd_external = parse_dd_external_section(section_slice(dd_text, "## 7. 外部接口设计"), module)
     dd_internal = parse_dd_internal_section(dd_text, module)
-    dd_dependency = parse_dd_dependency_section(section_slice(dd_text, "## 9. 依赖接口与Callout设计"), module)
+    dd_dependency = parse_dd_dependency_section(section_slice(dd_text, "## 9. 依赖接口设计"), module)
     assign_dd_trace_ids(dd_external, dd_internal, dd_dependency, arch_external, arch_dependency)
 
     conf_evidence = collect_conf_evidence(grounding_modules)

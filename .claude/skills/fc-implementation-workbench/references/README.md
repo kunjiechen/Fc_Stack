@@ -42,8 +42,7 @@
 - `rules/state-and-fault-rules.md`
 - `rules/flowchart-rules.md`
 - `rules/implementation-review-checklist.md`
-- `templates/output-template.md`
-- `templates/output-template-summary.md`
+- `templates/output-template.md`（唯一正式交付模板）
 
 ## Grounding 资料
 

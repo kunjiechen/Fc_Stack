@@ -110,7 +110,7 @@ A list of requirement items. Each item has the following fields:
 
 ### 6.4.1 Status Semantics
 
-- **`ready`**: The requirement meets the Ready Gate defined in `requirement_quality_contract.md`. It is sufficiently complete for downstream architecture, detailed design, and test planning.
+- **`ready`**: The requirement meets the Ready Gate defined in `requirement-quality-contract.md`. It is sufficiently complete for downstream architecture, detailed design, and test planning.
 - **`draft`**: The requirement exists but is not yet downstream-ready. Either execution details (trigger, input, output, exception) are insufficient, validation findings exist, or the source is missing.
 - **`open_issue`**: A validation error blocks this requirement. It must be resolved before it can be promoted to `draft` or `ready`.
 

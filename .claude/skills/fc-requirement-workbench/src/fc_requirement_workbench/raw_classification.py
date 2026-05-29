@@ -3,7 +3,7 @@
 This module decides whether a raw extracted item should enter the formal
 requirement pool or stay as constraint/capability/evidence metadata.
 
-Gate rules are loaded from ``references/raw_classification_rules.yaml`` so
+Gate rules are loaded from ``references/raw-classification-rules.yaml`` so
 they can be audited and adjusted without touching classification logic.
 """
 
@@ -35,7 +35,7 @@ def _rules_path() -> Path:
     this_file = Path(__file__).resolve()
     # Walk up from src/fc_requirement_workbench/ to the skill root
     skill_root = this_file.parents[2]
-    return skill_root / "references" / "raw_classification_rules.yaml"
+    return skill_root / "references" / "raw-classification-rules.yaml"
 
 
 def _load_rules() -> None:
@@ -144,12 +144,12 @@ def _looks_like_chip_capability(text: str, lowered: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Minimal YAML parser — built specifically for raw_classification_rules.yaml.
+# Minimal YAML parser — built specifically for raw-classification-rules.yaml.
 # No PyYAML dependency.
 # ---------------------------------------------------------------------------
 
 def _parse_simple_yaml(text: str) -> dict[str, Any]:
-    """Parse raw_classification_rules.yaml into ``{rules: [...], capability_patterns: {...}}``.
+    """Parse raw-classification-rules.yaml into ``{rules: [...], capability_patterns: {...}}``.
 
     Uses a simple line-by-line state machine tuned to the exact structure of the
     rules file.  No PyYAML dependency.

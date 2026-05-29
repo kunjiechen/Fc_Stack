@@ -134,7 +134,7 @@ def validate(arch_path: Path, dd_path: Path, srs_path: Path | None = None) -> li
     arch_external = section_slice(arch_text, "## 3. 外部接口设计")
     arch_dependency = section_slice(arch_text, "## 8. 依赖接口设计")
     dd_external = section_slice(dd_text, "## 7. 外部接口设计")
-    dd_dependency = section_slice(dd_text, "## 9. 依赖接口与Callout设计")
+    dd_dependency = section_slice(dd_text, "## 9. 依赖接口设计")
 
     arch_external_names = extract_interface_names(arch_external)
     arch_dependency_names = extract_interface_names(arch_dependency)

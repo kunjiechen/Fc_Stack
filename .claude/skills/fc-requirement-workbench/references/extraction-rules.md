@@ -6,7 +6,62 @@ The extractor must preserve source evidence, distinguish chip capability from pr
 
 For chip datasheet processing, apply the multi-view parallel extraction design in `feature-extraction-design.md` first. These rules define the normalized fields and extraction record format; `feature-extraction-design.md` defines the extractor architecture, feature grouping, subfunction analysis, software responsibility judgment, and application-scheme output.
 
-## 1. Input Sources
+## 1. Raw Extraction Model
+
+Raw extraction must be treated as two layers. Its job is not to decide final SRS wording, but to split raw input into stable items, remove metadata noise, preserve source references, normalize obvious fields, and prepare items for formal requirement gate classification.
+
+### 1.1 Layer A: Structure Extraction
+
+Responsible for:
+- line splitting
+- heading and metadata detection
+- spreadsheet field extraction
+- source reference preservation
+- basic category hints
+
+This layer answers: what raw item exists, where it came from, what fields it contains. It must not assume every extracted item is already a formal requirement.
+
+### 1.2 Layer B: Semantic Disposition
+
+Responsible for deciding whether the extracted item belongs to:
+- `formal_requirement`
+- `constraint`
+- `capability`
+- `metadata`
+- `evidence`
+- `architecture_seed_only`
+- `test_seed_only`
+- `open_issue`
+
+This layer answers: should the item enter the formal requirement pool, should it stay as constraint/evidence only, should it feed only architecture/test seed.
+
+### 1.3 Noise Filtering Rules
+
+The following should normally be filtered before the formal requirement gate:
+- module name
+- module abbreviation
+- document number
+- chapter titles such as `原始功能需求`
+- pure section labels without software behavior
+
+These may remain in module identity or source inventory but should not become formal requirements.
+
+### 1.4 Input Preference
+
+When structured spreadsheet fields exist, prefer field meaning over free-text heuristics. When only plain text exists, use heuristics conservatively and preserve uncertainty.
+
+### 1.5 Raw Item Output Requirement
+
+Every raw extracted item should retain:
+- source reference
+- category hint
+- normalized description
+- disposition
+- gate reason
+
+Without those, later bundle validation cannot explain why an item entered or did not enter the formal pool.
+
+## 2. Input Sources
 
 Extract information from these source types:
 
@@ -18,7 +73,7 @@ Extract information from these source types:
 | Configuration File | Instance count, core count, pin mapping, default mode, enable switches, ID ranges | Extract concrete configuration items and ranges |
 | Test Material | Test cases, test reports, trace matrix, expected results | Extract verification intent and acceptance clues |
 
-## 2. Source Priority
+## 3. Source Priority
 
 When the same topic appears in multiple sources, merge the evidence and assign priority:
 
@@ -36,9 +91,9 @@ Priority guidance:
 
 If sources conflict, do not silently choose one. Create a `Conflict` or `Open Issue` extraction record and preserve all conflicting evidence.
 
-## 3. Extracted Field Types
+## 4. Extracted Field Types
 
-### 3.1 Modes
+### 4.1 Modes
 
 Extract:
 
@@ -54,7 +109,7 @@ Extraction notes:
 - A project-prohibited mode should be extracted as an exclusion or forbidden item.
 - Internal transitional states should be marked as internal unless project requirements expose them.
 
-### 3.2 Pins
+### 4.2 Pins
 
 Extract:
 
@@ -69,7 +124,7 @@ Extraction notes:
 - If pin ownership is unclear, mark `Open Issue`.
 - If a pin affects system behavior but is not controlled by software, record it as a constraint, not a software action requirement.
 
-### 3.3 Interfaces
+### 4.3 Interfaces
 
 Extract:
 
@@ -85,7 +140,7 @@ Extraction notes:
 - API behavior must include success and failure semantics before it can become `Ready`.
 - If return value mapping is missing, mark `Draft`.
 
-### 3.4 Configuration Items
+### 4.4 Configuration Items
 
 Extract:
 
@@ -103,7 +158,7 @@ Extraction notes:
 - If a configurable value exists but range/default is unknown, mark `Draft` or `Open Issue`.
 - Configuration must be linked to validation or review/test evidence where possible.
 
-### 3.5 State Machine
+### 4.5 State Machine
 
 Extract:
 
@@ -120,7 +175,7 @@ Extraction notes:
 - Public API states and internal implementation states must be separated.
 - If transition trigger or guard is missing, mark `Draft`.
 
-### 3.6 Timing Values
+### 4.6 Timing Values
 
 Extract:
 
@@ -138,7 +193,7 @@ Extraction notes:
 - If a timing statement contains words like "fast", "stable", "delay", or "wait" without a value, mark `Draft`.
 - Preserve original unit and normalize to output style when generating SRS.
 
-### 3.7 Prohibited Items
+### 4.7 Prohibited Items
 
 Extract:
 
@@ -154,7 +209,7 @@ Extraction notes:
 - Prohibited items should become scope boundary, exception handling, or rejection requirements only when software has responsibility to reject or enforce them.
 - If they are only project exclusions, keep them as constraints or overview notes.
 
-### 3.8 Resource Constraints
+### 4.8 Resource Constraints
 
 Extract:
 
@@ -170,7 +225,7 @@ Extraction notes:
 - If numeric budgets are unavailable, extract the requirement to evaluate and record usage, then mark budget as `Open Issue`.
 - Source code may help estimate actual resource usage but should not replace project budget input.
 
-## 4. Extraction Record Format
+## 5. Extraction Record Format
 
 Use this structured Markdown format for extracted information:
 
@@ -195,7 +250,7 @@ Use this structured Markdown format for extracted information:
 | 备注 | {notes} |
 ```
 
-## 5. Aggregated Extraction Summary
+## 6. Aggregated Extraction Summary
 
 For each module, also output an extraction summary:
 
@@ -251,7 +306,7 @@ For each module, also output an extraction summary:
 {resource_rows}
 ```
 
-## 6. Evidence Level
+## 7. Evidence Level
 
 Every extraction record must include an evidence strength level. Evidence level is used to prevent Datasheet-only facts from becoming `Ready` requirements without project confirmation.
 
@@ -275,7 +330,7 @@ Inference / aggregation without direct source -> L5
 
 When several sources support the same feature, keep the strongest level and preserve all source evidence. If sources conflict, create `Conflict` or `Open Issue` instead of upgrading evidence.
 
-## 7. Software Action Gate
+## 8. Software Action Gate
 
 A feature may enter candidate requirement generation only if at least one explicit software action exists.
 
@@ -300,7 +355,7 @@ Gate rule:
 - If a software action exists but project support or required fields are missing, `Can Generate Requirement = Needs Review`.
 - If a software action exists, evidence is strong enough, and construction fields are complete, `Can Generate Requirement = Yes`.
 
-## 8. Feature-to-Requirement Mapping
+## 9. Feature-to-Requirement Mapping
 
 After feature aggregation, output a mapping table to connect extraction results with `construction-rules.md`.
 
@@ -324,7 +379,7 @@ Mapping rules:
 - Timing requirements require numeric value, unit, trigger, and software wait/timeout/sampling responsibility.
 - Resource/nonfunctional requirements require budget, constraint, measurement method, or project acceptance criterion.
 
-## 9. Required Inputs for Ready SRS
+## 10. Required Inputs for Ready SRS
 
 Extraction must output a reverse gap list focused on what must be provided before candidate requirements can become `Ready`.
 
@@ -353,7 +408,7 @@ Typical required inputs:
 | Verification method | Testing | UT, IT, HIL, review, analysis |
 | Safety level | Safety / project | QM, ASIL level, diagnostic coverage expectation |
 
-## 10. Accuracy Gate
+## 11. Accuracy Gate
 
 Before SRS generation, every feature must pass this three-layer judgment:
 
@@ -372,7 +427,43 @@ If any layer fails:
 - Software action exists but Ready fields are incomplete -> `Needs Review`.
 - All layers pass -> candidate can become `Ready`.
 
-## 11. Status Rules
+## 12. Formal Requirement Gate
+
+The gate between raw extracted items and the formal requirement pool enforces a key principle: **not every extracted item is a formal requirement**.
+
+### 12.1 Disposition Meanings
+
+| Disposition | Meaning |
+|---|---|
+| `formal_requirement` | Item expresses software behavior, interface, configuration, timing, or state obligations that can enter the formal requirement pool. |
+| `constraint` | Item governs downstream design or verification (ASIL, MISRA, ROM/RAM budgets, DET policy) but is not itself a direct software behavior requirement. |
+| `capability` | Item describes chip or project-supported capability not yet refined into implementation-ready software obligation wording. |
+| `metadata` | Module names, document labels, section titles, and other non-requirement framing content. |
+| `evidence` | Review, record, or assessment obligations rather than direct software behavior. |
+| `architecture_seed_only` | Item primarily constrains architectural freeze decisions (multi-core ownership, memory partitioning, deployment boundary). |
+| `test_seed_only` | Item is verification-oriented and should drive test design without being promoted to a formal software requirement. |
+| `open_issue` | Item still depends on project confirmation, ownership clarification, or missing engineering decisions. |
+
+### 12.2 Gate Rule
+
+Only items with `disposition = formal_requirement` may enter the formal requirement pool automatically. All other items must stay outside the formal pool until a later explicit decision moves them in.
+
+### 12.3 Why This Gate Exists
+
+Without this gate, the pipeline drifts toward "extract anything → classify roughly → convert everything into requirement objects." That causes capabilities to be mistaken for requirements, nonfunctional constraints to be treated like functional behavior, and metadata to leak into downstream seeds.
+
+### 12.4 Default Exclusions
+
+At minimum, the gate must prevent these from entering the formal requirement pool by default:
+
+- safety level statements
+- coding-standard statements
+- resource-budget statements
+- module/document metadata
+
+The machine-readable version of these gate rules is in `raw-classification-rules.yaml`.
+
+## 13. Status Rules
 
 - `Ready`: source is clear, meaning is unambiguous, and software responsibility is known.
 - `Draft`: information is extractable but incomplete, vague, or not yet ready for SRS construction.
@@ -380,7 +471,7 @@ If any layer fails:
 - `Conflict`: multiple sources disagree.
 - `NotApplicable`: source capability exists but no software action, constraint, configuration, interface, or verification responsibility exists.
 
-## 12. Extraction Rules
+## 14. Extraction Rules
 
 - Every extracted item must include source evidence.
 - Every extracted item must include evidence level.

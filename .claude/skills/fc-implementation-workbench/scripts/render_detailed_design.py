@@ -398,7 +398,7 @@ def render_dependency_section(bundle: dict) -> str:
     dd_dep = {item["name"]: item for item in bundle["detailed_design"]["dependency_interfaces"]}
     internal_names = {internal["name"] for internal in bundle["detailed_design"]["internal_interfaces"]}
     external_names = {external["name"] for external in bundle["detailed_design"]["external_interfaces"]}
-    sections: list[str] = ["## 9. 依赖接口与Callout设计", ""]
+    sections: list[str] = ["## 9. 依赖接口设计", ""]
     for idx, name in enumerate(arch_dep, start=1):
         item = dd_dep.get(name, {"name": name, "relationship_links": []})
         arch = arch_dep[name]
@@ -661,7 +661,7 @@ def detailed_design_trace_rows(bundle: dict) -> list[list[str]]:
         rows.append([format_trace_ids(item.get("trace_ids", [])), name, "External Interface", "7. 外部接口设计", name if name in dd_external else "—", "Covered" if name in dd_external else "Missing", "保持 architecture external interface 与 DD 展开一致。"])
     for item in bundle["architecture"].get("dependency_interfaces", []):
         name = item["name"]
-        rows.append([format_trace_ids(item.get("trace_ids", [])), name, "Dependency Interface", "9. 依赖接口与Callout设计", name if name in dd_dependency else "—", "Covered" if name in dd_dependency else "Partial", "保持 architecture dependency/callout contract 与 DD 展开一致。"])
+        rows.append([format_trace_ids(item.get("trace_ids", [])), name, "Dependency Interface", "9. 依赖接口设计", name if name in dd_dependency else "—", "Covered" if name in dd_dependency else "Partial", "保持 architecture dependency/callout contract 与 DD 展开一致。"])
     for item in bundle["detailed_design"].get("internal_interfaces", []):
         name = item["name"]
         rows.append([format_trace_ids(item.get("trace_ids", [])), name, "Internal Interface", "8. 内部接口设计", name if name in dd_internal else "—", "Covered", "由 DD 内部职责拆分展开。"])

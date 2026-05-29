@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from .builder import RequirementBuilder
 from .cache_support import cache_key, cached_stage, dependency_fingerprint
 from .candidate_mapping import RequirementCandidateMapper, RequirementCandidateMarkdownRenderer
 from .candidate_pruner import CandidatePruningMarkdownRenderer, RequirementCandidatePruner
+from .chip_view_extractor import generate_chip_views
 from .emit_support import dispatch_final_emit, emit_text
 from .feature_extraction import FeatureExtractionMarkdownRenderer, FeatureExtractor
 from .filenames import (
@@ -113,7 +115,17 @@ def main() -> int:
         description="Generate SRS + full workflow deliverables from datasheet / raw requirements."
     )
     parser.add_argument("input", type=Path, help="Requirements input datasheet file or input directory")
-    parser.add_argument("--module", default="FC", help="Module name used in requirement IDs")
+    parser.add_argument("--module", default="FC", help="FC driver name used in requirement IDs")
+    parser.add_argument(
+        "--safety-level", default="",
+        choices=("", "QM", "ASIL-A", "ASIL-B", "ASIL-C", "ASIL-D"),
+        help="Functional safety level (QM, ASIL-A/B/C/D). Required before pipeline execution.",
+    )
+    parser.add_argument(
+        "--core-mode", default="",
+        choices=("", "single", "multi"),
+        help="Core control mode: single or multi. Required before pipeline execution.",
+    )
     parser.add_argument(
         "--constraints", "--requirement-doc", dest="constraints", type=Path,
         help="Project requirement document / constraint Markdown file.",
@@ -138,6 +150,14 @@ def main() -> int:
     parser.add_argument(
         "--source-root", type=Path,
         help="Optional project source root for bundle source-grounding.",
+    )
+    parser.add_argument(
+        "--chip-view-dir", type=Path,
+        help="Chip-view output directory (default: <input-root>/Output/<MODULE>/Doc/ChipViews).",
+    )
+    parser.add_argument(
+        "--skip-chip-view", action="store_true",
+        help="Skip chip-view generation even when datasheet input is present.",
     )
     parser.add_argument(
         "--emit",
@@ -182,6 +202,9 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # ---- Pre-flight: validate required project context ----
+    _validate_prerequisites(args.module, args.safety_level, args.core_mode)
+
     resolved = _resolve_requirement_inputs(
         input_path=args.input,
         raw_input=args.raw_input,
@@ -191,6 +214,7 @@ def main() -> int:
     args.raw_input = resolved["raw_input"]
     args.constraints = resolved["requirement_doc"]
     input_root = resolved["input_root"]
+    has_datasheet = resolved["has_datasheet"]
 
     cache_dir = args.cache_dir
     use_cache = not args.no_cache
@@ -200,6 +224,13 @@ def main() -> int:
     parsed = cached_stage(cache_dir, "parsed",
         cache_key(args.input, args.module, "parsed", current_dependency_fingerprint),
         lambda: MarkdownStructureParser().parse_file(args.input), enabled=use_cache)
+
+    # Refine has_datasheet with content-based verification (both directions)
+    if not has_datasheet:
+        has_datasheet = _verify_datasheet_content(parsed)
+    elif not _verify_datasheet_content(parsed):
+        # Filename suggested datasheet but content doesn't match
+        has_datasheet = False
 
     features = cached_stage(cache_dir, "features",
         cache_key(args.input, args.module, "features", current_dependency_fingerprint),
@@ -280,7 +311,7 @@ def main() -> int:
             module=builder_module,
             source_count=0,
             has_raw_requirements=raw_document is not None,
-            has_datasheet=True,
+            has_datasheet=has_datasheet,
             has_project_constraints=args.constraints is not None,
         )
         open_item_dicts = [oi.__dict__ if hasattr(oi, '__dict__') else oi for oi in open_items]
@@ -302,7 +333,7 @@ def main() -> int:
             input_file=str(args.input),
             has_raw_requirements=raw_document is not None,
             has_project_constraints=args.constraints is not None,
-            has_datasheet=True,
+            has_datasheet=has_datasheet,
             feature_groups=[fg.to_dict() if hasattr(fg, "to_dict") else fg for fg in features],
         )
 
@@ -311,6 +342,37 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     module = builder_module
     has_raw = raw_document is not None
+
+    # --- Phase 0: Chip-view generation (deterministic, before SRS) ---
+    chip_view_dir = args.chip_view_dir or input_root / "Output" / module / "Doc" / "ChipViews"
+    chip_view_status: dict[str, Any] = {"generated": False, "arch_exists": False, "design_exists": False}
+    if not has_datasheet:
+        chip_view_status["skipped"] = "no datasheet input"
+    elif args.skip_chip_view:
+        chip_view_status["skipped"] = "--skip-chip-view flag"
+    else:
+        arch_path = chip_view_dir / f"{module}_芯片架构输入.md"
+        design_path = chip_view_dir / f"{module}_芯片详细设计输入.md"
+        chip_view_status["arch_exists"] = arch_path.exists()
+        chip_view_status["design_exists"] = design_path.exists()
+        chip_view_status["arch_path"] = str(arch_path)
+        chip_view_status["design_path"] = str(design_path)
+        if not arch_path.exists() or not design_path.exists():
+            try:
+                gen_arch, gen_design = generate_chip_views(
+                    parsed, module, chip_view_dir, doc=str(args.input),
+                )
+                chip_view_status["generated"] = True
+                chip_view_status["arch_generated"] = str(gen_arch)
+                chip_view_status["design_generated"] = str(gen_design)
+                chip_view_status["missing_before"] = {
+                    "arch": not arch_path.exists(),
+                    "design": not design_path.exists(),
+                }
+            except Exception as exc:
+                chip_view_status["error"] = str(exc)
+        else:
+            chip_view_status["skipped"] = "both files already exist"
 
     # --- Phase 1: Source index + extract records ---
     datasheet_chapters = _collect_datasheet_chapters(parsed)
@@ -359,7 +421,7 @@ def main() -> int:
         module=module,
         source_count=len(source_entries),
         has_raw_requirements=has_raw,
-        has_datasheet=True,
+        has_datasheet=has_datasheet,
         has_project_constraints=args.constraints is not None,
     )
     open_item_dicts = [oi.__dict__ if hasattr(oi, '__dict__') else oi for oi in open_items]
@@ -376,7 +438,7 @@ def main() -> int:
             max_iterations=5, module=module, open_items=open_items,
             source_count=len(source_entries),
             has_raw_requirements=has_raw,
-            has_datasheet=True,
+            has_datasheet=has_datasheet,
             has_project_constraints=args.constraints is not None,
         )
         # Re-render SRS after modifications
@@ -415,7 +477,7 @@ def main() -> int:
             output_dir=str(output_dir),
             input_file=str(args.input),
             has_raw_requirements=has_raw,
-            has_datasheet=True,
+            has_datasheet=has_datasheet,
             open_items=open_items,
             loop_count=loop_count,
             auto_fixes_applied=auto_fixes_applied,
@@ -428,7 +490,7 @@ def main() -> int:
             module=module,
             srs_file=srs_doc(module),
             has_raw_requirements=has_raw,
-            has_datasheet=True,
+            has_datasheet=has_datasheet,
             has_project_constraints=args.constraints is not None,
             gate_reports=gate_reports,
             open_items=open_items,
@@ -518,6 +580,7 @@ def main() -> int:
         "gate_status": {r.gate: r.status for r in gate_reports},
         "open_items": len(open_items),
         "loop_count": loop_count,
+        "chip_view": chip_view_status,
         "post_generation_guide": str(post_guide_path),
         "next_step_message_file": str(next_step_message_path),
         "next_actions": [
@@ -546,13 +609,62 @@ def main() -> int:
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _validate_prerequisites(module: str, safety_level: str, core_mode: str) -> None:
+    """Validate that the three required project context items are provided.
+
+    Raises SystemExit with a clear message if any are missing.
+    """
+    missing: list[str] = []
+    if module == "FC":
+        missing.append("FC 驱动名称 (--module)")
+    if not safety_level:
+        missing.append("功能安全等级 (--safety-level)，可选: QM / ASIL-A / ASIL-B / ASIL-C / ASIL-D")
+    if not core_mode:
+        missing.append("单核/多核控制模式 (--core-mode)，可选: single / multi")
+
+    if missing:
+        msg = (
+            "\n"
+            "============================================================\n"
+            "  前置校验失败：缺少必需的工程上下文信息\n"
+            "============================================================\n"
+            "\n"
+            "  以下信息必须明确给定，否则不允许继续向下执行：\n\n"
+        )
+        for i, item in enumerate(missing, 1):
+            msg += f"    {i}. {item}\n"
+        msg += (
+            "\n"
+            "  请补充以上信息后重新运行。示例：\n"
+            "\n"
+            '    python -m fc_requirement_workbench.cli <输入> \\\n'
+            '      --module Gp_NCA9539 \\\n'
+            '      --safety-level ASIL-B \\\n'
+            '      --core-mode single\n'
+            "\n"
+            "============================================================\n"
+        )
+        print(msg, file=sys.stderr)
+        raise SystemExit(1)
+
+
 _TEXT_INPUT_SUFFIXES = {".md", ".txt", ".csv", ".tsv", ".xlsx"}
-_DATASHEET_KEYWORDS = ("datasheet", "手册", "芯片", "manual")
+_DATASHEET_KEYWORDS = ("datasheet", "手册", "芯片", "manual", "数据手册", "数据表", "规格书",
+                       "registers", "register map", "pin description", "电气特性",
+                       "绝对最大额定", "时序", "timing", "package information")
 _RAW_REQUIREMENT_KEYWORDS = (
     "原始开发需求", "原始需求", "rawreq", "raw_requirement", "raw-requirement",
-    "original_requirement", "original-requirement",
+    "original_requirement", "original-requirement", "raw_input", "rawinput",
 )
-_REQUIREMENT_DOC_KEYWORDS = ("需求文档", "项目需求", "需求规范", "requirement", "srs")
+_REQUIREMENT_DOC_KEYWORDS = ("需求文档", "项目需求", "需求规范", "requirement", "srs",
+                              "软件需求", "系统需求", "sysreq", "swreq")
+# Patterns in content that strongly indicate a datasheet
+_DATASHEET_CONTENT_PATTERNS = (
+    "绝对最大额定", "absolute maximum rating", "electrical characteristic",
+    "pin configur", "引脚配置", "register map", "寄存器映射",
+    "dynamic characteristic", "时序特性", "package information",
+    "recommended operating", "thermal characteristic",
+)
 
 
 def _resolve_requirement_inputs(
@@ -579,11 +691,14 @@ def _resolve_requirement_inputs(
             "需求生成输入不完整，至少需要提供以下三者之一：芯片资料、原始开发需求、需求文档。"
         )
 
+    _has_ds = _classify_input_file(primary_input) == "datasheet"
+
     return {
         "input_root": input_root,
         "datasheet": primary_input,
         "raw_input": raw_req,
         "requirement_doc": req_doc,
+        "has_datasheet": _has_ds,
     }
 
 
@@ -606,7 +721,20 @@ def _classify_input_file(path: Path) -> str:
         return "datasheet"
     if any(keyword in name for keyword in _REQUIREMENT_DOC_KEYWORDS):
         return "requirement_doc"
+    # Default: treat unknown files as potential datasheets
     return "datasheet"
+
+
+def _verify_datasheet_content(parsed: Any) -> bool:
+    """Post-parse verification: check if document content looks like a datasheet."""
+    full_text = ""
+    for chunk in getattr(parsed, 'chunks', []):
+        full_text += " ".join(getattr(chunk, 'heading_path', [])) + " "
+        full_text += getattr(chunk, 'text', '') + " "
+    full_lower = full_text.lower()
+    matches = sum(1 for p in _DATASHEET_CONTENT_PATTERNS if p in full_lower)
+    return matches >= 2
+
 
 def _collect_datasheet_chapters(parsed: Any) -> list[str]:
     """Extract top-level heading texts from a parsed document."""

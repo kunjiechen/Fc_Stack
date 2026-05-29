@@ -81,6 +81,7 @@ Check:
 - is each dependency API tied to an implementation boundary
 - are failure paths described where relevant
 - are callout usage reasons explicit
+- if delay/wait/timing requirements exist in external interfaces, is a delay Callout generated
 - for non-trivial dependency paths, are execution steps and flowcharts provided
 
 Common failure signals:
@@ -88,6 +89,7 @@ Common failure signals:
 - dependency behavior hidden inside prose
 - direct hardware or MCAL assumptions leak into FC API design
 - failure path is omitted for a dependency that can fail
+- delay/wait/ settling requirements exist in execution steps but no delay Callout is defined
 
 ## 6. Subfunction Decomposition Review
 
@@ -97,18 +99,24 @@ Check:
 - do the steps reflect actual implementation order
 - are internal function responsibilities aligned with those steps
 - do subfunctions show where cfg, runtime, DET, fault, and callout logic occur
+- are dependency/callout interfaces referenced in the internal function table for each external API
+- if delay/timing requirements exist, is a corresponding delay Callout generated
 
 Common failure signals:
 
 - only interface purpose is written
 - steps are too vague to map into code
 - internal helpers are listed but not connected to control flow
+- internal functions listed without their dependency interfaces
+- delay/wait requirements exist in steps but no delay Callout is defined
 
 ## 7. Single-Core / Multi-Core Review
 
 Check:
 
 - is the single-core or multi-core choice justified
+- for single-core, do flowcharts avoid core-matching, core-traversal, and `CalloutGetCoreId` nodes
+- for single-core, is runtime container free of per-core indexing
 - for multi-core, are per-core responsibilities explicit
 - are per-core task entries explicit
 - are shared objects identified
@@ -118,6 +126,8 @@ Check:
 Common failure signals:
 
 - multi-core claimed with no per-core partition
+- single-core design contains core-matching or core-traversal nodes in flowcharts
+- single-core design references `CalloutGetCoreId`
 - shared state exists but no sync strategy is shown
 - task ownership by core is missing
 
@@ -126,6 +136,8 @@ Common failure signals:
 Check:
 
 - is a state machine present when behavior is stateful
+- is the design approach explicit: chip hardware state machine vs software driver state machine
+- if software driver state machine is chosen, is the mapping between software states and chip states documented
 - are states explicit
 - are transitions explicit
 - are condition and action functions separated
@@ -138,20 +150,28 @@ Common failure signals:
 - stateful behavior exists but no explicit state model is given
 - transition conditions are buried in prose
 - state updates have no clear owner
+- software state machine chosen without chip state mapping
 
 ## 9. Internal Function Review
 
 Check:
 
+- are ALL internal functions fully expanded with the same format as external APIs (prototype table + sub-function decomposition + execution steps + call relationship table + flowchart)
+- are no internal functions skipped, merged, or reduced because they are "simple helpers"
 - are internal functions grouped by responsibility
 - is `static` vs internal-header scope reasonable
 - are parameter checks, state checks, data conversion, fault helpers, and record helpers separated when needed
-- are key internal control flows represented with steps or flowcharts
+- does each internal function entry document its dependency/callout interfaces (or explicitly mark N/A)
+- does the call relationship table's "类别" column correctly reflect whether a callee is a 依赖接口 or 内部函数
 
 Common failure signals:
 
+- internal functions only listed as a summary table without per-function full expansion
+- "simple" internal functions skipped without sub-function decomposition or flowchart
 - one oversized internal helper is responsible for unrelated concerns
 - internal decomposition follows code order instead of responsibility
+- internal function table missing "依赖接口" column
+- internal functions listed without any indication of which callout/dependency interfaces they consume
 
 ## 10. DET Review
 
@@ -174,19 +194,36 @@ Common failure signals:
 Check:
 
 - are fault objects present when runtime abnormal behavior matters
-- are detection, confirmation, response, recovery, and retention described
+- is each fault classified as 芯片故障 or 驱动逻辑故障
+- is each fault's confirmation strategy explicit (单次确认 / 连续多次 / 累计多次)
+- are confirmation thresholds configurable (macros) when count > 1
+- are confirmation runtime counters and statuses listed as runtime variables
+- is each fault's recovery strategy explicit (不可恢复 / 单次自恢复 / 连续多次自恢复)
+- are recovery thresholds configurable (macros) when count > 1, with self-recovery enable switch
+- are recovery runtime counters listed as runtime variables
 - are fault response categories explicit
+- are fault latch semantics and clear methods explicit for each fault
+- if no fault clear API exists, is the constraint documented
 - is reset relation explicit if present
 - is fault observability exposed if needed
-- is a fault flowchart present for non-trivial fault lifecycle
+- are fault confirmation and recovery flowcharts present for non-trivial fault lifecycles
 
 Common failure signals:
 
 - only detection is described
+- faults not classified as chip fault vs driver logic fault
 - response says “handle fault” without concrete behavior
 - recovery is missing where service return matters
+- self-recovery described but no self-recovery enable config macro
+- multi-count confirmation/recovery described but no runtime counter variable
+- latched faults described but no clear method specified
+- no fault clear API but clear method not documented as “Init清除”
 
-## 12. Runtime-State Review
+## 12. 运行参数设计 Review
+
+运行参数设计评审必须覆盖两个独立维度：运行变量和运行参数类型。
+
+### 12.1 运行变量 Review
 
 Check:
 
@@ -201,20 +238,96 @@ Common failure signals:
 - ownership is unclear
 - per-core data and shared data are mixed
 
-## 13. Config Review
+### 12.2 运行参数类型 Review
 
 Check:
 
-- are cfg macros and cfg tables both handled where needed
-- are macros used only for suitable compile-time concerns
-- are tables used where mapping or repeated structured data exists
-- is `Cfg.c` present when the design is table-driven
+- are runtime parameter types defined (not just variable list)
+- is at least one global runtime type defined for module-level state
+- are sub-structures split by semantic boundary (global / per-instance / per-core / fault / monitor)
+- do key fields have field descriptions (meaning, value range)
+- do key fields carry type suffixes (`_u8`/`_u16`/`_u32`/`_b` etc.) matching the 字段类型 column
+- does the 字段类型 column explicitly state C standard types
+- if the project has no established runtime type pattern, is the design marked `pending-confirm` with a learning item flagged
 
 Common failure signals:
 
+- only variables listed, no runtime parameter type definitions at all
+- runtime types exist but field descriptions are missing
+- field names lack type suffixes, or 字段类型 column is missing
+- runtime types split by file size or arbitrary grouping instead of semantic ownership
+- no global runtime type defined
+
+## 13. 配置参数设计 Review
+
+Configuration parameter review must cover two independent dimensions: macros and types.
+
+### 13.1 Configuration Macro Review
+
+Check:
+
+- does every architecture-sourced config parameter have a corresponding macro
+- are macros categorized correctly (feature / count / threshold / platform)
+- are coding-standard-introduced macros explicitly listed with source marked `coding-standard`
+- are macros used only for suitable compile-time concerns
+- are macro default values reasonable and marked as assumption when unknown
+
+Common failure signals:
+
+- architecture config parameter has no corresponding macro
+- coding standard macros are silently assumed but not listed
 - table-driven behavior forced into macros
-- `Cfg.c` omitted even though table-shaped config clearly exists
-- config and runtime data are mixed
+
+### 13.2 Configuration Type Review
+
+Check:
+
+- are configuration types defined (not just macros)
+- is a top-level config container defined
+- are sub-structures split by semantic boundary (hardware / timing / feature / per-instance / dependency)
+- do key fields have field descriptions (meaning, value range, constraints)
+- do key fields carry type suffixes (`_u8`/`_u16`/`_u32`/`_b` etc.) matching the 字段类型 column
+- does the 字段类型 column explicitly state C standard types or concrete enum/struct type names
+- are config type instances defined in `Cfg.c`
+- if the project has no established config type pattern, is the design marked `pending-confirm` with a learning item flagged
+
+Common failure signals:
+
+- only macros listed, no configuration type definitions at all
+- config types exist but field descriptions are missing
+- field names lack type suffixes, or 字段类型 column is missing
+- 字段类型 column says "枚举" or "结构体" without giving the concrete type name
+- config types split by file size or arbitrary grouping instead of semantic ownership
+- `Cfg.c` omitted even though config types need concrete instantiation
+- config type design copied from reference module without adapting to current FC's needs
+
+### 13.3 Config Coverage Validation
+
+Check:
+
+- does the design explicitly validate that architecture → config macros coverage is complete
+- are all config types accompanied by field-level descriptions
+- are coverage gaps recorded as blocking items, not as informational notes
+
+### 13.4 Design-Addition Provenance Review
+
+Check:
+
+- are all `design-addition` macros tagged with a risk-item reference (e.g., `design-addition (R5)`)
+- do all `design-addition` config type fields have a corresponding risk item in §17
+- do all `design-addition` runtime variables have a corresponding risk item in §17
+- do all `design-addition` runtime type fields have a corresponding risk item in §17
+- does each design-addition risk item explain *why* the addition is needed and the consequence of omission
+- does the risk table's "关联设计增量" column list all affected design objects
+- are there any bare `design-addition` tags without a risk-item reference
+
+Common failure signals:
+
+- `design-addition` appears in Source/设计依据 column without `(Rx)` suffix
+- risk table has no entries for design-addition items
+- risk item says "待确认" but does not list the specific design objects it covers
+- coding-standard macros are mislabeled as design-addition
+- design-addition items have no "why" justification in the risk table
 
 ## 14. MemMap / NoClear Review
 
@@ -259,7 +372,7 @@ Check:
 - can a developer create files immediately from this design
 - can APIs be stubbed without guessing
 - can cfg objects be declared without rethinking structure
-- can runtime state be allocated without guessing ownership
+- can runtime parameters (variables and type layout) be allocated without guessing ownership
 - can the state machine be implemented directly
 - can fault handling be implemented without inventing missing lifecycle behavior
 

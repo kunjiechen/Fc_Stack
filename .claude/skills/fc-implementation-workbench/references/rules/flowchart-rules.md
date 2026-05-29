@@ -278,7 +278,48 @@ Do not put:
 
 inside the flowchart unless the user explicitly asks for code-oriented pseudo-flow.
 
-## 11. Review Checklist
+## 11. Single-Core vs Multi-Core Flowchart Rules
+
+### 11.1 Core Principle
+
+The flowchart must reflect the actual execution model. A single-core design must not leak multi-core patterns into its flowcharts.
+
+### 11.2 Single-Core Flowchart Constraints
+
+When the detailed design is explicitly single-core, the following nodes and patterns are forbidden in all flowcharts:
+
+- core matching / core selection nodes (e.g. `核匹配`, `Core Match`, `Select Core`)
+- core traversal loops (e.g. `For Each Core`, `Next Core`)
+- `CalloutGetCoreId` call nodes
+- per-core index or core-id-based branching
+- runtime container indexing by core id
+
+Acceptable single-core replacements:
+
+| Forbidden | Acceptable Single-Core Replacement |
+|---|---|
+| `核匹配 / Core Match` | Omit entirely |
+| `CalloutGetCoreId` | Omit entirely |
+| `For Each Core` | Direct chip/instance traversal if multi-instance exists |
+| `Select Core Runtime` | Direct runtime access |
+| `Per-Core Init` | `Init` (single path) |
+
+### 11.3 Multi-Core Flowchart Requirements
+
+When the design is multi-core, flowcharts may include core-aware nodes, but only when core separation is a real design concern:
+
+- `CalloutGetCoreId` is allowed only when per-core runtime/config routing exists
+- core traversal is allowed only when the FC behavior iterates across cores
+- per-core init paths are allowed only when different cores have different init responsibilities
+
+### 11.4 Validation
+
+Before accepting a flowchart, additionally check:
+
+- if single-core, verify no core-matching or core-traversal nodes exist
+- if multi-core, verify core-aware nodes reflect actual design separation, not decorative labeling
+
+## 12. Review Checklist
 
 Before accepting a flowchart, check:
 
@@ -288,3 +329,5 @@ Before accepting a flowchart, check:
 4. does it help coding rather than merely decorate the document
 5. is it small enough to remain readable in markdown
 6. does it avoid code-like wording and stay at step level
+7. if single-core, does it avoid core-matching, core-traversal, and `CalloutGetCoreId` nodes
+8. if multi-core, do core-aware nodes reflect real design separation

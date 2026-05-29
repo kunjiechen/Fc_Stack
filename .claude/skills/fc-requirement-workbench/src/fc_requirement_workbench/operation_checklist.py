@@ -214,11 +214,11 @@ def render_post_generation_guidance_markdown(
         "",
         "| 问题类型 | 应修改文件 | 处理方式 |",
         "| --- | --- | --- |",
-        "| 升级点漏了/目标不对 | `Original_Requirement_Pack_[FC].md` | 补原始意图后重新生成 |",
-        "| 来源资料不足 | `Input_Manifest_[FC].md` | 补用户手册/需求文档/约束后重新生成 |",
-        f"| SRS 表达不清/分类不对 | `{review_doc('[FC]')}` | 记录评审意见并进入修正 |",
-        f"| 暂时不能确认 | `{open_items_doc('[FC]')}` | 保留开放项，不直接固化 |",
-        "| 不属于本 FC | `Original_Requirement_Pack_[FC].md` 的不做范围 | 标记排除后重新生成 |",
+        "| 升级点漏了/目标不对 | `Original_Requirement_Pack_<FC>.md` | 补原始意图后重新生成 |",
+        "| 来源资料不足 | `Input_Manifest_<FC>.md` | 补用户手册/需求文档/约束后重新生成 |",
+        f"| SRS 表达不清/分类不对 | `{review_doc('<FC>')}` | 记录评审意见并进入修正 |",
+        f"| 暂时不能确认 | `{open_items_doc('<FC>')}` | 保留开放项，不直接固化 |",
+        "| 不属于本 FC | `Original_Requirement_Pack_<FC>.md` 的不做范围 | 标记排除后重新生成 |",
         "",
     ]
 
@@ -321,10 +321,10 @@ def render_post_generation_reply(
         "4. 当前主要设计决策是否符合项目预期",
         "",
         "如果检查出问题，请按下面方式处理：",
-        "1. 升级点漏了或目标不对 -> 修改 Original_Requirement_Pack_[FC].md",
-        "2. 来源资料不全 -> 修改 Input_Manifest_[FC].md",
-        f"3. SRS 表达不清或分类不对 -> 记录到 {review_doc('[FC]')}",
-        f"4. 暂时不能确认 -> 保留到 {open_items_doc('[FC]')}",
+        "1. 升级点漏了或目标不对 -> 修改 Original_Requirement_Pack_<FC>.md",
+        "2. 来源资料不全 -> 修改 Input_Manifest_<FC>.md",
+        f"3. SRS 表达不清或分类不对 -> 记录到 {review_doc('<FC>')}",
+        f"4. 暂时不能确认 -> 保留到 {open_items_doc('<FC>')}",
         "",
     ]
 
