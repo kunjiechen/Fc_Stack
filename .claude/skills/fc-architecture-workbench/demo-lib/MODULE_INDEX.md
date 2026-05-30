@@ -8,18 +8,31 @@ Use this file before opening any summary, so historical demo knowledge is used i
 
 ## Coverage Matrix
 
-| Module | Layer | Summary File | Main Validation Points | Best-Fit Target Scenario |
-| --- | --- | --- | --- | --- |
-| `Gp_IoMcuAdc` | `IoMcu` resource layer | `summaries/Gp_IoMcuAdc.md` | ADC resource APIs, `Init/MainFunction`, raw/diag split, `Cfg/CfgData/Callout` boundary | MCU ADC resource FC |
-| `Gp_IoMcuDio` | `IoMcu` resource layer | `summaries/Gp_IoMcuDio.md` | Simple IO APIs, direction/input/output split, logical signal ID mapping | DIO/IO control FC |
-| `Gp_IoSigAdc` | `IoSigSrv` signal service layer | `summaries/Gp_IoSigAdc.md` | Signal service abstraction, raw/converted/diag separation, calibration/conversion handling | Physical signal service FC |
-| `Gp_DRV887x_DIO` | `IoExtDev` external device layer | `summaries/Gp_DRV887x_DIO.md` | Mode control, output request, current readback, fault diagnosis, multi-core/multi-instance runtime | H-bridge or motor-driver chip FC |
-| `Gp_Mux` | `IoExtDev` external device layer | `summaries/Gp_Mux.md` | Mapping-heavy multi-channel design, periodic switching, cached reads, minimal external APIs | Mux/channel-switching FC |
-| `Gp_TLE92104` | `IoExtDev` external device layer | `summaries/Gp_TLE92104.md` | Complex SPI chip control, register abstraction, mode/fault APIs, background state machine | SPI external chip driver FC |
-| `Gp_RstM` | `BswSys_Gp` system layer | `summaries/Gp_RstM.md` | Reset reasons, NoClear data, NVM interaction, safe-state callouts | Reset/lifecycle management FC |
-| `Gp_SysState` | `BswSys_Gp` system layer | `summaries/Gp_SysState.md` | System state machine, `Internal.h`, external/internal state separation, recorder buffer | System state management FC |
-| `Gp_TimeRecord` | `Cdd` functional component layer | `summaries/Gp_TimeRecord.md` | Lightweight utility FC, small API surface, optional observation callout | Time-record/tool FC |
-| `Gp_CpuLoadMonitor` | `RtMon` runtime monitor layer | `summaries/Gp_CpuLoadMonitor.md` | Multi-core runtime buffers, monitor APIs, observation ownership | CPU load/performance monitor FC |
+| Module | Layer | Sub-type | Summary File | Structured Reference | Main Validation Points | Best-Fit Target Scenario |
+| --- | --- | --- | --- | --- | --- | --- |
+| `Gp_TLE92104` | `IoExtDev` | **Reg** (SPI) | `summaries/Gp_TLE92104.md` | `summaries/Gp_TLE92104.arch.json` | Complex SPI chip control, register abstraction, mode/fault APIs, background state machine | SPI register-based external chip driver FC |
+| `Gp_NCA95xx` | `IoExtDev` | **Reg** (I2C) | — | `summaries/Gp_NCA95xx.arch.json` | I2C register-based GPIO expander, register readback, INT handling | I2C register-based external chip driver FC |
+| `Gp_DRV887x_DIO` | `IoExtDev` | **Pin** (DIO) | `summaries/Gp_DRV887x_DIO.md` | `summaries/Gp_DRV887x_DIO.arch.json` | DIO pin-control motor driver, mode control, output request, fault diagnosis | Pin-control external device FC |
+| `Gp_Mux` | `IoExtDev` | **Pin** (DIO) | `summaries/Gp_Mux.md` | — | Mapping-heavy multi-channel design, periodic switching, cached reads | Mux/channel-switching FC |
+| `Gp_IoMcuDio` | `IoMcu` | — | `summaries/Gp_IoMcuDio.md` | `summaries/Gp_IoMcuDio.arch.json` | Simple IO APIs, direction/input/output split, logical signal ID mapping | MCU DIO peripheral FC |
+| `Gp_IoMcuAdc` | `IoMcu` | — | `summaries/Gp_IoMcuAdc.md` | — | ADC resource APIs, raw/diag split, `Cfg/CfgData/Callout` boundary | MCU ADC peripheral FC |
+| `Gp_IoSigAdc` | `IoSigSrv` | — | `summaries/Gp_IoSigAdc.md` | — | Signal service abstraction, raw/converted/diag separation | Physical signal service FC |
+| `Gp_SysState` | `BswSys_Gp` | — | `summaries/Gp_SysState.md` | `summaries/Gp_SysState.arch.json` | System state machine, revise hooks, Internal.h, recorder buffer, calibration carrier | System state management FC |
+| `Gp_RstM` | `BswSys_Gp` | — | `summaries/Gp_RstM.md` | — | Reset reasons, NoClear data, NVM interaction, safe-state callouts | Reset/lifecycle management FC |
+| `Gp_TimeRecord` | `Cdd` | — | `summaries/Gp_TimeRecord.md` | — | Lightweight utility FC, small API surface | Time-record/tool FC |
+| `Gp_CpuLoadMonitor` | `RtMon` | — | `summaries/Gp_CpuLoadMonitor.md` | — | Multi-core runtime buffers, monitor APIs | CPU load/performance monitor FC |
+
+## Structured Reference Selection by Architecture Family
+
+When generating architecture, load the `.arch.json` file that matches the target family and sub-type:
+
+| Target Family + Sub-type | Load This Reference | Key Patterns To Extract |
+|--------------------------|--------------------|------------------------|
+| IoExtDev Reg (SPI) | `Gp_TLE92104.arch.json` | SPI Callout, FC_Reg.h Required, REG CONST rendered, MainFunction Required, register readback |
+| IoExtDev Reg (I2C) | `Gp_NCA95xx.arch.json` | I2C Callout, FC_Reg.h Required, REG CONST rendered, MainFunction Required |
+| IoExtDev Pin (DIO) | `Gp_DRV887x_DIO.arch.json` | DIO Callouts only, NO FC_Reg.h, NO REG CONST, pin mapping in Cfg.c, MainFunction Conditional |
+| IoMcu | `Gp_IoMcuDio.arch.json` | Synchronous APIs, no MainFunction default, signal-ID mapping macros, DET bookkeeping |
+| BswSys_Gp | `Gp_SysState.arch.json` | Revise hooks, Internal.h, global runtime, Cali.c conditional, signal-count macros |
 
 ## Recommended Selection Strategy
 

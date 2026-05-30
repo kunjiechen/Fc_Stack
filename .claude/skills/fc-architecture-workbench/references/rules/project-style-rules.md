@@ -29,17 +29,38 @@ The most common FC skeleton is:
 - optional `FC_MainFunction(void)`
 - semantic setters and getters
 
-Do not force `MainFunction` for every FC.
+Do not force `MainFunction` for every FC. The necessity depends on the architecture family and SRS requirements.
 
-Prefer `MainFunction` when the module has:
+### 2.1 MainFunction Default Strategy by Architecture Family
 
-- periodic sampling
-- state-machine progression
-- diagnosis
-- debounce
+| Architecture Family | Sub-type | MainFunction Default | Rationale |
+|---------------------|----------|---------------------|-----------|
+| IoExtDev | Reg (register-based) | **Required** | Periodic register polling for chip status, diagnostics, and fault flags is inherent to register-based external devices |
+| IoExtDev | Pin (pin-control) | **Conditional** | Only needed if periodic ERR_N/INT status pin polling or fault debounce is required by SRS |
+| IoMcu | — | **Not Default** | APIs read MCU peripheral status synchronously; periodic polling is not the default pattern |
+| Cdd | — | **Not Default** | Conversion drivers are trigger-driven; no universal periodic task |
+| BswSys_Gp | — | **Not Default** | System-status oriented; query-style interfaces |
+| IoSigSrv | — | **Conditional** | Depends on whether periodic sampling/conversion is required |
+
+### 2.2 SRS Scenario Override
+
+Regardless of family default, MainFunction becomes **Required** if SRS contains any of:
+
+- periodic sampling (e.g., periodic ERR_N pin state reading)
+- state-machine progression (e.g., Go-to-Sleep → Sleep auto-transition timer)
+- diagnosis processing (e.g., fault debounce confirmation, fault counters)
+- debounce (e.g., ERR_N stabilization ≥8μs with multiple confirmations)
+- recovery handling (e.g., auto re-initialization after undervoltage recovery)
+- buffered request processing (e.g., async mode switch request queue)
 - watchdog handling
-- recovery handling
-- buffered request processing
+
+### 2.3 MainFunction Decision Rule
+
+1. Start with the family default strategy from §2.1
+2. Check SRS for any override scenarios from §2.2
+3. If family default is Required OR any SRS scenario is present → `MainFunction_Required: true`
+4. If family default is Not Default AND no SRS scenarios → `MainFunction_Required: false` — do NOT render MainFunction in the external API list
+5. Record the decision with rationale in architecture assumptions
 
 ## 3. Preferred Interface Naming
 
@@ -94,6 +115,7 @@ Callout parameter style:
 - Use pointer form with naming that shows pointee type, such as `uint16* TxData_pu16` or `uint8* Data_pu8`.
 - Use `uint16 Size_u16` for transfer size/count parameters unless a narrower project rule is explicitly provided.
 - For SPI devices whose protocol frame is 16 bit, use `uint16*` SPI data buffers so FC callers do not need casts at each call site.
+- **Callout 命名必须固化**：所有 Callout 函数名包含 `<FC>_Callout` 前缀（如 `Gp_TJA1043_CalloutDioWrite`）。禁止使用不绑定 FC 的通用名（如 `FC_CalloutDioWrite`）——通用名缺少命名空间隔离，跨模块产生符号冲突。
 
 ## 5. Header Carrier Rules
 

@@ -189,7 +189,7 @@ Sections 5.1-5.4 are mandatory and must always be emitted. When a section has no
 
 ## Non-Functional Requirement Sections
 
-Sections 5.1-5.4 and 6.1-6.4 are mandatory and must always be emitted. When a section has no requirement items, render the heading followed by "无对应需求。" as a placeholder paragraph.
+Sections 5.1-5.4 and 6.1-6.5 are mandatory and must always be emitted. When a section has no requirement items, render the heading followed by "无对应需求。" as a placeholder paragraph.
 
 ```markdown
 ## 6 非功能需求
@@ -209,6 +209,10 @@ Sections 5.1-5.4 and 6.1-6.4 are mandatory and must always be emitted. When a se
 ### 6.4 资源消耗需求
 
 {resource_requirements}
+
+### 6.5 单核/多核控制需求
+
+{core_control_requirements}
 ```
 
 ## Requirement Item Template
@@ -249,6 +253,7 @@ Use these ID type codes by default:
 | Safety level and safety boundary | `SAFE` | 6.2 安全等级需求 |
 | Coding and implementation standard constraints | `CODE` | 6.3 编码规范需求 |
 | ROM/RAM/Stack/CPU resources | `RES` | 6.4 资源消耗需求 |
+| Single/Multi core control | `CORE` | 6.5 单核/多核控制需求 |
 
 Requirement IDs should follow:
 

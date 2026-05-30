@@ -93,9 +93,15 @@ Callout design rules:
 
 Recommended communication callout shapes:
 
-- `Std_ReturnType FC_CalloutSpiTransceive(uint16 Id_u16, uint16* TxData_pu16, uint16* RxData_pu16, uint16 Size_u16)` for 16-bit SPI frame devices.
-- `Std_ReturnType FC_CalloutI2cWrite(uint16 Id_u16, uint8* Data_pu8, uint16 Size_u16)` for byte-oriented I2C writes.
-- `Std_ReturnType FC_CalloutI2cRead(uint16 Id_u16, uint8* Data_pu8, uint16 Size_u16)` for byte-oriented I2C reads.
+- `Std_ReturnType <FC>_CalloutSpiTransceive(uint16 Id_u16, uint16* TxData_pu16, uint16* RxData_pu16, uint16 Size_u16)` for 16-bit SPI frame devices.
+- `Std_ReturnType <FC>_CalloutI2cWrite(uint16 Id_u16, uint8* Data_pu8, uint16 Size_u16)` for byte-oriented I2C writes.
+- `Std_ReturnType <FC>_CalloutI2cRead(uint16 Id_u16, uint8* Data_pu8, uint16 Size_u16)` for byte-oriented I2C reads.
+- `Std_ReturnType <FC>_CalloutDioWrite(uint16 Id_u16, uint8 Level_u8)` for GPIO output control.
+- `Std_ReturnType <FC>_CalloutDioRead(uint16 Id_u16, uint8* Level_pu8)` for GPIO input reading.
+- `Std_ReturnType <FC>_CalloutPwmSetDuty(uint16 Id_u16, uint16 Duty_u16)` for PWM duty control.
+- `Std_ReturnType <FC>_CalloutAdcRead(uint16 Id_u16, uint16* Value_pu16)` for ADC sampling (current/voltage sensing).
+- `uint8 <FC>_CalloutGetCoreId(void)` for multi-core core identification.
+- `void <FC>_CalloutDelayUs(uint32 Delay_us)` for microsecond-level timing delays.
 
 ### Fixed Integration Code
 

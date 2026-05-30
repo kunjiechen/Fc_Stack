@@ -30,6 +30,7 @@ EngineeringRequirementType = Literal[
     "safety",
     "coding",
     "resource",
+    "core",
 ]
 
 
@@ -43,6 +44,7 @@ TYPE_CODES = {
     "safety": "SAFE",
     "coding": "CODE",
     "resource": "RES",
+    "core": "CORE",
 }
 
 
@@ -445,9 +447,11 @@ class RequirementBuilder:
         self, item: dict[str, Any], findings: list[ValidationFinding]
     ) -> EngineeringRequirement:
         name = item.get("name") or item.get("interface_name") or "Diagnostic Behavior"
-        # Profile-injected fault enumeration: table data embedded in description
-        if name == "故障枚举与恢复策略":
-            dep = item.get("description", "")
+        # Fault table rendering: detect by content (type=diagnostic + hardware_chip
+        # rows in description) rather than by exact name string, which is fragile
+        # across planner versions and profile changes.
+        dep = item.get("description", "")
+        if item.get("type") == "diagnostic" and "hardware_chip" in dep:
             header = "| 故障名称 | 分类 | 触发条件 | 检测方式 | 确认策略 | 芯片行为 | 恢复类型 | 软件动作 |"
             sep = "|---|---|---|---|---|---|---|---|"
             all_rows = [line for line in dep.split("\n") if line.startswith("|")]

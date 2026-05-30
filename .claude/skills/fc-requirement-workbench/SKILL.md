@@ -164,9 +164,10 @@ description: "用于把芯片手册、项目需求、参考 SRS 与追溯材料�
 
 ### 4.4 非功能需求原则
 
-- 时序需求不得出现“待确认”——有值写值，无值写“本项目无软件时序约束”
+- 单核/多核控制需求是**必选非功能需求**，必须根据用户指定的 `--core-mode` 参数生成。该需求明确模块的执行模型（单核独占 or 多核隔离），是架构阶段判定 per-core 运行时容器、per-core MemMap 段和 core enable 宏的必需上游输入。缺少该需求会导致架构无法判断执行模型。
+- 时序需求不得出现”待确认”——有值写值，无值写”本项目无软件时序约束”
 - 资源需求至少给出测量方法（ROM/RAM/栈统计方式），预算缺失标注为 `open_issue`
-- 安全等级需求必须反映实际 ASIL 等级，不得出现“默认 QM”与实际等级矛盾的描述
+- 安全等级需求必须反映实际 ASIL 等级，不得出现”默认 QM”与实际等级矛盾的描述
 
 ## 5. 规则分工
 
@@ -272,9 +273,9 @@ authoring-standard.md                   ← 模糊词禁止列表 + 写作规范
 
 CLI 侧也会做硬校验：缺少任一项则打印错误信息并退出。
 
-### 8.1 调用 CLI
+### 8.1 调用 CLI（含内置 AI 富化）
 
-根据输入类型组装命令并执行：
+**一次调用，Agent 内部自动完成富化编排，调用者无感。**
 
 ```bash
 python -m fc_requirement_workbench.cli <输入文件或目录> \
@@ -287,22 +288,45 @@ python -m fc_requirement_workbench.cli <输入文件或目录> \
   [--output-dir <SRS 输出目录>]
 ```
 
-**参数说明**：
-
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `input` | 是 | 芯片手册文件或输入目录路径 |
 | `--module` | **是** | FC 模块短名，如 `Gp_NCA9539` |
-| `--safety-level` | **是** | 功能安全等级：`QM` / `ASIL-A` / `ASIL-B` / `ASIL-C` / `ASIL-D` |
-| `--core-mode` | **是** | 单核/多核控制模式：`single` / `multi` |
+| `--safety-level` | **是** | 功能安全等级 |
+| `--core-mode` | **是** | 单核/多核控制模式 |
 | `--raw-input` | 否 | 原始开发需求文件 |
 | `--constraints` | 否 | 项目约束/需求文档 |
 | `--chip-view-dir` | 否 | 芯片视图输出目录 |
 | `--output-dir` | 否 | SRS 输出目录 |
-| `--skip-chip-view` | 否 | 跳过芯片视图生成 |
-| `--source-root` | 否 | 项目源码根目录（用于接地增强，非必填） |
 
-CLI 会自动完成：输入解析 → 切块索引 → 特征提取 → 候选映射 → 候选压缩 → 需求规划 → 规则校验 → SRS 构建 → 追溯覆盖。**LLM 不手工执行这些步骤。**
+CLI 自动完成：输入解析 → 特征提取 → 候选映射 → 候选压缩 → 需求规划 → 规则校验 → SRS 构建。
+
+**Agent 执行流程（一次完整的 §8.1 调用）：**
+
+```
+1. 运行 CLI
+     ↓
+2. 检查 JSON 输出的 enrichment_required 字段
+     ├─ false → 富化不需要，跳到步骤 4
+     └─ true  → 继续步骤 3
+     ↓
+3. Agent 处理富化（对调用者透明）：
+   a. 读取 enrichment_tasks_path 指向的 JSON 文件
+   b. 对文件中的每个 task，用自身对数据手册的理解生成符合 output_schema 的答案
+      · chip_classify: 判断芯片类型和总线类型
+      · fault_enrich: 补全每个故障的触发/检测/行为/恢复/软件动作
+      · mode_normalize: 去重归一化模式名
+   c. 将答案汇总写入同目录下的 Enrichment_Results.json
+   d. 重新运行 CLI（相同参数）
+   e. 回到步骤 2（此时 enrichment_required 应为 false）
+     ↓
+4. 继续 §8.2 解析 CLI 输出
+```
+
+**关键点：**
+- 调用者只需发起一次"生成需求"，Agent 自动判断是否需要富化、自动执行、自动重跑
+- 步骤 3 对调用者完全透明，不需要调用者感知"第几次运行"
+- 如果规则提取质量已经足够（enrichment_required=false），步骤 3 整段跳过，零开销
 
 ### 8.2 解析 CLI 输出
 
@@ -316,11 +340,13 @@ CLI 在 stdout 输出 JSON summary。关键字段：
 | `gate_status` | 各 Gate 通过状态 |
 | `open_items` | 开放项数量 |
 | `files` | 生成的所有文件列表 |
+| `enrichment_required` | **【阻断】** 为 `true` 时必须先执行 §8.1 中的 Agent 富化流程再继续 |
+| `enrichment_tasks_path` | Enrichment_Tasks.json 路径 |
 | `assistant_reply` | 给用户的下步操作提示 |
 
 ### 8.3 审查与补充
 
-CLI 执行完成后，LLM 的职责：
+CLI 执行完成后（富化已在 §8.1 内部自动处理完毕），LLM 的职责：
 
 1. **检查 `chip_view` 状态**：
    - `chip_view.generated: true` → 打开 ChipView 文件，搜索 `<!-- LLM_SUPPLEMENT -->` 标记，根据原始芯片手册补充完善，完成后移除标记

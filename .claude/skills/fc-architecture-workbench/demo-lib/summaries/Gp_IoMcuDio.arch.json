@@ -1,0 +1,59 @@
+{
+  "module": "Gp_IoMcuDio",
+  "architecture_version": "V1",
+  "architecture_status": "Released",
+  "output_mode": "Formal Draft",
+  "layer": "IoMcu",
+  "sub_type": null,
+  "change_summary": ["MCU internal DIO peripheral driver architecture pattern."],
+  "family_pattern": "IoMcu (MCU internal peripheral, no external chip)",
+  "key_characteristics": {
+    "has_registers": false,
+    "fc_reg_h_required": false,
+    "reg_const_required": false,
+    "mainfunction_required": false,
+    "mainfunction_reason": "IoMcu APIs are synchronous — read/write directly without periodic polling",
+    "callout_types": ["DioWrite", "DioRead", "GetCoreId"],
+    "calibration_default": "Empty",
+    "communication_interface": "Internal MCU peripheral (DIO port)",
+    "api_style": "Synchronous resource wrapper (no MainFunction by default)",
+    "dependency_selection_style": "Signal ID mapping macros for logical-to-physical routing"
+  },
+  "external_apis": [
+    {"name": "Gp_IoMcuDio_Init", "prototype": "void Gp_IoMcuDio_Init(void)", "description": "Initializes DIO module, loads config, sets default pin directions.", "sync_mode": "Synchronous", "reentrancy": "Non-reentrant"},
+    {"name": "Gp_IoMcuDio_SetOutputLevel", "prototype": "Std_ReturnType Gp_IoMcuDio_SetOutputLevel(uint16 Id_u16, uint8 Level_u8)", "description": "Sets output level for a logical DIO signal. Internal mapping resolves CoreId+Channel from Id.", "sync_mode": "Synchronous", "reentrancy": "Reentrant"},
+    {"name": "Gp_IoMcuDio_GetInputLevel", "prototype": "Std_ReturnType Gp_IoMcuDio_GetInputLevel(uint16 Id_u16, uint8* Level_pu8)", "description": "Reads input level from a logical DIO signal.", "sync_mode": "Synchronous", "reentrancy": "Reentrant"},
+    {"name": "Gp_IoMcuDio_GetXxxSigDiag", "prototype": "Std_ReturnType Gp_IoMcuDio_GetXxxSigDiag(uint16 Id_u16, uint32* Diag_pu32)", "description": "Returns diagnostic status for a DIO signal. IoMcu uses GetXxxSigDiag naming (not GetDevFaultSig).", "sync_mode": "Synchronous", "reentrancy": "Reentrant"}
+  ],
+  "dependency_apis": [
+    {"name": "Gp_IoMcuDio_CalloutDioWrite", "prototype": "Std_ReturnType Gp_IoMcuDio_CalloutDioWrite(uint16 Id_u16, uint8 Level_u8)", "description": "Writes physical DIO output via MCAL port.", "implemented_by": "MCAL"},
+    {"name": "Gp_IoMcuDio_CalloutDioRead", "prototype": "Std_ReturnType Gp_IoMcuDio_CalloutDioRead(uint16 Id_u16, uint8* Level_pu8)", "description": "Reads physical DIO input via MCAL port.", "implemented_by": "MCAL"},
+    {"name": "Gp_IoMcuDio_CalloutGetCoreId", "prototype": "uint8 Gp_IoMcuDio_CalloutGetCoreId(void)", "description": "Returns current core ID.", "implemented_by": "Service Layer"}
+  ],
+  "config_macros": [
+    {"name": "GP_IOMCUDIO_CFG_DEV_ERROR_DETECT", "purpose": "Global DET switch.", "macro_type": "Development Error Detect", "default_value": "STD_ON"},
+    {"name": "GP_IOMCUDIO_CFG_SIGNAL_COUNT", "purpose": "Number of managed DIO signals.", "macro_type": "Count Size", "default_value": "PROJECT_DEFINED"},
+    {"name": "GP_IOMCUDIO_CFG_DIO_ID_<SIGNAL>", "purpose": "Signal ID mapping macros in Cfg.h (IoMcu pattern: many signal-ID macros).", "macro_type": "Dependency Selection", "default_value": "PROJECT_DEFINED"}
+  ],
+  "config_params": [],
+  "runtime_states": [
+    {"name": "InitState", "owner": "FC.c", "read_write_side": "Written by Init; read by all APIs.", "lifecycle": "Set on Init; checked on each API call.", "memory_section": "CLEAR_FAR_DATA", "concurrency_strategy": "Per-core ownership."},
+    {"name": "DET buffer (per core)", "owner": "FC.c", "read_write_side": "Written by all APIs on DET errors.", "lifecycle": "Newest-error overwrite strategy.", "memory_section": "CLEAR_FAR_DATA", "concurrency_strategy": "Per-core isolation."}
+  ],
+  "memmap_sections": [
+    {"name": "CODE", "target_content": "External APIs and internal helpers.", "start_macro": "GP_IOMCUDIO_CODE_START", "stop_macro": "GP_IOMCUDIO_CODE_STOP", "used_files": ["FC.c", "FC_Callout.c"]},
+    {"name": "RUNTIME RAM", "target_content": "Init state, DET buffers.", "start_macro": "GP_IOMCUDIO_CLEAR_FAR_DATA_ALIGN4_COREx_START", "stop_macro": "GP_IOMCUDIO_CLEAR_FAR_DATA_ALIGN4_COREx_STOP", "used_files": ["FC.c"]},
+    {"name": "CONST (per core)", "target_content": "Per-core signal mapping tables.", "start_macro": "GP_IOMCUDIO_CONST_FAR_DATA_ALIGN4_COREx_START", "stop_macro": "GP_IOMCUDIO_CONST_FAR_DATA_ALIGN4_COREx_STOP", "used_files": ["FC_Cfg.c"]}
+  ],
+  "file_items": [
+    {"name": "Gp_IoMcuDio.c", "required_level": "Required"},
+    {"name": "Gp_IoMcuDio.h", "required_level": "Required"},
+    {"name": "Gp_IoMcuDio_Types.h", "required_level": "Required"},
+    {"name": "Gp_IoMcuDio_Cfg.h", "required_level": "Required"},
+    {"name": "Gp_IoMcuDio_Cfg.c", "required_level": "Required"},
+    {"name": "Gp_IoMcuDio_CfgData.h", "required_level": "Required"},
+    {"name": "Gp_IoMcuDio_Callout.h", "required_level": "Required"},
+    {"name": "Gp_IoMcuDio_Callout.c", "required_level": "Required"},
+    {"name": "Gp_IoMcuDio_MemMap.h", "required_level": "Required"}
+  ]
+}

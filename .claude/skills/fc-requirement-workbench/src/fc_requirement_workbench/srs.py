@@ -22,6 +22,7 @@ SECTION_ORDER = [
     ("6.2 安全等级需求", "safety"),
     ("6.3 编码规范需求", "coding"),
     ("6.4 资源消耗需求", "resource"),
+    ("6.5 单核/多核控制需求", "core"),
 ]
 
 
@@ -1138,6 +1139,7 @@ def ensure_default_engineering_requirements(
     safety_level: str = "QM",
     *,
     mainfunction_required: bool = True,
+    core_mode: str = "single",
 ) -> tuple[list[EngineeringRequirement], list[ValidationFinding]]:
     result = _with_default_diagnostic_requirements(requirements, module)
     token = _normalize_doc_token(module)
@@ -1185,6 +1187,25 @@ def ensure_default_engineering_requirements(
                 constraint="ROM/RAM/栈/CPU 预算由项目资源计划定义，编译后通过 map 文件统计验证。",
                 verification="通过编译后资源统计（map 文件分析）和集成测试验证。",
                 source=[{"document": "SRS Template", "chunk_id": "DEFAULT-RESOURCE-BUDGET", "evidence": "Default resource budget requirement — project must fill actual limits."}],
+            )
+        )
+    if "core" not in existing:
+        if core_mode == "single":
+            core_desc = f"Gp_{_short_module(module)} 模块运行在单核上。所有运行时状态为单核独占，无需核间隔离或多核同步机制。配置段仅使用单核 MemMap 段，不启用 per-core 宏。"
+            core_constraint = "模块所有运行时数据和配置数据归属单一核心，不暴露 CoreId 参数。若后续项目扩展为多核，需在架构阶段新增 per-core 容器和 core enable 宏。"
+        else:
+            core_desc = f"Gp_{_short_module(module)} 模块运行在多核环境。每个核维护独立的运行时状态容器和配置表，通过 per-core MemMap 段（COREx）实现核间数据隔离。使用 CalloutGetCoreId 区分当前核，核间不共享可变运行时数据。"
+            core_constraint = "每个核的运行时数据和配置数据通过 COREx MemMap 段隔离。外部接口通过内部映射（cfgSigMapping）确定核归属，不直接暴露 CoreId 参数。核 enable 宏在 Cfg.h 中定义。"
+        result.append(
+            EngineeringRequirement(
+                requirement_id=f"SRS-{token}-CORE-0001",
+                semantic_id=f"DEFAULT-{token}-CORE-0001",
+                requirement_type="core",
+                title="单核代码控制需求" if core_mode == "single" else "多核代码控制需求",
+                description=core_desc,
+                constraint=core_constraint,
+                verification="通过架构评审和代码静态分析验证：运行时容器和 MemMap 段符合单核/多核设计要求。" if core_mode == "single" else "通过架构评审、map 文件分析和多核并发测试验证：各核运行时数据和配置数据正确隔离，核间无数据竞争。",
+                source=[{"document": "Project Input", "chunk_id": "CORE-MODE", "evidence": f"Core mode specified as {core_mode}."}],
             )
         )
 

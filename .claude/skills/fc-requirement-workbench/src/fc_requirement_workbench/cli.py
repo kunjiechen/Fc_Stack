@@ -11,6 +11,7 @@ inspect pipeline intermediates (features-markdown, candidates-markdown, …).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -247,6 +248,127 @@ def main() -> int:
     if args.emit == "features-markdown":
         return emit_text(FeatureExtractionMarkdownRenderer().render(features, args.module), args.output)
 
+    # ---- AI semantic enrichment (Agent-driven, two-phase) ----
+    # Phase 1 (this run): build prompts → write to Enrichment_Tasks.json.
+    # Agent reads the file, answers prompts with its own reasoning, writes
+    # Enrichment_Results.json.
+    # Phase 2 (next run): CLI reads Enrichment_Results.json, applies to
+    # features, continues pipeline with enriched data.
+    #
+    # No separate API key, model config, or HTTP call — the agent that
+    # invoked this skill provides the intelligence.
+    from .ai_enricher import AiEnricher, parse_task_result
+
+    # Compute enrichment paths early (output_dir is set further down, but
+    # we need these paths before the SRS build phase).
+    _enrichment_dir = args.output_dir or input_root / "Output" / args.module / "Doc" / "SRS"
+    _tasks_path = _enrichment_dir / "Enrichment_Tasks.json"
+    _results_path = _enrichment_dir / "Enrichment_Results.json"
+
+    # Track enrichment state for the JSON summary and assistant_reply.
+    enrichment_required = False
+    enrichment_tasks_path: str | None = None
+
+    # Compute input hash for cross-run validation (P0-1).
+    _input_hash = hashlib.sha256(
+        _read_input_text(args.input).encode("utf-8")
+    ).hexdigest()[:16]
+
+    _apply_ok = False
+    if _results_path.exists():
+        # Phase 2: results exist → apply and continue
+        try:
+            _raw_results = json.loads(_results_path.read_text(encoding="utf-8"))
+            # P0-1: validate input hash to prevent cross-datasheet contamination
+            _result_hash = _raw_results.get("_input_hash", "")
+            if _result_hash and _result_hash != _input_hash:
+                print(
+                    f"[ai-enrich] WARNING: Results hash ({_result_hash}) != input hash ({_input_hash}). "
+                    f"Discarding stale results from a different datasheet.",
+                    file=sys.stderr,
+                )
+                _results_path.unlink(missing_ok=True)
+            else:
+                _task_results: dict[str, Any] = {}
+                for tid, raw in _raw_results.items():
+                    if tid.startswith("_"):
+                        continue  # skip metadata fields
+                    parsed = parse_task_result(tid, raw)
+                    if parsed is not None:
+                        _task_results[tid] = parsed
+                    else:
+                        print(
+                            f"[ai-enrich] WARNING: task '{tid}' could not be parsed — "
+                            f"check output_schema compatibility.",
+                            file=sys.stderr,
+                        )
+                if _task_results:
+                    _summary = AiEnricher.apply_results(features, _task_results)
+                    if _summary:
+                        print(f"[ai-enrich] Applied: {_summary}", file=sys.stderr)
+                    _apply_ok = True
+                # Results consumed — delete both temp files so next run starts fresh
+                _results_path.unlink(missing_ok=True)
+                _tasks_path.unlink(missing_ok=True)
+        except json.JSONDecodeError as _exc:
+            print(
+                f"[ai-enrich] ERROR: Results file is not valid JSON: {_exc}. "
+                f"Delete {_results_path} and re-run.",
+                file=sys.stderr,
+            )
+        except Exception as _exc:
+            print(
+                f"[ai-enrich] ERROR: Unexpected failure applying results: {_exc}. "
+                f"Delete {_results_path} if corrupted.",
+                file=sys.stderr,
+            )
+
+        # P0-2: when enrichment was applied, invalidate downstream caches
+        # so candidates/planning are regenerated from enriched features.
+        if _apply_ok and use_cache:
+            _stale_stages = ("candidates", "pruning", "planning")
+            for _stage in _stale_stages:
+                _ck = cache_key(args.input, args.module, _stage, current_dependency_fingerprint)
+                _cp = cache_dir / _ck
+                if _cp.exists():
+                    _cp.unlink()
+
+    # Fall through to Phase 1 only when results were rejected (hash mismatch,
+    # invalid JSON, parse failure) or never existed.  Successful application
+    # (_apply_ok=True) skips this — the pipeline is already enriched.
+    if not _apply_ok and not _results_path.exists():
+        # Phase 1: no (valid) results → build prompts for the agent
+        _raw_text = _read_input_text(args.input)
+        if not _raw_text.strip():
+            print(
+                "[ai-enrich] WARNING: input file is empty or unreadable — "
+                "enrichment prompts will lack datasheet context.",
+                file=sys.stderr,
+            )
+        _prompts = AiEnricher.build_prompts(features, _raw_text)
+        if _prompts:
+            enrichment_required = True
+            _tasks_json = json.dumps(
+                {"_input_hash": _input_hash} | {
+                    t.task_id: {
+                        "task_type": t.task_type,
+                        "instruction": t.instruction,
+                        "input_data": t.input_data,
+                        "output_schema": t.output_schema,
+                    } for t in _prompts
+                },
+                ensure_ascii=False, indent=2,
+            )
+            _enrichment_dir.mkdir(parents=True, exist_ok=True)
+            _tasks_path.write_text(_tasks_json, encoding="utf-8")
+            enrichment_tasks_path = str(_tasks_path)
+            print(
+                f"[ai-enrich] {len(_prompts)} enrichment task(s) written to {_tasks_path}.\n"
+                f"           The agent MUST read this file, answer each task, and\n"
+                f"           write the results to {_results_path}. Then re-run the CLI.",
+                file=sys.stderr,
+            )
+
     candidates = cached_stage(cache_dir, "candidates",
         cache_key(args.input, args.module, "candidates", current_dependency_fingerprint),
         lambda: RequirementCandidateMapper(module=args.module).map(features), enabled=use_cache)
@@ -295,10 +417,12 @@ def main() -> int:
     # ---- Post-build validation: construction-rules + authoring-standard ----
     findings = _validate_engineering_requirements(engineering, normative_rules, findings)
 
+    _core_mode = args.core_mode or "single"
     engineering = enrich_engineering_requirements(engineering, module=builder_module, raw_document=raw_document)
     engineering, default_findings = ensure_default_engineering_requirements(
         engineering, builder_module, safety_level,
         mainfunction_required=driver_profile.mainfunction_required,
+        core_mode=_core_mode,
     )
     findings.extend(default_findings)
 
@@ -545,6 +669,8 @@ def main() -> int:
         "open_items": len(open_items),
         "loop_count": loop_count,
         "chip_view": chip_view_status,
+        "enrichment_required": enrichment_required,
+        "enrichment_tasks_path": enrichment_tasks_path,
         "next_actions": [
             "补原始需求",
             "补来源资料",
@@ -922,6 +1048,15 @@ def _detect_driver_profile(parsed: Any, rules: NormativeRules) -> DriverTypeProf
 
     combined = " ".join(chip_description)
     return rules.resolve_profile(combined)
+
+
+def _read_input_text(input_path: Any) -> str:
+    """Read the full text of the input file for AI context."""
+    path = Path(str(input_path))
+    if path.exists():
+        return path.read_text(encoding="utf-8", errors="replace")
+    return ""
+
 
 
 if __name__ == "__main__":

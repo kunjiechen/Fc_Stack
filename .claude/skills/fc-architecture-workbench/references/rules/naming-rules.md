@@ -31,9 +31,10 @@ Meaning:
 When the requirement or source document gives an explicit FC/module name, preserve that exact module prefix as the C namespace by default.
 
 Examples:
-- FC name `Gp_DRV8889` -> functions use `Gp_DRV8889_Init`, `Gp_DRV8889_MainFunction`, `Gp_DRV8889_CalloutSpiTransceive`
+- FC name `Gp_DRV8889` -> functions use `Gp_DRV8889_Init`, `Gp_DRV8889_MainFunction`, `Gp_DRV8889_CalloutDioWrite`
 - FC name `Gp_NCA9539` -> functions use `Gp_NCA9539_Init`, `Gp_NCA9539_CalloutI2cWrite`
 - FC name `DRV8876` -> functions use `DRV8876_Init`, `DRV8876_Set...`
+- FC name `Gp_TJA1043` -> functions use `Gp_TJA1043_Init`, `Gp_TJA1043_CalloutDioWrite`
 
 Do not silently normalize underscore-separated FC names into CamelCase namespaces:
 - forbidden unless explicitly requested by the user: `GpDrv8889_Init`
@@ -41,7 +42,7 @@ Do not silently normalize underscore-separated FC names into CamelCase namespace
 
 This preservation rule applies to:
 - external function names
-- dependency/callout function names
+- dependency/callout function names (必须包含 `<FC>_Callout` 前缀，禁止使用不绑定 FC 的通用名如 `FC_CalloutDioWrite`)
 - typedef names
 - enum names and enum values
 - struct names
@@ -60,9 +61,10 @@ Rules:
 - configuration macro identifiers must be ALL_CAPS
 - allowed characters are `A-Z`, `0-9`, and `_`
 - the FC/module name portion must also be converted to uppercase
-- examples: `GP_NCA9539_CFG_DEV_ERROR_DETECT`, `GP_NCA9539_CFG_REG_READBACK_VERIFY_ENABLE`, `DRV8876_CFG_SW_MAJOR_VERSION`
-- forbidden: `Gp_NCA9539_CFG_DEV_ERROR_DETECT`, `Drv8876_CFG_SW_MAJOR_VERSION`, `DRV8876_Cfg_SW_MAJOR_VERSION`
+- examples: `GP_TJA1043_CFG_DEV_ERROR_DETECT`, `GP_NCA9539_CFG_REG_READBACK_VERIFY_ENABLE`, `GP_DRV887X_CFG_DEV_ERROR_DETECT`
+- forbidden: `Gp_NCA9539_CFG_DEV_ERROR_DETECT` (大小写混用), `Drv8876_CFG_SW_MAJOR_VERSION` (下划线缺失), `FC_CFG_DEV_ERROR_DETECT` (通用 `FC_` 前缀缺少模块命名空间)
 - this rule applies only to macro identifiers, not file names, function names, type names, struct members, or configuration object names
+- 禁止生成软件版本宏 `CFG_SW_MAJOR_VERSION` / `CFG_SW_MINOR_VERSION`
 
 ## Field Rules
 

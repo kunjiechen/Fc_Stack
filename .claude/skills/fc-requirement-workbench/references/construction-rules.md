@@ -231,7 +231,48 @@ Example:
 - Verification Method: Review/Test
 - Status: Ready
 
-## 7. 状态判断规则 Status Rules
+## 7. 核心控制需求 Core Control Requirements
+
+Core control requirements describe the execution model — whether the module runs on a single core or multiple cores. This requirement is mandatory for all FC modules: it informs the architecture whether per-core isolation, core enable macros, per-core runtime containers, and per-core MemMap sections are needed.
+
+Required elements:
+
+- Title
+- Description, specifying single-core or multi-core and the execution model
+- Source (always "Project Input")
+- Verification Method
+- Status
+
+Recommended elements:
+
+- Core count or core index range
+- Per-core resource ownership description
+- Cross-core access policy
+- Core enable macro convention
+- Acceptance criteria
+
+Missing handling:
+
+- If not specified, set `Status` to `Draft` — the architecture cannot determine the execution model without this requirement.
+- This requirement must always be emitted; it is mandatory for all FC modules.
+
+Example:
+
+- Title: 单核代码控制需求
+- Description: 模块仅运行在单核上，所有运行时状态为单核独占，无需核间隔离或多核同步机制。
+- Source: Project Input
+- Verification Method: Review/Analysis
+- Status: Ready
+
+Example:
+
+- Title: 多核代码控制需求
+- Description: 模块运行在多核环境，每个核维护独立的运行时状态容器和配置表，通过 per-core MemMap 段实现核间数据隔离，使用 CalloutGetCoreId 区分当前核。核间不共享可变运行时数据。
+- Source: Project Input
+- Verification Method: Review/Analysis
+- Status: Ready
+
+## 8. 状态判断规则 Status Rules
 
 Status should be assigned by evidence maturity. This section is the source of truth for construction-time downgrade logic:
 
@@ -244,7 +285,7 @@ Status should be assigned by evidence maturity. This section is the source of tr
 
 Any missing required element must prevent `Ready`.
 
-## 8. 前提条件
+## 9. 前提条件
 
 - Requirement items must be practical, executable, verifiable, and traceable.
 - A formal SRS requirement must correspond to a software action, software responsibility, software-visible state, configuration item, diagnostic behavior, timing constraint, resource constraint, or process-quality requirement.

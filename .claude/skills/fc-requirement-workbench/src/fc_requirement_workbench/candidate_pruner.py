@@ -302,19 +302,35 @@ def _select_keepers(items: list[RequirementCandidate]) -> list[RequirementCandid
         return [config_priority[0]]
     best = _best_candidate(items)
     # Merge FaultRows from dropped candidates into the keeper so that
-    # datasheet-extracted fault table data survives pruning.  This is
-    # essential for diagnostic requirements where multiple subfunctions
-    # contribute different fault information (e.g. "故障状态读取" carries
-    # fault rows while "故障恢复处理" carries recovery strategy).
-    existing_fr = best.target_requirement_fields.get("FaultRows", "")
+    # datasheet-extracted fault table data survives pruning.  Dedup by
+    # fault name (first |...| field) to avoid the substring-match bug
+    # where "UVNOM" would be falsely considered a duplicate of "UVNOM_EXT".
+    existing_rows: list[str] = (best.target_requirement_fields.get("FaultRows", "") or "").split("\n")
+    existing_names: set[str] = set()
+    for row in existing_rows:
+        parts = row.split("|")
+        if len(parts) >= 2:
+            existing_names.add(parts[1].strip().lower())
     for c in items:
         if c.candidate_id == best.candidate_id:
             continue
         fr = c.target_requirement_fields.get("FaultRows", "")
-        if fr and fr not in existing_fr:
-            existing_fr = f"{existing_fr}\n{fr}".strip()
-    if existing_fr and existing_fr != best.target_requirement_fields.get("FaultRows", ""):
-        best.target_requirement_fields["FaultRows"] = existing_fr
+        if not fr:
+            continue
+        for row in fr.split("\n"):
+            row = row.strip()
+            if not row.startswith("|"):
+                continue
+            parts = row.split("|")
+            if len(parts) >= 2:
+                fname = parts[1].strip().lower()
+                if fname and fname not in existing_names:
+                    existing_names.add(fname)
+                    existing_rows.append(row)
+    if existing_rows:
+        merged = "\n".join(existing_rows).strip()
+        if merged != best.target_requirement_fields.get("FaultRows", ""):
+            best.target_requirement_fields["FaultRows"] = merged
     return [best]
 
 

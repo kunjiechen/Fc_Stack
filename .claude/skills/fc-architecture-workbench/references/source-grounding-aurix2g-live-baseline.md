@@ -428,6 +428,68 @@ Architecture implication:
 - allow global runtime caches and calibration carriers when the live pattern supports them
 - keep `Callout.h/.c`, but do not require `Reg.h` or `MainFunction` by default
 
+## 11D. IoExtDev Family Pattern
+
+Observed live samples:
+
+- `IoExtDev/IoExtDev/Gp_TLE92104` — SPI register-based external chip (multi-channel motor driver)
+- `IoExtDev/IoExtDev/Gp_NCA9539` — I2C register-based external chip (GPIO expander)
+
+Observed characteristics by sub-type:
+
+### Reg Sub-type (SPI/I2C register-based)
+
+- external APIs follow the standard IoExtDev skeleton:
+  - `Init` + `MainFunction` (MainFunction required for periodic register polling/diagnosis)
+  - `SetDevModeOutSig` / `GetDevModeInSig` (chip mode control)
+  - `GetDevFaultSig` (chip-level fault/diagnostic readout)
+- dependency adaptation uses callout for:
+  - `GetCoreId` (multi-core support)
+  - delay (timing between SPI/I2C transactions)
+  - SPI/I2C sync transmit/receive (`CalloutSpiTransceive` / `CalloutI2cWrite` / `CalloutI2cRead`)
+  - DIO output/input for extra control/status pins (RESET, INT, EN)
+- `Cfg.h` is rich in:
+  - core enable switches
+  - chip/instance count macros
+  - DET switch
+  - SPI/I2C device ID/bus selection macros
+  - register readback verification enable
+- `FC_Reg.h` is **Required** — carries register addresses, bit masks, command words, reset defaults
+- `FC_Cfg.h` includes `FC_Reg.h` when config defaults reference register symbols
+- MemMap includes `REG CONST` section for register constants
+- `Cfg.c` contains per-instance config tables, SigMapping tables, register-based init sequences
+- configuration may include timing thresholds (register access delays, mode switch timeouts)
+
+### Pin Sub-type (pin-control, no registers)
+
+- external APIs follow a simplified IoExtDev skeleton:
+  - `Init` + `MainFunction` (MainFunction needed if periodic fault polling or debounce required)
+  - `SetDevModeOutSig` / `GetDevModeInSig` (mode control via DIO pins)
+  - `GetDevFaultSig` (fault status via status pin reading)
+- dependency adaptation uses callout for:
+  - DIO output for control pins (STB, EN, nSLEEP) → merged into single `CalloutDioWrite`
+  - DIO input for status pins (ERR_N, INT, FAULT) → merged into single `CalloutDioRead`
+  - No SPI/I2C callouts — chip has no communication bus interface
+- `Cfg.h` is lean:
+  - DET switch
+  - behavior selection macros (default mode, debounce count)
+  - timing threshold macros
+  - No register-related macros, no device address macros
+- `FC_Reg.h` is **NOT Required** — no registers, no bit masks
+- MemMap does **NOT** include `REG CONST` section
+- `Cfg.c` contains pin mapping tables (`const uint16[]` indexed by pin enum), mode control truth tables
+- Callout pin identity is resolved through Cfg.c lookup tables, not per-pin macros in Cfg.h
+
+### Architecture implication for IoExtDev:
+
+- determine sub-type (Reg vs Pin) before generating any architecture object
+- Reg sub-type → follow TLE92104 pattern: FC_Reg.h Required, REG CONST rendered, SPI/I2C Callouts
+- Pin sub-type → follow pin-control pattern: NO FC_Reg.h, NO REG CONST, DIO Callouts only
+- both sub-types: Callout.h/.c Required, DET default STD_ON, calibration default Empty
+- MainFunction: required for Reg (register polling), conditional for Pin (only if fault polling/debounce/state machine progression needed)
+- do not clone Reg-type register patterns onto Pin-type devices, and vice versa
+- do not generate per-pin DIO macros in Cfg.h for either sub-type — pin mapping belongs in Cfg.c
+
 ## 12. How To Use This Grounding
 
 Use this grounding note when:

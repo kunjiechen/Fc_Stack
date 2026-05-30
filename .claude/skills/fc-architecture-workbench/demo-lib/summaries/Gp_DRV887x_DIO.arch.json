@@ -1,0 +1,61 @@
+{
+  "module": "Gp_DRV887x_DIO",
+  "architecture_version": "V1",
+  "architecture_status": "Released",
+  "output_mode": "Formal Draft",
+  "layer": "IoExtDev",
+  "sub_type": "Pin",
+  "change_summary": ["DIO pin-control H-bridge motor driver architecture pattern."],
+  "family_pattern": "IoExtDev-Pin (pin-control external device, no registers)",
+  "key_characteristics": {
+    "has_registers": false,
+    "fc_reg_h_required": false,
+    "reg_const_required": false,
+    "mainfunction_required": true,
+    "mainfunction_reason": "Periodic fault polling and debounce required for motor driver diagnostics",
+    "callout_types": ["DioWrite", "DioRead", "PwmSetDuty", "GetCoreId", "Delay"],
+    "calibration_default": "Empty",
+    "communication_interface": "Pin-control (DIO + PWM)"
+  },
+  "external_apis": [
+    {"name": "Gp_DRV887x_Init", "prototype": "void Gp_DRV887x_Init(void)", "description": "Initializes driver, loads config, sets default mode.", "sync_mode": "Synchronous", "reentrancy": "Non-reentrant"},
+    {"name": "Gp_DRV887x_MainFunction", "prototype": "void Gp_DRV887x_MainFunction(void)", "description": "Periodic processing: fault debounce, output request processing.", "sync_mode": "Synchronous", "reentrancy": "Non-reentrant"},
+    {"name": "Gp_DRV887x_SetHbOutSig", "prototype": "Std_ReturnType Gp_DRV887x_SetHbOutSig(uint8 Dir_u8, uint8 Duty_u8)", "description": "Sets H-bridge output direction and duty cycle via DIO + PWM pins.", "sync_mode": "Asynchronous (buffered)", "reentrancy": "Non-reentrant"},
+    {"name": "Gp_DRV887x_GetDevFaultSig", "prototype": "Std_ReturnType Gp_DRV887x_GetDevFaultSig(uint32* FaultFlags_pu32)", "description": "Returns confirmed fault status from nFAULT pin polling.", "sync_mode": "Synchronous", "reentrancy": "Reentrant"}
+  ],
+  "dependency_apis": [
+    {"name": "Gp_DRV887x_CalloutDioWrite", "prototype": "Std_ReturnType Gp_DRV887x_CalloutDioWrite(uint16 Id_u16, uint8 Level_u8)", "description": "DIO output for IN1/IN2/nSLEEP control pins. Pin identity resolved via Cfg.c lookup table.", "implemented_by": "MCAL/IoMcu"},
+    {"name": "Gp_DRV887x_CalloutDioRead", "prototype": "Std_ReturnType Gp_DRV887x_CalloutDioRead(uint16 Id_u16, uint8* Level_pu8)", "description": "DIO input for nFAULT status pin.", "implemented_by": "MCAL/IoMcu"},
+    {"name": "Gp_DRV887x_CalloutPwmSetDuty", "prototype": "Std_ReturnType Gp_DRV887x_CalloutPwmSetDuty(uint16 Id_u16, uint16 Duty_u16)", "description": "PWM output for motor speed control.", "implemented_by": "MCAL/IoMcu"}
+  ],
+  "config_macros": [
+    {"name": "GP_DRV887X_CFG_DEV_ERROR_DETECT", "purpose": "Global DET switch.", "macro_type": "Development Error Detect", "default_value": "STD_ON"},
+    {"name": "GP_DRV887X_CFG_DEFAULT_MODE", "purpose": "Default PMODE selection (control interface semantics).", "macro_type": "Behavior Selection", "default_value": "GP_DRV887X_PMODE_PHASE_EN"},
+    {"name": "GP_DRV887X_CFG_FAULT_DEBOUNCE_CNT", "purpose": "nFAULT pin consecutive read count for fault confirmation.", "macro_type": "Count Size", "default_value": "3"}
+  ],
+  "config_params": [
+    {"name": "Gp_DRV887x_DioPinMap_au16", "type": "const uint16[]", "purpose": "Maps logical pin index (IN1/IN2/nSLEEP) to physical DIO channel ID.", "carrier": "FC_CfgData.h / FC_Cfg.c"},
+    {"name": "Gp_DRV887x_PwmChMap_au16", "type": "const uint16[]", "purpose": "Maps PWM channel index to physical PWM channel ID.", "carrier": "FC_CfgData.h / FC_Cfg.c"}
+  ],
+  "runtime_states": [
+    {"name": "ModeState_e", "owner": "FC.c", "read_write_side": "Written by Init/SetHbOutSig; read by getters.", "lifecycle": "Set to UNINIT at load; transitions managed by Init.", "memory_section": "CLEAR_FAR_DATA", "concurrency_strategy": "Per-core ownership."},
+    {"name": "FaultState + debounce counters", "owner": "FC.c", "read_write_side": "Written by MainFunction; read by GetDevFaultSig.", "lifecycle": "Zeroed in Init; updated each MainFunction cycle.", "memory_section": "CLEAR_FAR_DATA", "concurrency_strategy": "Per-core ownership."}
+  ],
+  "memmap_sections": [
+    {"name": "CODE", "target_content": "External APIs and internal helpers.", "start_macro": "GP_DRV887X_CODE_START", "stop_macro": "GP_DRV887X_CODE_STOP", "used_files": ["FC.c", "FC_Callout.c"]},
+    {"name": "RUNTIME RAM", "target_content": "Mode state, output request buffer, fault flags, debounce counters.", "start_macro": "GP_DRV887X_CLEAR_FAR_DATA_ALIGN4_COREx_START", "stop_macro": "GP_DRV887X_CLEAR_FAR_DATA_ALIGN4_COREx_STOP", "used_files": ["FC.c"]},
+    {"name": "CONST (global)", "target_content": "Shared constants.", "start_macro": "GP_DRV887X_CONST_FAR_DATA_ALIGN4_GLOBAL_START", "stop_macro": "GP_DRV887X_CONST_FAR_DATA_ALIGN4_GLOBAL_STOP", "used_files": ["FC_Cfg.c"]},
+    {"name": "CONST (per core)", "target_content": "Pin mapping tables, per-core config.", "start_macro": "GP_DRV887X_CONST_FAR_DATA_ALIGN4_COREx_START", "stop_macro": "GP_DRV887X_CONST_FAR_DATA_ALIGN4_COREx_STOP", "used_files": ["FC_Cfg.c"]}
+  ],
+  "file_items": [
+    {"name": "Gp_DRV887x.c", "required_level": "Required"},
+    {"name": "Gp_DRV887x.h", "required_level": "Required"},
+    {"name": "Gp_DRV887x_Types.h", "required_level": "Required"},
+    {"name": "Gp_DRV887x_Cfg.h", "required_level": "Required"},
+    {"name": "Gp_DRV887x_Cfg.c", "required_level": "Required"},
+    {"name": "Gp_DRV887x_CfgData.h", "required_level": "Required"},
+    {"name": "Gp_DRV887x_Callout.h", "required_level": "Required"},
+    {"name": "Gp_DRV887x_Callout.c", "required_level": "Required"},
+    {"name": "Gp_DRV887x_MemMap.h", "required_level": "Required"}
+  ]
+}

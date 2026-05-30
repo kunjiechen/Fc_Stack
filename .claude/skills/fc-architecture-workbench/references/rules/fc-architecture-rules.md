@@ -9,6 +9,23 @@ Routine use note:
 
 Use this file when deciding FC file structure, layering, interface placement, and MemMap strategy.
 
+## Role of This File
+
+This is the **original** architecture rules file, created from the FC Development Guide PDF. Over time, some sections have been superseded by more specialized rule files. The current authority for each topic is defined in `SKILL.md` §8 (规则分工表).
+
+**Still authoritative here** (not duplicated elsewhere):
+- §Core Principles — general architecture design principles
+- §Layering — Realize Interface / Function / Dependency Interface three-layer model
+- §Internal State Guidance — initialization rules, DET variable design, state management
+
+**Superseded — see authoritative source**:
+- §Version And Release Rules → `release-workflow.md` (version strategy, release gates)
+- §Default FC File Set + §File Responsibilities → `project-style-rules.md` §5 (header carrier rules) + `SKILL.md` §9.4.9 (file items)
+- §Dependency Strategy → `interface-selection.md` (selection criteria for each dependency type)
+- §File Structure Judgment Tips → `project-style-rules.md` §5 (when to split/merge files)
+- §FC_Reg.h rules → `SKILL.md` §9.2 (sub-type determines FC_Reg.h requirement)
+- §Callout prototype rules → `interface-selection.md` §Callout + `SKILL.md` §9.4.2 (prototype specs and merge rules)
+
 ## Core Principles
 
 - FC architecture design comes before FC code writing.

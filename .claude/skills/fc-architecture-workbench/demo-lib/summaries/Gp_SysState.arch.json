@@ -1,0 +1,66 @@
+{
+  "module": "Gp_SysState",
+  "architecture_version": "V1",
+  "architecture_status": "Released",
+  "output_mode": "Formal Draft",
+  "layer": "BswSys_Gp",
+  "sub_type": null,
+  "change_summary": ["System-level state management FC architecture pattern (BswSys_Gp family)."],
+  "family_pattern": "BswSys_Gp (system-level module, no external chip, no hardware registers)",
+  "key_characteristics": {
+    "has_registers": false,
+    "fc_reg_h_required": false,
+    "reg_const_required": false,
+    "mainfunction_required": false,
+    "mainfunction_reason": "System-status oriented with query-style APIs. No periodic hardware polling needed.",
+    "callout_types": ["Data revise hooks", "NVM interaction", "Safe-state callouts"],
+    "calibration_default": "Conditional",
+    "calibration_note": "BswSys_Gp may have Cali.c when calibration workflow is project-defined",
+    "communication_interface": "None (system-level, no hardware interface)",
+    "api_style": "System-status query APIs; asynchronous behavior described in header comments even for getters",
+    "config_style": "Signal-count macros, signal-ID mapping macros, revise-switch macros, DET switch",
+    "dependency_style": "Revise hooks (CalloutXxxDataRevise) rather than hardware access callouts",
+    "internal_headers": "May include FC_Internal.h for internal state sharing within BswSys_Gp layer"
+  },
+  "external_apis": [
+    {"name": "Gp_SysState_Init", "prototype": "void Gp_SysState_Init(void)", "description": "Initializes system state module, sets default state.", "sync_mode": "Synchronous", "reentrancy": "Non-reentrant"},
+    {"name": "Gp_SysState_GetCurrentState", "prototype": "Std_ReturnType Gp_SysState_GetCurrentState(uint8* State_pu8)", "description": "Returns current system state. May be asynchronous if state is updated by external triggers.", "sync_mode": "Asynchronous (state updated externally)", "reentrancy": "Reentrant"}
+  ],
+  "dependency_apis": [
+    {"name": "Gp_SysState_CalloutStateDataRevise", "prototype": "void Gp_SysState_CalloutStateDataRevise(uint8* State_pu8)", "description": "Revise hook for state data before consumption. Project adaptation point.", "implemented_by": "Project Adaptation"}
+  ],
+  "config_macros": [
+    {"name": "GP_SYSSTATE_CFG_DEV_ERROR_DETECT", "purpose": "Global DET switch.", "macro_type": "Development Error Detect", "default_value": "STD_ON"},
+    {"name": "GP_SYSSTATE_CFG_DATA_REVISE_ENABLE", "purpose": "Enable data revise callout hook.", "macro_type": "Feature Enable", "default_value": "STD_OFF"},
+    {"name": "GP_SYSSTATE_CFG_STATE_SIGNAL_COUNT", "purpose": "Number of managed state signals.", "macro_type": "Count Size", "default_value": "PROJECT_DEFINED"},
+    {"name": "GP_SYSSTATE_CFG_STATE_ID_<NAME>", "purpose": "Signal ID mapping macros for state identifiers.", "macro_type": "Dependency Selection", "default_value": "PROJECT_DEFINED"}
+  ],
+  "config_params": [],
+  "calibration_items": [
+    {"name": "Gp_SysState_StateThresholds", "type": "const uint32[]", "initial_value": "PROJECT_DEFINED", "description": "Calibration thresholds for state transitions (conditional — only when project calibration workflow exists).", "status": "Conditional"}
+  ],
+  "runtime_states": [
+    {"name": "CurrentState", "owner": "FC.c", "read_write_side": "Written by external state updates; read by GetCurrentState.", "lifecycle": "Set to DEFAULT at Init; updated by triggers/events.", "memory_section": "CLEAR_FAR_DATA", "concurrency_strategy": "Global (system state is inherently global, not per-core)."},
+    {"name": "StateRecorder buffer", "owner": "FC.c", "read_write_side": "Written on state transitions; read by diagnostic APIs.", "lifecycle": "Circular buffer; initialized in Init.", "memory_section": "NO_CLEAR_FAR_DATA (warm-reset retention)", "concurrency_strategy": "Global with critical section protection."}
+  ],
+  "memmap_sections": [
+    {"name": "CODE", "target_content": "External APIs and internal helpers.", "start_macro": "GP_SYSSTATE_CODE_START", "stop_macro": "GP_SYSSTATE_CODE_STOP", "used_files": ["FC.c", "FC_Callout.c"]},
+    {"name": "RUNTIME RAM", "target_content": "Current state, recorder buffer.", "start_macro": "GP_SYSSTATE_CLEAR_FAR_DATA_ALIGN4_GLOBAL_START", "stop_macro": "GP_SYSSTATE_CLEAR_FAR_DATA_ALIGN4_GLOBAL_STOP", "used_files": ["FC.c"]},
+    {"name": "RUNTIME RAM (NO_CLEAR)", "target_content": "State recorder buffer (retained across warm reset).", "start_macro": "GP_SYSSTATE_NO_CLEAR_FAR_DATA_ALIGN4_GLOBAL_START", "stop_macro": "GP_SYSSTATE_NO_CLEAR_FAR_DATA_ALIGN4_GLOBAL_STOP", "used_files": ["FC.c"]},
+    {"name": "CONST (global)", "target_content": "State signal mapping tables.", "start_macro": "GP_SYSSTATE_CONST_FAR_DATA_ALIGN4_GLOBAL_START", "stop_macro": "GP_SYSSTATE_CONST_FAR_DATA_ALIGN4_GLOBAL_STOP", "used_files": ["FC_Cfg.c"]},
+    {"name": "CALIB", "target_content": "State transition calibration thresholds.", "start_macro": "GP_SYSSTATE_CONST_FAR_DATA_ALIGN4_CALI_START", "stop_macro": "GP_SYSSTATE_CONST_FAR_DATA_ALIGN4_CALI_STOP", "used_files": ["FC_Cali.c"]}
+  ],
+  "file_items": [
+    {"name": "Gp_SysState.c", "required_level": "Required"},
+    {"name": "Gp_SysState.h", "required_level": "Required"},
+    {"name": "Gp_SysState_Internal.h", "required_level": "Conditional", "note": "BswSys_Gp pattern: Internal.h for layer-internal state sharing"},
+    {"name": "Gp_SysState_Types.h", "required_level": "Required"},
+    {"name": "Gp_SysState_Cfg.h", "required_level": "Required"},
+    {"name": "Gp_SysState_Cfg.c", "required_level": "Required"},
+    {"name": "Gp_SysState_CfgData.h", "required_level": "Required"},
+    {"name": "Gp_SysState_Callout.h", "required_level": "Required"},
+    {"name": "Gp_SysState_Callout.c", "required_level": "Required"},
+    {"name": "Gp_SysState_Cali.c", "required_level": "Conditional", "note": "Conditional on project calibration workflow"},
+    {"name": "Gp_SysState_MemMap.h", "required_level": "Required"}
+  ]
+}

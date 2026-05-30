@@ -1,0 +1,63 @@
+{
+  "module": "Gp_TLE92104",
+  "architecture_version": "V1",
+  "architecture_status": "Released",
+  "output_mode": "Formal Draft",
+  "layer": "IoExtDev",
+  "sub_type": "Reg",
+  "change_summary": ["SPI register-based external multi-channel motor driver architecture pattern."],
+  "family_pattern": "IoExtDev-Reg (SPI/I2C register-based external device)",
+  "key_characteristics": {
+    "has_registers": true,
+    "fc_reg_h_required": true,
+    "reg_const_required": true,
+    "mainfunction_required": true,
+    "mainfunction_reason": "Periodic register polling for chip status, diagnostics and background state machine",
+    "callout_types": ["SpiTransceive", "DioWrite", "DioRead", "PwmSetDuty", "GetCoreId", "Delay"],
+    "calibration_default": "Empty",
+    "communication_interface": "SPI"
+  },
+  "external_apis": [
+    {"name": "Gp_TLE92104_Init", "prototype": "void Gp_TLE92104_Init(void)", "description": "Initializes driver, loads config, sets up per-core runtime.", "sync_mode": "Synchronous", "reentrancy": "Non-reentrant"},
+    {"name": "Gp_TLE92104_MainFunction", "prototype": "void Gp_TLE92104_MainFunction(void)", "description": "Periodic processing: register polling, fault debounce, state machine progression.", "sync_mode": "Synchronous", "reentrancy": "Non-reentrant"},
+    {"name": "Gp_TLE92104_SetDevModeOutSig", "prototype": "Std_ReturnType Gp_TLE92104_SetDevModeOutSig(uint8 Mode_u8)", "description": "Sets chip operating mode via SPI register write.", "sync_mode": "Synchronous", "reentrancy": "Non-reentrant"},
+    {"name": "Gp_TLE92104_GetDevModeInSig", "prototype": "Std_ReturnType Gp_TLE92104_GetDevModeInSig(uint8* Mode_pu8)", "description": "Reads current chip mode from cached runtime state.", "sync_mode": "Synchronous", "reentrancy": "Reentrant"},
+    {"name": "Gp_TLE92104_GetDevFaultSig", "prototype": "Std_ReturnType Gp_TLE92104_GetDevFaultSig(uint32* FaultFlags_pu32)", "description": "Returns confirmed fault/diagnostic status from register polling.", "sync_mode": "Synchronous", "reentrancy": "Reentrant"}
+  ],
+  "dependency_apis": [
+    {"name": "Gp_TLE92104_CalloutSpiTransceive", "prototype": "Std_ReturnType Gp_TLE92104_CalloutSpiTransceive(uint16 Id_u16, uint16* TxData_pu16, uint16* RxData_pu16, uint16 Size_u16)", "description": "SPI synchronous transmit/receive for register access.", "implemented_by": "Project Adaptation"},
+    {"name": "Gp_TLE92104_CalloutDioWrite", "prototype": "Std_ReturnType Gp_TLE92104_CalloutDioWrite(uint16 Id_u16, uint8 Level_u8)", "description": "DIO output for EN/RESET control pins.", "implemented_by": "MCAL/IoMcu"},
+    {"name": "Gp_TLE92104_CalloutGetCoreId", "prototype": "uint8 Gp_TLE92104_CalloutGetCoreId(void)", "description": "Returns current core ID for per-core runtime selection.", "implemented_by": "Service Layer"}
+  ],
+  "config_macros": [
+    {"name": "GP_TLE92104_CFG_DEV_ERROR_DETECT", "purpose": "Global DET switch.", "macro_type": "Development Error Detect", "default_value": "STD_ON"},
+    {"name": "GP_TLE92104_CFG_CHIP_COUNT", "purpose": "Number of TLE92104 chip instances.", "macro_type": "Count Size", "default_value": "1"},
+    {"name": "GP_TLE92104_CFG_REG_READBACK_VERIFY_ENABLE", "purpose": "Enable SPI register readback verification.", "macro_type": "Feature Enable", "default_value": "STD_ON"}
+  ],
+  "config_params": [
+    {"name": "Gp_TLE92104_DioPinMap_au16", "type": "const uint16[]", "purpose": "Maps logical pin index to physical DIO channel ID for EN/RESET.", "carrier": "FC_CfgData.h / FC_Cfg.c"}
+  ],
+  "runtime_states": [
+    {"name": "ModeState_e", "owner": "FC.c", "read_write_side": "Written by Init/SetDevMode/MainFunction; read by GetDevMode.", "lifecycle": "Set to UNINIT at load; transitions managed by Init and MainFunction.", "memory_section": "CLEAR_FAR_DATA", "concurrency_strategy": "Per-core ownership."},
+    {"name": "FaultState", "owner": "FC.c", "read_write_side": "Written by MainFunction; read by GetDevFaultSig.", "lifecycle": "Zeroed in Init; updated each MainFunction cycle.", "memory_section": "CLEAR_FAR_DATA", "concurrency_strategy": "Per-core ownership."}
+  ],
+  "memmap_sections": [
+    {"name": "CODE", "target_content": "External APIs and internal helpers.", "start_macro": "GP_TLE92104_CODE_START", "stop_macro": "GP_TLE92104_CODE_STOP", "used_files": ["FC.c", "FC_Callout.c"]},
+    {"name": "RUNTIME RAM", "target_content": "Mode state, fault flags, debounce counters, DET buffer.", "start_macro": "GP_TLE92104_CLEAR_FAR_DATA_ALIGN4_COREx_START", "stop_macro": "GP_TLE92104_CLEAR_FAR_DATA_ALIGN4_COREx_STOP", "used_files": ["FC.c"]},
+    {"name": "CONST (global)", "target_content": "Register default values, version info.", "start_macro": "GP_TLE92104_CONST_FAR_DATA_ALIGN4_GLOBAL_START", "stop_macro": "GP_TLE92104_CONST_FAR_DATA_ALIGN4_GLOBAL_STOP", "used_files": ["FC_Cfg.c"]},
+    {"name": "CONST (per core)", "target_content": "Per-core config tables, SigMapping.", "start_macro": "GP_TLE92104_CONST_FAR_DATA_ALIGN4_COREx_START", "stop_macro": "GP_TLE92104_CONST_FAR_DATA_ALIGN4_COREx_STOP", "used_files": ["FC_Cfg.c"]},
+    {"name": "REG CONST", "target_content": "Register addresses, bit masks, command words.", "start_macro": "GP_TLE92104_CONST_FAR_DATA_ALIGN4_GLOBAL_START", "stop_macro": "GP_TLE92104_CONST_FAR_DATA_ALIGN4_GLOBAL_STOP", "used_files": ["FC_Reg.h"]}
+  ],
+  "file_items": [
+    {"name": "Gp_TLE92104.c", "required_level": "Required"},
+    {"name": "Gp_TLE92104.h", "required_level": "Required"},
+    {"name": "Gp_TLE92104_Types.h", "required_level": "Required"},
+    {"name": "Gp_TLE92104_Cfg.h", "required_level": "Required"},
+    {"name": "Gp_TLE92104_Cfg.c", "required_level": "Required"},
+    {"name": "Gp_TLE92104_CfgData.h", "required_level": "Required"},
+    {"name": "Gp_TLE92104_Reg.h", "required_level": "Required", "note": "Required for SPI register definitions"},
+    {"name": "Gp_TLE92104_Callout.h", "required_level": "Required"},
+    {"name": "Gp_TLE92104_Callout.c", "required_level": "Required"},
+    {"name": "Gp_TLE92104_MemMap.h", "required_level": "Required"}
+  ]
+}
