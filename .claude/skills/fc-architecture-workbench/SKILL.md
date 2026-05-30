@@ -197,7 +197,7 @@ description: "用于设计、评审、校验和整理嵌入式汽车 FC 软件�
 |-------------|---------|-------------|---------|
 | 接口需求 | `IF` | §2 外部接口设计 | 每条 IF 需求映射为 1 个 `external_apis` 对象。函数名、参数、返回值、约束从 SRS 描述中提取。 |
 | 配置需求 | `CFG` | §3 配置参数设计 | 配置项按类型拆分：编译期开关/行为选择 → §3.1 `config_macros`；硬件映射/查找表 → §3.2 `config_params` |
-| 诊断需求 | `DIAG` | §2 外部接口（GetDevFaultSig）、§5 故障设计（逐故障检测/去抖/恢复链路）、§9 依赖接口（ERR_N/INT Callout） | DIAG-0001 故障枚举表 → §5.2 每项故障独立 fault_handler 对象（含检测机制、去抖策略、确认后动作、恢复路径、影响范围）；DIAG-9001 DET → `config_macros` 中的 DEV_ERROR_DETECT 宏 + 运行时 DET buffer |
+| 诊断需求 | `DIAG` | §2 外部接口（GetDevFaultSig）、§6 故障诊断设计（逐故障检测/去抖/恢复链路）、§9 依赖接口（ERR_N/INT Callout） | DIAG-0001 故障枚举表 → §6.2 每项故障独立 fault_handler 对象（含检测机制、去抖策略、确认后动作、恢复路径、影响范围）；DIAG-9001 DET → `config_macros` 中的 DEV_ERROR_DETECT 宏 + 运行时 DET buffer |
 | 时序需求 | `TIME` | §4.2 配置参数（时序阈值 const）、§2 外部接口（时序约束） | 时序数值 → `config_params` 中的阈值常量（Cfg.c const）；时序责任（调用方保证 vs 模块保证）→ 外部接口的 Basic Constraints |
 | 安全需求 | `SAFE` | §3 DEV_ERROR_DETECT 宏、§2 各 API 参数校验、§6 DET bookkeeping | ASIL 等级决定：DET 默认值（QM→STD_OFF, ASIL→STD_ON）、参数校验完整性、故障去抖策略。ASIL-D：强制 DET buffer + newest-error overwrite |
 | 编码需求 | `CODE` | §10 文件列表、§1 命名规范 | 编码规范版本 → §1 设计思路中的符合性声明；MISRA/静态检查 → 不产生架构对象，在 Check 产物中记录 |
@@ -292,9 +292,9 @@ description: "用于设计、评审、校验和整理嵌入式汽车 FC 软件�
 **操作**：按 §11.3 消费规则表，逐域消费芯片架构视图。消费行为取决于 §9.2 判定的子类型：
 
 **所有 IoExtDev/IoMcu（通用）**：
-- A1 模块身份 → §1 FC总结介绍
+- A1 模块身份 → §1 软件架构设计
 - A2 引脚清单 → §9 依赖接口设计（Callout 候选生成）
-- A3 工作模式 → §4 状态机设计
+- A3 工作模式 → §5 状态模式设计
 - A7 时钟与复位 → §2 外部接口设计、§6 运行时策略
 
 **仅 IoExtDev 寄存器型（Reg）**：
@@ -349,7 +349,7 @@ description: "用于设计、评审、校验和整理嵌入式汽车 FC 软件�
 
 若架构族默认策略为 Not Default 且 SRS 无上述场景 → MainFunction 不生成。若默认策略为 Required 或 Conditional 但 SRS 有上述场景 → MainFunction Required。
 
-判定结果记录为 `assumptions` 中的 `MainFunction_Required: true/false`，并在 §1 的"架构设计思路"中简述理由。判定为 false 时，不得在外部接口列表中渲染 `MainFunction`。
+判定结果记录为 `assumptions` 中的 `MainFunction_Required: true/false`，并在 §1 的"架构设计"中简述理由。判定为 false 时，不得在外部接口列表中渲染 `MainFunction`。
 
 #### 9.4.2 依赖接口对象
 
@@ -599,7 +599,7 @@ DET 宏判定：SRS 含 DET/诊断需求或安全等级为 ASIL-B/D → 生成 `
 
 #### 9.4.7 运行时状态对象
 
-从 SRS 模式需求 + 芯片架构视图 A3 工作模式（如有）提取状态机设计。
+从 SRS 模式需求 + 芯片架构视图 A3 工作模式（如有）提取状态模式设计。
 
 每个运行时状态包含：`name`、`owner`、`read_write_side`、`lifecycle`、`memory_section`、`concurrency_strategy`。
 
@@ -763,16 +763,16 @@ DET 宏判定：SRS 含 DET/诊断需求或安全等级为 ASIL-B/D → 生成 `
 
 | 架构章节 | 语义对象来源 | 渲染规则 |
 |----------|-------------|---------|
-| §1 FC总结介绍 | 文档信封 + A1 模块身份 | 从 semantic-model 信封取 module/architecture_version/architecture_status/output_mode/layer/sub_type。芯片型号、通信接口类型从 A1 直接填充。架构设计思路段落包含：MainFunction 决策及理由、Callout 归并策略、DET 策略、单核/多核执行模型。 |
+| §1 软件架构设计 | 文档信封 + A1 模块身份 | 从 semantic-model 信封取 module/architecture_version/architecture_status/output_mode/layer/sub_type。芯片型号、通信接口类型从 A1 直接填充。架构设计段落包含：MainFunction 决策及理由、Callout 归并策略、DET 策略、单核/多核执行模型。**必须生成 §1.1 架构框图**：ASCII art 分层框图（上层调用方→FC 内部组件→Callout 接口→MCAL→芯片硬件），层数/接口数/Callout 数与 §2/§3 一致，Callout 层标注归并的引脚名，附图例说明。 |
 | §2 外部接口设计 | external_apis | 每个 external_api 渲染为结构化列表项（非表格），所有接口统一格式。格式：**原型**、**概述**（一句话职责）、**同步/异步 | 可重入 | 返回值**（紧凑行）、**前置条件**、**异常处理**。Init 用前置条件/异常处理描述初始化契约（不逐步骤展开）；MainFunction_Required=true 则 MainFunction 必须列入。架构只描述接口契约，不展开实现细节。 |
 | §3 依赖接口设计 | dependency_apis | 每个 dependency_api 渲染为结构化列表项（非表格）。格式：**原型**、**目标**（此 Callout 统一了哪些硬件依赖）、**实现方**、**约束**。紧接外部接口之后——两者都是"接口"。隐藏依赖推导结果（GetCoreId/DelayUs）若产生也列入本节。Callout 原型必须使用指针形参（无 `[]` 声明式），函数名包含 `<FC>_Callout` 前缀。 |
 | §4 配置参数设计 | config_macros + config_params | **分两子节**：§4.1 配置宏参——功能开关，每条独立展开（类型/默认值/说明/来源）；§4.2 配置参数——`<FC>_CfgType` 结构体（IO 直接展开成员、寄存器建 `RegCfgType` 子结构体、通信建 `SpiCfgType`/`I2cCfgType`、功能参数标量），配成员表。binding_items / strategy_items 非空时归入 §4.1。 |
-| §5 状态机设计 | state_transitions + runtime_states（状态相关变量） | **分三部分**：(1) §5.1 芯片工作模式（硬件）；(2) §5.2 软件状态机（状态枚举、转换图、变量设计——含 ModeState 等状态变量，本章直接声明）；(3) §5.3 状态转换详表（增加"软件动作"列体现驱动代码操作）。硬件触发转换不可遗漏。 |
-| §6 故障设计 | fault_handlers + runtime_states（故障相关变量） | **分三部分**：(1) §6.1 故障分类；(2) §6.2 策略维度定义（6 维度）；(3) §6.3 全链路表（9 列）。故障运行时变量（FaultFlags、去抖计数器、快照存储）在本章直接声明。 |
+| §5 状态模式设计 | state_transitions + runtime_states（状态相关变量） | **分三部分**：(1) §5.1 芯片工作模式（硬件）；(2) §5.2 软件状态机（状态枚举、转换图、变量设计——含 ModeState 等状态变量，本章直接声明）；(3) §5.3 状态转换详表（增加"软件动作"列体现驱动代码操作）。硬件触发转换不可遗漏。 |
+| §6 故障诊断设计 | fault_handlers + runtime_states（故障相关变量） | **分三部分**：(1) §6.1 故障分类；(2) §6.2 策略维度定义（6 维度）；(3) §6.3 逐故障全链路——**禁止使用超宽 9 列表格**（单元格内容过长导致渲染器解析失败），必须使用逐故障小节（§6.3.x） + 2 列 key-value 表（维度/决策），每条故障 7 行。硬件故障在前，软件基线故障在后。故障运行时变量（FaultFlags、去抖计数器、快照存储）在本章直接声明。 |
 | §7 全局变量设计 | calibration_items | **分两子节**：(1) §7.1 全局变量（固定 Empty，架构不允许对外暴露全局变量）；(2) §7.2 标定变量（空或条件填充）。运行时状态变量（ModeState、FaultFlags 等）已在 §5、§6 中定义，不在此处重复汇总。 |
 | §8 内存分段设计 | memmap_sections | 每段一行。RUNTIME RAM 段承载 §5/§6 中的运行时状态变量（ModeState、FaultFlags 等）。仅 Reg 子类型渲染 REG CONST 行。仅 §7.2 非空时渲染 CALIB 行。 |
 | §9 驱动文件设计 | file_items | **分两部分**：§9.1 文件列表；§9.2 文件关系。仅 Reg 子类型渲染 `<FC>_Reg.h`。 |
-| §10 架构风险与待确认 | risk_items | 每风险项一行。索引 R1 递增，始终含 R-OTHER。Quick Draft 仅 3~5 条 + R-OTHER。 |
+| §10 架构风险确认 | risk_items | 每风险项一行。索引 R1 递增，始终含 R-OTHER。Quick Draft 仅 3~5 条 + R-OTHER。 |
 
 ### 9.8 产物输出
 
@@ -832,7 +832,16 @@ DET 宏判定：SRS 含 DET/诊断需求或安全等级为 ASIL-B/D → 生成 `
    ```
    > 校验 6 使用宽松匹配（列出 §5/§6 中变量名与类型在同一行的条目），命中行需人工核对命名是否符合命名规范。常见遗漏：enum 变量未用 `_e` 后缀、boolean 未用 `_b` 后缀、struct 变量未用 `_st` 后缀、uint32 未用 `_u32` 后缀。参考 `references/rules/naming-rules.md`。
 
-   以上 6 条 grep 校验必须全部通过（校验 1-5 输出为空；校验 6 需人工核对无违规）。若任一命中 → 定位到具体行号，修正后重新渲染，再跑 grep 校验直至全部通过。校验结果记录在 `Check_<FC>_软件架构设计.md` 的 Gate 1 章节中。
+   # 校验 7: §1.1 架构框图必须存在（禁止无框图交付）
+   # 期望输出: 找到匹配行
+   grep -n '### 1.1 架构框图' <FC>_软件架构设计.md
+
+   # 校验 8: §6.3 禁止使用超宽 9 列故障表（必须使用逐故障 key-value 格式）
+   # 期望输出: 空（无命中）
+   grep -n '^| 故障名称 | 分类 | 检测机制 | 确认策略 | 故障响应 | 快照策略 | 恢复策略 | 清除策略 | 影响范围 |$' <FC>_软件架构设计.md
+   ```
+
+   以上 8 条 grep 校验必须全部通过（校验 1-5 输出为空；校验 6 需人工核对无违规；校验 7 必须有匹配行；校验 8 输出为空）。若任一命中 → 定位到具体行号，修正后重新渲染，再跑 grep 校验直至全部通过。校验结果记录在 `Check_<FC>_软件架构设计.md` 的 Gate 1 章节中。
 
 6. **可选的 Python 脚本校验**：若语义对象已序列化为 JSON（如 freeze bundle 场景），可额外运行：
    ```bash
@@ -954,9 +963,9 @@ Output/<FC>/Doc/ChipViews/<FC>_芯片架构输入.md
 
 | 芯片架构视图域        | 消费到的架构章节                           | 消费方式                                                                                                                                                                                                                  |
 | --------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A1 模块身份**       | §1 FC总结介绍                             | 芯片型号、通信接口类型(I2C/SPI)、最大速率、安全等级 → 直接填充"FC功能介绍"和"AUTOSAR架构层级"。接口类型用于判定层级（I2C/SPI 外设 → IoExtDev）                                                                          |
+| **A1 模块身份**       | §1 软件架构设计                             | 芯片型号、通信接口类型(I2C/SPI)、最大速率、安全等级 → 直接填充"功能概述"和"AUTOSAR架构层级"。接口类型用于判定层级（I2C/SPI 外设 → IoExtDev）                                                                          |
 | **A2 引脚清单**       | §9 依赖接口设计, §3.2 配置参数           | **按依赖类型归并，不是逐引脚生成独立接口。** 从 A2 中提取所有非电源引脚，按硬件访问方式分为以下依赖类型，每类只生成一个参数化 Callout：<br><br>**DIO 输出控制类**：所有需要 FC 主动拉高/拉低的引脚（如 RESET\、EN、STB、nSLEEP）→ **一个** `<FC>_CalloutDioWrite(Id_u16, Level_u8)`，引脚身份通过 `CfgType` 结构体中对应引脚的 `DioId` 成员区分<br><br>**DIO 输入读取类**：所有需要 FC 读取电平的引脚（如 INT\、nFAULT、RDY）→ **一个** `<FC>_CalloutDioRead(Id_u16, Level_pu8)`，引脚身份同上<br><br>**I2C 通信类**：SCL/SDA → `<FC>_CalloutI2cWrite` + `<FC>_CalloutI2cRead`（协议级，已参数化），器件地址在 `Cfg.c` 中作为 const 常量<br><br>**SPI 通信类**：SCK/MOSI/MISO/CS → `<FC>_CalloutSpiTransceive`（协议级，已参数化），器件 ID 在 `Cfg.c` 中作为 const 常量<br><br>**地址/strap 引脚**：A0/A1 等 → `Cfg.c` 中的 const 常量，不生成 Callout<br><br>**归并判定原则**：同类硬件访问方式 → 同一个参数化 Callout；引脚身份通过 `Id` 参数 + `CfgType` 成员区分，不进入函数名。不在 `Cfg.h` 中为每个引脚生成独立 `#define` 宏。 |
-| **A3 工作模式**       | §1 FC总结介绍, §4 状态机设计             | 硬件模式列表写入 §1 的芯片背景描述。模式进入/退出条件直接映射到 §4.3 状态转换详表。**重点：Standby 等 SRS 容易遗漏的硬件自动模式，芯片架构视图可补漏** |
+| **A3 工作模式**       | §1 软件架构设计, §5 状态模式设计             | 硬件模式列表写入 §1 的芯片背景描述。模式进入/退出条件直接映射到 §5.3 状态转换详表。**重点：Standby 等 SRS 容易遗漏的硬件自动模式，芯片架构视图可补漏** |
 | **A4 寄存器空间概览** | §7 内存分段设计, §10 文件列表          | **仅 IoExtDev 寄存器型消费。** 寄存器分类统计决定`FC_Reg.h` 是否需要以及 §7 是否渲染 REG CONST 段。引脚型（Pin）和 IoMcu 跳过此域——不渲染 `FC_Reg.h`，§7 不渲染 REG CONST 行。 |
 | **A5 I2C/SPI 帧协议** | §9 依赖接口设计                           | **仅 IoExtDev 寄存器型消费。** 帧结构(命令字节、地址位宽)和 Burst 行为(交替/自增)写入对应 Callout 的 Description 和 Basic Constraints。引脚型（Pin）跳过此域——无通信帧协议。 |
 | **A6 中断资源**       | §2 外部接口设计, §9 依赖接口设计         | 中断触发条件和清除机制决定是否需要独立的中断状态查询 API。清除方式(read-clear/write-1-clear/auto-clear)影响接口的调用时序约束                                                                                             |
@@ -969,7 +978,7 @@ Output/<FC>/Doc/ChipViews/<FC>_芯片架构输入.md
 - A4 寄存器中标记"R/W"的，架构是否提供了写路径 → 无则报接口缺失
 - A6 中断源，架构是否提供了中断处理 Callout 或查询 API → 无则报中断遗漏
 
-交叉校验发现的缺口，列入 §11 架构风险与待确认。
+交叉校验发现的缺口，列入 §10 架构风险确认。
 
 ---
 
@@ -1071,6 +1080,13 @@ Trace_<FC>_软件架构设计.md
 |---|--------|---------|---------|
 | E1 | IoExtDev 族生成标定参数 | IoExtDev 默认无标定流程 | 标定项保持 Empty，阈值和时序参数归类为编译期配置 |
 | E2 | 策略项可以表达为简单宏开关但仍拆成独立 strategy_item | 过度设计 | 简单行为选择保留为 config_macros 中的 `Behavior Selection` 类型宏 |
+
+### 14.7 文档渲染反模式
+
+| # | 反模式 | 错误原因 | 正确做法 |
+|---|--------|---------|---------|
+| F1 | §1 缺少架构框图 | 架构文档缺少直观的分层结构图，评审者无法快速理解模块上下关系 | §1.1 必须生成 ASCII art 架构框图，至少 4 层（上层调用方→FC 内部组件→Callout 接口→MCAL/芯片硬件），Callout 层标注归并的引脚名，附图例说明 |
+| F2 | §6.3 使用超宽 9 列故障全链路表 | 单元格内容过长（含多句中文字段）导致绝大多数 Markdown 渲染器无法正确解析表格 | 必须使用逐故障小节（§6.3.x）+ 2 列 key-value 表（维度/决策），每条故障 7 行 |
 
 ### 14.6 校验时机
 

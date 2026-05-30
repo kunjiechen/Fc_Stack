@@ -30,7 +30,7 @@ Current Document version **V1** is **Draft**.
 
 ## 适用说明
 
-本文档适用于 `<FC>` 模块的软件架构设计定义。本文档描述模块的外部接口、依赖接口、配置参数、状态机设计、故障设计、全局变量设计、内存分配与文件族设计，不描述详细实现方案、代码细节或测试用例步骤。
+本文档适用于 `<FC>` 模块的软件架构设计定义。本文档描述模块的外部接口、依赖接口、配置参数、状态模式设计、故障诊断设计、全局变量设计、内存分配与文件族设计，不描述详细实现方案、代码细节或测试用例步骤。
 
 ---
 
@@ -44,17 +44,17 @@ Current Document version **V1** is **Draft**.
 
 ## 目录
 
-- [1 FC总结介绍](#1-fc总结介绍)
+- [1 软件架构设计](#1-软件架构设计)
 - [2 外部接口设计](#2-外部接口设计)
 - [3 依赖接口设计](#3-依赖接口设计)
 - [4 配置参数设计](#4-配置参数设计)
   - [4.1 配置宏参](#41-配置宏参)
   - [4.2 配置参数](#42-配置参数)
-- [5 状态机设计](#5-状态机设计)
+- [5 状态模式设计](#5-状态模式设计)
   - [5.1 芯片工作模式](#51-芯片工作模式)
   - [5.2 软件状态机](#52-软件状态机)
   - [5.3 状态转换详表](#53-状态转换详表)
-- [6 故障设计](#6-故障设计)
+- [6 故障诊断设计](#6-故障诊断设计)
   - [6.1 故障分类](#61-故障分类)
   - [6.2 故障策略维度定义](#62-故障策略维度定义)
   - [6.3 故障全链路表](#63-故障全链路表)
@@ -65,23 +65,35 @@ Current Document version **V1** is **Draft**.
 - [9 驱动文件设计](#9-驱动文件设计)
   - [9.1 文件列表](#91-文件列表)
   - [9.2 文件关系](#92-文件关系)
-- [10 架构风险与待确认](#10-架构风险与待确认)
+- [10 架构风险确认](#10-架构风险确认)
 - [附录：架构元信息](#附录架构元信息)
 
 ---
 
-## 1. FC总结介绍
+## 1. 软件架构设计
 
-- **架构版本**: `V1` / `V2` / `V3`
-- **架构状态**: `Draft` / `Released`
-- **生成时间**: `<GenerationTime>`
-- **变更点总结**: (初版写"初版生成"；升级/更新时用一句话概括主要变化)
-- **FC名称**: `<FC>`
-- **FC功能介绍**: (中文完整段落；层级名、接口名、架构术语可保留英文)
+- **功能概述**: (中文完整段落；层级名、接口名、架构术语可保留英文)
 - **应用场景**: (中文完整段落；层级名、接口名、架构术语可保留英文)
-- **架构设计思路**: (中文完整段落；包含 MainFunction 决策及理由、Callout 归并策略、执行模型、关键设计取舍)
+- **架构设计**: (中文完整段落；包含 MainFunction 决策及理由、Callout 归并策略、执行模型、关键设计取舍)
 - **AUTOSAR架构层级**:
 - **当前软件架构所处层级**: (e.g. `IoExtDev`, `IoHwAb`, `Cdd`, `Srv`)
+
+### 1.1 架构框图
+
+**(必生成——每条架构产物都必须包含此框图。)** 使用 ASCII art 绘制模块的分层架构框图，至少表达以下 4 层：
+
+```
+第 1 层: 上层调用方（Application / BSW 层，列出关键调用模块或栈名）
+第 2 层: FC 模块内部（外部接口 5 个箭头向下 + 内部组件：模式控制/故障处理/DET/Runtime State/Config）
+第 3 层: 依赖接口（Callout 箭头向下，按归并后的 Callout 逐个列出，标注归并的控制引脚）
+第 4 层: MCAL 层 + 芯片硬件层（列出芯片的软件可控引脚和硬件资源）
+```
+
+**构建规则**：
+- 框图的层数、接口数、Callout 数必须与 §2/§3 的正式接口列表一致
+- Callout 层必须体现归并结果：N 个引脚 → 1 个参数化 Callout，标注归并的引脚名
+- 芯片硬件层标注引脚方向（MCU→Chip 或 Chip→MCU）和软件不可控引脚
+- 框图后附**图例说明**（3~4 条，解释箭头方向、各层含义、Callout 归并逻辑）
 
 说明：
 - 当前软件架构所处层级填写项目的正式层级名，如 `IoExtDev`、`IoHwAb`、`Srv`、`Cdd` 等。
@@ -189,7 +201,7 @@ typedef struct
 
 ---
 
-## 5. 状态机设计
+## 5. 状态模式设计
 
 本章定义完整的软件状态机——包含芯片硬件支持的工作模式 + 驱动层为管理这些模式所需的软件状态。是详细设计阶段状态机代码骨架的直接输入。
 
@@ -286,7 +298,7 @@ typedef struct
 
 ---
 
-## 6. 故障设计
+## 6. 故障诊断设计
 
 本章定义每条故障的检测→确认→响应→快照→恢复→清除全生命周期。是详细设计阶段 MainFunction 故障处理骨架和故障存储结构的直接输入。
 
@@ -311,29 +323,36 @@ typedef struct
 | **清除策略** | 故障恢复后，如何清除故障标志和快照数据 | 清除条件 | `EnterNormal` / `ReadClear` / `ApiClear` / `PowerOnReset` |
 | **影响范围** | 故障存在期间，哪些功能受影响 | 影响的功能域 | `FullChip` / `TxOnly` / `SingleCall` / `BusDisconnect` |
 
-### 6.3 故障全链路表
+### 6.3 故障全链路
 
-| 故障名称 | 分类 | 检测机制 | 确认策略 | 故障响应 | 快照策略 | 恢复策略 | 清除策略 | 影响范围 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| UVNOM | hardware_chip | VCC/VIO 欠压 > tdet(uv) → 芯片进 Sleep，INH 浮空。MainFunction 中 DetectModeChange 检测 INH=LOW + 状态机变化 | 连续 2 次 MainFunction 确认 | 记录欠压事件；DET 上报；锁存 LastModeBeforeSleep | ModeSnapshot（锁存当前模式） | Auto（VCC+VIO 恢复 > trec(uv) 后芯片自动退出） | PowerOnReset（重新初始化） | FullChip |
-| UVBAT | hardware_chip | VBAT < Vuvd(VBAT) → 芯片进 Standby，总线脱离。MainFunction 中 DetectModeChange 检测 | 连续 2 次 MainFunction 确认 | 记录 VBAT 欠压事件 | ModeSnapshot | Auto（VBAT 恢复后芯片自动恢复） | Auto（VBAT 恢复自动清除） | BusDisconnect |
-| TXD 超时 | hardware_chip | TXD 持续显性 > tto(dom)TXD → 芯片禁用发送器。MainFunction 在 Listen-only 模式通过 PollErrN 读 Local failure | 芯片自判定 | 记录本地故障；DET 上报 | None | Auto（MCU 释放 TXD 后芯片自动恢复） | EnterNormal | TxOnly |
-| 过温 | hardware_chip | 结温 > Tj(sd) → 芯片禁用发送器。MainFunction 中 PollErrN 读 Local failure | 芯片自判定 | 记录过温事件；DET 上报 | FullContext（故障计数+模式） | Auto（降温后芯片自动恢复） | Auto（降温自动清除） | TxOnly |
-| 总线短路 | hardware_chip | 4 对 TXD 显隐边沿内检测 CANH/CANL 短路 → Bus failure 标志置位。Normal 模式通过 PollErrN 读取 | 芯片自判定 | 记录总线故障；DET 上报 | None | Manual（重新进入 Normal 重试） | EnterNormal 或 PowerOnReset | TxOnly |
-| 未初始化访问 | software_state | 各 API 入口检查初始化标志 | 单次触发即确认 | DET 上报；返回 E_NOT_OK | FullContext（调用 API ID + 参数） | Manual（调用 Init 后恢复） | ApiClear（Init 成功后清除） | SingleCall |
-| 非法参数 | software_param | 各 API 入口检查参数范围/指针非空 | 单次触发即确认 | DET 上报；返回 E_NOT_OK | FullContext（非法参数值 + API ID） | Manual（调用方修正参数） | Auto（仅当次返回错误） | SingleCall |
-| 非法状态转换 | software_state | SetDevModeOutSig 检查目标模式是否在 §5.3 合法转换集合中 | 单次触发即确认 | DET 上报；返回 E_NOT_OK | FullContext（请求模式+当前模式） | Manual（调用方传入合法模式） | Auto（仅当次返回错误） | SingleCall |
+以下逐故障定义检测→确认→响应→快照→恢复→清除全生命周期。硬件芯片故障在前，软件基线故障在后。
 
-说明：
-- **确认策略**：芯片硬件自判定故障无需软件去抖。仅外部信号读取类故障（INH 判断欠压）需多次确认防瞬态。
-- **快照策略**：`None`=芯片行为确定，快照无额外诊断价值。`FullContext`=锁存数据辅助根因分析，具体字段由项目诊断需求确认。
+**（必生成——不得使用超宽 9 列表格。原因：故障描述通常含多句中文字段，9 列宽表在绝大多数 Markdown 渲染器中无法正确解析。必须使用逐故障小节 + 2 列 key-value 表格的格式。）**
+
+#### 6.3.x `<FaultName>`
+
+| 维度 | 决策 |
+|------|------|
+| **分类** | `hardware_chip` / `software_state` / `software_param` |
+| **检测机制** | <如何检测此故障：引脚读取/寄存器轮询/状态变量检查> |
+| **确认策略** | <芯片自判定 / 连续 N 次 MainFunction 确认> |
+| **故障响应** | <确认后立即执行的动作> |
+| **快照策略** | `None` / `ModeSnapshot` / `FullContext` |
+| **恢复策略** | `Auto` / `Manual` / `Reset` / `Fatal` |
+| **清除策略** | `EnterNormal` / `PowerOnReset` / `ApiClear` / `Auto` |
+| **影响范围** | `FullChip` / `TxOnly` / `SingleCall` / `BusDisconnect` |
+
+说明（放在最后一个故障项之后）：
+- **确认策略**：芯片硬件自判定故障无需软件去抖。仅外部信号读取类故障需多次确认防瞬态，次数由 `CFG_FAULT_DEBOUNCE_CNT` 控制。
+- **快照策略**：`None`=芯片行为确定，快照无额外诊断价值。`ModeSnapshot`=锁存故障时刻模式。`FullContext`=锁存模式+引脚+供电+计数。
 - ASIL-D 要求硬件故障+软件故障全覆盖。
+- 每条故障均需覆盖 7 个维度，硬件故障至少 5 条，软件基线故障 3 条（未初始化访问/非法参数/非法状态转换）。
 
 ---
 
 ## 7. 全局变量设计
 
-本章定义模块对外暴露的全局变量和标定可调参数。运行时状态变量（ModeState、FaultFlags 等）在 §5 状态机和 §6 故障设计章节中直接定义，不在此处重复汇总。
+本章定义模块对外暴露的全局变量和标定可调参数。运行时状态变量（ModeState、FaultFlags 等）在 §5 状态模式设计和 §6 故障诊断设计章节中直接定义，不在此处重复汇总。
 
 ### 7.1 全局变量
 
@@ -412,7 +431,7 @@ typedef struct
 
 ---
 
-## 10. 架构风险与待确认
+## 10. 架构风险确认
 
 填写说明：
 - 可以直接修改下表的 `状态` 和 `备注`，也可以在当前窗口直接回复。
@@ -440,7 +459,7 @@ typedef struct
 - **发布条件**: 所有真实风险项均为 `已评审`。
 - **变更点总结【简洁版】**:
   - 初版生成 / 草稿更新 / 正式版本升级。
-  - 外部接口、依赖接口、配置、状态机、故障设计、全局变量、MemMap、文件结构或风险状态变化。
+  - 外部接口、依赖接口、配置、状态模式、故障诊断设计、全局变量、MemMap、文件结构或风险状态变化。
 
 ---
 

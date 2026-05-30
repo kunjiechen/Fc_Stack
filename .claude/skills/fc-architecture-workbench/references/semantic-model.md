@@ -403,9 +403,9 @@ Recommended mapping:
 - `external_apis` -> §2 外部接口设计
 - `dependency_apis` -> §3 依赖接口设计
 - `config_macros` + `config_params` -> §4 配置参数设计
-- `state_transitions` + (状态相关的 runtime_states) -> §5 状态机设计
-- `fault_handlers` + (故障相关的 runtime_states) -> §6 故障设计
+- `state_transitions` + (状态相关的 runtime_states) -> §5 状态模式设计
+- `fault_handlers` + (故障相关的 runtime_states) -> §6 故障诊断设计
 - `calibration_items` -> §7 全局变量设计 (§7.1 全局变量 / §7.2 标定变量)
-- `memmap_sections` -> §8 内存分配宏定义
+- `memmap_sections` -> §8 内存分段设计
 - `file_items` -> §9 文件列表与文件关系
-- `risk_items` -> §10 架构风险与待确认
+- `risk_items` -> §10 架构风险确认
