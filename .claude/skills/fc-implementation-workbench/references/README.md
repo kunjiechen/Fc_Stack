@@ -65,6 +65,13 @@
 - `validation_rules.md`
 - `golden_checks.md`
 
+## 回归包
+
+在做链路回归或 golden baseline 校验时再读取：
+
+- `../regression/README.md` — 回归包执行方式和通过标准
+- `../regression/cases/` — 回归用例（当前含 `gp_nca95yy.json`）
+
 ## 来源说明
 
 本目录中的规则，来自当前工作区已完成的工程学习、代码设计学习和公司规范学习整理。
